@@ -8,10 +8,13 @@ import com.yandex.runtime.Error
 actual fun createMapSearchProvider(): MapSearchProvider = AndroidMapSearchProvider()
 
 private class AndroidMapSearchProvider : MapSearchProvider {
-    private val searchManager: SearchManager =
+    // Lazy initialization to ensure SearchFactory is ready
+    private val searchManager: SearchManager by lazy {
         SearchFactory.getInstance().createSearchManager(SearchManagerType.COMBINED)
-    private val suggestSession: SuggestSession =
+    }
+    private val suggestSession: SuggestSession by lazy {
         searchManager.createSuggestSession()
+    }
 
     override fun suggest(
         query: String,
@@ -19,36 +22,40 @@ private class AndroidMapSearchProvider : MapSearchProvider {
         centerLon: Double,
         onResult: (List<SearchSuggestion>) -> Unit,
     ) {
-        val delta = 0.05
-        val window = BoundingBox(
-            Point(centerLat - delta, centerLon - delta),
-            Point(centerLat + delta, centerLon + delta),
-        )
-        val options = SuggestOptions().apply {
-            suggestTypes = SuggestType.GEO.value or SuggestType.BIZ.value
-        }
-        suggestSession.suggest(
-            query,
-            window,
-            options,
-            object : SuggestSession.SuggestListener {
-                override fun onResponse(response: SuggestResponse) {
-                    val items = response.items.take(5).mapNotNull { item ->
-                        val center = item.center ?: return@mapNotNull null
-                        SearchSuggestion(
-                            title = item.title?.text?.toString().orEmpty(),
-                            subtitle = item.subtitle?.text?.toString(),
-                            latitude = center.latitude,
-                            longitude = center.longitude,
-                        )
-                    }
-                    onResult(items)
-                }
-                override fun onError(error: Error) {
-                    onResult(emptyList())
-                }
+        try {
+            val delta = 0.05
+            val window = BoundingBox(
+                Point(centerLat - delta, centerLon - delta),
+                Point(centerLat + delta, centerLon + delta),
+            )
+            val options = SuggestOptions().apply {
+                suggestTypes = SuggestType.GEO.value or SuggestType.BIZ.value
             }
-        )
+            suggestSession.suggest(
+                query,
+                window,
+                options,
+                object : SuggestSession.SuggestListener {
+                    override fun onResponse(response: SuggestResponse) {
+                        val items = response.items.take(5).mapNotNull { item ->
+                            val center = item.center ?: return@mapNotNull null
+                            SearchSuggestion(
+                                title = item.title?.text?.toString().orEmpty(),
+                                subtitle = item.subtitle?.text?.toString(),
+                                latitude = center.latitude,
+                                longitude = center.longitude,
+                            )
+                        }
+                        onResult(items)
+                    }
+                    override fun onError(error: Error) {
+                        onResult(emptyList())
+                    }
+                }
+            )
+        } catch (e: Exception) {
+            onResult(emptyList())
+        }
     }
 
     override fun reverseGeocode(
@@ -56,21 +63,25 @@ private class AndroidMapSearchProvider : MapSearchProvider {
         longitude: Double,
         onResult: (String?) -> Unit,
     ) {
-        searchManager.submit(
-            Point(latitude, longitude),
-            16,
-            SearchOptions(),
-            object : Session.SearchListener {
-                override fun onSearchResponse(response: Response) {
-                    val meta = response.collection.children.firstOrNull()?.obj
-                        ?.metadataContainer
-                        ?.getItem(ToponymObjectMetadata::class.java)
-                    onResult(meta?.address?.formattedAddress?.toString())
+        try {
+            searchManager.submit(
+                Point(latitude, longitude),
+                16,
+                SearchOptions(),
+                object : Session.SearchListener {
+                    override fun onSearchResponse(response: Response) {
+                        val meta = response.collection.children.firstOrNull()?.obj
+                            ?.metadataContainer
+                            ?.getItem(ToponymObjectMetadata::class.java)
+                        onResult(meta?.address?.formattedAddress?.toString())
+                    }
+                    override fun onSearchError(error: Error) {
+                        onResult(null)
+                    }
                 }
-                override fun onSearchError(error: Error) {
-                    onResult(null)
-                }
-            }
-        )
+            )
+        } catch (e: Exception) {
+            onResult(null)
+        }
     }
 }

@@ -10,7 +10,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 
-fun Routing.markerRoutes(service: MarkerService, storage: StorageService) {
+fun Route.markerRoutes(service: MarkerService, storage: StorageService) {
     route("/api") {
         post("/complaints") {
             val multipart = call.receiveMultipart()

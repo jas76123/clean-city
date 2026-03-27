@@ -43,8 +43,10 @@ class MarkerRoutesTest {
     }
 
     private fun ApplicationTestBuilder.configureTestApp() {
-        install(ContentNegotiation) { json() }
-        routing { markerRoutes(service, storage) }
+        application {
+            install(ContentNegotiation) { json() }
+            routing { markerRoutes(service, storage) }
+        }
     }
 
     @Test

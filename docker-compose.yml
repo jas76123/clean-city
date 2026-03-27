@@ -3,7 +3,7 @@ services:
     image: postgis/postgis:16-3.4
     platform: linux/amd64
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_DB: cleancity
       POSTGRES_USER: cleancity

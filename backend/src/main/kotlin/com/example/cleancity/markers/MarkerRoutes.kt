@@ -85,7 +85,16 @@ fun Routing.markerRoutes(service: MarkerService, storage: StorageService) {
         }
 
         get("/markers") {
-            val markers = service.getAllMarkers()
+            val swLat = call.request.queryParameters["swLat"]?.toDoubleOrNull()
+            val swLon = call.request.queryParameters["swLon"]?.toDoubleOrNull()
+            val neLat = call.request.queryParameters["neLat"]?.toDoubleOrNull()
+            val neLon = call.request.queryParameters["neLon"]?.toDoubleOrNull()
+
+            val markers = if (swLat != null && swLon != null && neLat != null && neLon != null) {
+                service.getMarkersInBounds(swLat, swLon, neLat, neLon)
+            } else {
+                service.getAllMarkers()
+            }
             call.respond(markers)
         }
 
@@ -108,6 +117,9 @@ fun Routing.markerRoutes(service: MarkerService, storage: StorageService) {
         get("/photos/{filename}") {
             val filename = call.parameters["filename"]
                 ?: return@get call.respond(HttpStatusCode.BadRequest, "Missing filename")
+            if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+                return@get call.respond(HttpStatusCode.BadRequest, "Invalid filename")
+            }
             val bytes = storage.get(filename)
                 ?: return@get call.respond(HttpStatusCode.NotFound, "Photo not found")
             val contentType = when {

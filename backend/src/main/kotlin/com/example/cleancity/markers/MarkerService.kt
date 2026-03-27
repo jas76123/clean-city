@@ -69,6 +69,12 @@ class MarkerService(
         return MapMarkersResponse(complaints, subbotniks)
     }
 
+    fun getMarkersInBounds(swLat: Double, swLon: Double, neLat: Double, neLon: Double): MapMarkersResponse {
+        val complaints = repository.getComplaintsInBounds(swLat, swLon, neLat, neLon).map { it.toComplaintResponse() }
+        val subbotniks = repository.getSubbotniksInBounds(swLat, swLon, neLat, neLon).map { it.toSubbotnikResponse() }
+        return MapMarkersResponse(complaints, subbotniks)
+    }
+
     fun getComplaintById(id: Long): ComplaintResponse? {
         return repository.getComplaintById(id)?.toComplaintResponse()
     }

@@ -9,6 +9,8 @@ import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import com.example.cleancity.data.InMemoryRepository
+import com.example.cleancity.model.Problem
+import com.example.cleancity.model.CleanupEvent
 import com.example.cleancity.ui.map.components.*
 
 class MapScreen : Screen {
@@ -17,25 +19,25 @@ class MapScreen : Screen {
     override fun Content() {
         val model = rememberScreenModel { MapScreenModel() }
 
-        val markers by model.markers.collectAsState()
-        val selectedMarker by model.selectedMarker.collectAsState()
-        val activeFilter by model.activeFilter.collectAsState()
-        val searchQuery by model.searchQuery.collectAsState()
-        val suggestions by model.suggestions.collectAsState()
-        val isCreateMode by model.isCreateMode.collectAsState()
+        val markers: List<MapMarker> by model.markers.collectAsState()
+        val selectedMarker: MapMarker? by model.selectedMarker.collectAsState()
+        val activeFilter: MapFilter by model.activeFilter.collectAsState()
+        val searchQuery: String by model.searchQuery.collectAsState()
+        val suggestions: List<SearchSuggestion> by model.suggestions.collectAsState()
+        val isCreateMode: Boolean by model.isCreateMode.collectAsState()
         val createType by model.createType.collectAsState()
-        val createDescription by model.createDescription.collectAsState()
-        val createAddress by model.createAddress.collectAsState()
-        val privacyConsent by model.privacyConsent.collectAsState()
-        val cameraPosition by model.cameraPosition.collectAsState()
+        val createDescription: String by model.createDescription.collectAsState()
+        val createAddress: String by model.createAddress.collectAsState()
+        val privacyConsent: Boolean by model.privacyConsent.collectAsState()
+        val cameraPosition: CameraPosition by model.cameraPosition.collectAsState()
 
-        val problems by InMemoryRepository.problems.collectAsState()
-        val events by InMemoryRepository.events.collectAsState()
+        val problems: List<Problem> by InMemoryRepository.problems.collectAsState()
+        val events: List<CleanupEvent> by InMemoryRepository.events.collectAsState()
 
-        val selectedProblem = selectedMarker?.let { marker ->
+        val selectedProblem: Problem? = selectedMarker?.let { marker: MapMarker ->
             if (marker.type != MapMarkerType.EVENT) problems.find { it.id == marker.id } else null
         }
-        val selectedEvent = selectedMarker?.let { marker ->
+        val selectedEvent: CleanupEvent? = selectedMarker?.let { marker: MapMarker ->
             if (marker.type == MapMarkerType.EVENT) events.find { it.id == marker.id } else null
         }
 
@@ -83,33 +85,33 @@ class MapScreen : Screen {
                     .padding(end = 16.dp, bottom = 16.dp),
             )
 
-            AnimatedVisibility(
-                visible = selectedProblem != null,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it }),
-                modifier = Modifier.align(Alignment.BottomCenter),
-            ) {
-                selectedProblem?.let { problem ->
+            if (selectedProblem != null) {
+                AnimatedVisibility(
+                    visible = true,
+                    enter = slideInVertically(initialOffsetY = { it }),
+                    exit = slideOutVertically(targetOffsetY = { it }),
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                ) {
                     ProblemBottomSheet(
-                        problem = problem,
-                        onVerify = { model.verifyProblem(problem.id) },
-                        onVoteYes = { model.voteProblem(problem.id, true) },
-                        onVoteNo = { model.voteProblem(problem.id, false) },
+                        problem = selectedProblem,
+                        onVerify = { model.verifyProblem(selectedProblem.id) },
+                        onVoteYes = { model.voteProblem(selectedProblem.id, true) },
+                        onVoteNo = { model.voteProblem(selectedProblem.id, false) },
                         onDismiss = { model.clearSelection() },
                     )
                 }
             }
 
-            AnimatedVisibility(
-                visible = selectedEvent != null,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it }),
-                modifier = Modifier.align(Alignment.BottomCenter),
-            ) {
-                selectedEvent?.let { event ->
+            if (selectedEvent != null) {
+                AnimatedVisibility(
+                    visible = true,
+                    enter = slideInVertically(initialOffsetY = { it }),
+                    exit = slideOutVertically(targetOffsetY = { it }),
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                ) {
                     EventBottomSheet(
-                        event = event,
-                        onJoin = { InMemoryRepository.joinEvent(event.id) },
+                        event = selectedEvent,
+                        onJoin = { InMemoryRepository.joinEvent(selectedEvent.id) },
                         onDismiss = { model.clearSelection() },
                     )
                 }

@@ -135,7 +135,7 @@ class MapScreenModel : ScreenModel {
             _createLat.value = lat
             _createLon.value = lon
             searchProvider.reverseGeocode(lat, lon) { address ->
-                _createAddress.value = address ?: "%.5f, %.5f".format(lat, lon)
+                _createAddress.value = address ?: "${lat}, ${lon}"
             }
         }
     }

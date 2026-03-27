@@ -8,7 +8,7 @@ import io.ktor.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.utils.io.core.readBytes
+import kotlinx.io.readByteArray
 import kotlinx.serialization.json.Json
 
 fun Routing.markerRoutes(service: MarkerService, storage: StorageService) {
@@ -26,7 +26,7 @@ fun Routing.markerRoutes(service: MarkerService, storage: StorageService) {
                     }
                     is PartData.FileItem -> {
                         if (part.name == "photo") {
-                            photoBytes = part.provider().readBytes()
+                            photoBytes = part.provider().readByteArray()
                             photoFileName = part.originalFileName ?: "upload.jpg"
                         }
                     }
@@ -62,7 +62,7 @@ fun Routing.markerRoutes(service: MarkerService, storage: StorageService) {
                     }
                     is PartData.FileItem -> {
                         if (part.name == "photo") {
-                            photoBytes = part.provider().readBytes()
+                            photoBytes = part.provider().readByteArray()
                             photoFileName = part.originalFileName ?: "upload.jpg"
                         }
                     }

@@ -3,10 +3,7 @@ package com.example.cleancity.ui.map
 import android.annotation.SuppressLint
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.map.CameraPosition as YandexCameraPosition
 import com.yandex.mapkit.map.InputListener
@@ -27,33 +24,56 @@ actual fun YandexMapView(
     onMarkerClick: (MapMarker) -> Unit,
     onMapTap: (latitude: Double, longitude: Double) -> Unit,
 ) {
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var mapView by remember { mutableStateOf<MapView?>(null) }
     val tapListeners = remember { mutableMapOf<String, MapObjectTapListener>() }
+
+    // Track camera position changes to move map
+    val currentCameraPosition by rememberUpdatedState(cameraPosition)
 
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
             MapView(ctx).apply {
+                // Move to initial position
                 mapWindow.map.move(
                     YandexCameraPosition(
-                        Point(cameraPosition.latitude, cameraPosition.longitude),
-                        cameraPosition.zoom,
+                        Point(currentCameraPosition.latitude, currentCameraPosition.longitude),
+                        currentCameraPosition.zoom,
                         0.0f,
                         0.0f
                     )
                 )
+
+                // Listen for map taps
                 mapWindow.map.addInputListener(object : InputListener {
                     override fun onMapTap(map: Map, point: Point) {
                         onMapTap(point.latitude, point.longitude)
                     }
                     override fun onMapLongTap(map: Map, point: Point) {}
                 })
-                mapView = this
+
+                // Start the MapView immediately
+                onStart()
             }
         },
         update = { view ->
             val map = view.mapWindow.map
+
+            // Move camera if position changed
+            val target = map.cameraPosition.target
+            if (target.latitude != currentCameraPosition.latitude ||
+                target.longitude != currentCameraPosition.longitude ||
+                map.cameraPosition.zoom != currentCameraPosition.zoom) {
+                map.move(
+                    YandexCameraPosition(
+                        Point(currentCameraPosition.latitude, currentCameraPosition.longitude),
+                        currentCameraPosition.zoom,
+                        0.0f,
+                        0.0f
+                    )
+                )
+            }
+
+            // Update markers
             map.mapObjects.clear()
             tapListeners.clear()
 
@@ -80,23 +100,11 @@ actual fun YandexMapView(
                 tapListeners[marker.id] = listener
                 placemark.addTapListener(listener)
             }
+        },
+        onRelease = { view ->
+            view.onStop()
         }
     )
-
-    DisposableEffect(lifecycleOwner, mapView) {
-        val view = mapView ?: return@DisposableEffect onDispose {}
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_START -> view.onStart()
-                Lifecycle.Event.ON_STOP -> view.onStop()
-                else -> {}
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
 }
 
 private fun createPinBitmap(color: Int): Bitmap {

@@ -8,7 +8,9 @@ import com.example.cleancity.ui.theme.CleanCityTheme
 
 @Composable
 fun App() {
-    InMemoryRepository.loadSampleData()
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        InMemoryRepository.loadSampleData()
+    }
 
     CleanCityTheme {
         Navigator(MainTabScreen())

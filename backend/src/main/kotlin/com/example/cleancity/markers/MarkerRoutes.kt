@@ -8,6 +8,7 @@ import io.ktor.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.utils.io.core.readBytes
 import kotlinx.serialization.json.Json
 
 fun Routing.markerRoutes(service: MarkerService, storage: StorageService) {

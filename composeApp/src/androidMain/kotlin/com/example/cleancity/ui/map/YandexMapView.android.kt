@@ -25,86 +25,100 @@ actual fun YandexMapView(
     onMapTap: (latitude: Double, longitude: Double) -> Unit,
 ) {
     val tapListeners = remember { mutableMapOf<String, MapObjectTapListener>() }
-
-    // Track camera position changes to move map
     val currentCameraPosition by rememberUpdatedState(cameraPosition)
+    val currentMarkers by rememberUpdatedState(markers)
+    val currentOnMarkerClick by rememberUpdatedState(onMarkerClick)
+    val currentOnMapTap by rememberUpdatedState(onMapTap)
+
+    var mapViewRef by remember { mutableStateOf<MapView?>(null) }
+
+    // Rebuild markers when they change
+    LaunchedEffect(currentMarkers) {
+        val view = mapViewRef ?: return@LaunchedEffect
+        updateMarkers(view, currentMarkers, tapListeners, currentOnMarkerClick)
+    }
+
+    // Move camera when position changes
+    LaunchedEffect(currentCameraPosition) {
+        val view = mapViewRef ?: return@LaunchedEffect
+        view.map.move(
+            YandexCameraPosition(
+                Point(currentCameraPosition.latitude, currentCameraPosition.longitude),
+                currentCameraPosition.zoom,
+                0.0f,
+                0.0f
+            )
+        )
+    }
 
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
             MapView(ctx).apply {
-                // Move to initial position
-                mapWindow.map.move(
+                // Use .map directly (same as working project)
+                map.move(
                     YandexCameraPosition(
-                        Point(currentCameraPosition.latitude, currentCameraPosition.longitude),
-                        currentCameraPosition.zoom,
+                        Point(cameraPosition.latitude, cameraPosition.longitude),
+                        cameraPosition.zoom,
                         0.0f,
                         0.0f
                     )
                 )
 
-                // Listen for map taps
-                mapWindow.map.addInputListener(object : InputListener {
+                map.addInputListener(object : InputListener {
                     override fun onMapTap(map: Map, point: Point) {
-                        onMapTap(point.latitude, point.longitude)
+                        currentOnMapTap(point.latitude, point.longitude)
                     }
                     override fun onMapLongTap(map: Map, point: Point) {}
                 })
 
-                // Start the MapView immediately
+                // Start immediately
                 onStart()
-            }
-        },
-        update = { view ->
-            val map = view.mapWindow.map
+                mapViewRef = this
 
-            // Move camera if position changed
-            val target = map.cameraPosition.target
-            if (target.latitude != currentCameraPosition.latitude ||
-                target.longitude != currentCameraPosition.longitude ||
-                map.cameraPosition.zoom != currentCameraPosition.zoom) {
-                map.move(
-                    YandexCameraPosition(
-                        Point(currentCameraPosition.latitude, currentCameraPosition.longitude),
-                        currentCameraPosition.zoom,
-                        0.0f,
-                        0.0f
-                    )
-                )
-            }
-
-            // Update markers
-            map.mapObjects.clear()
-            tapListeners.clear()
-
-            markers.forEach { marker ->
-                val point = Point(marker.latitude, marker.longitude)
-                val color = when (marker.type) {
-                    MapMarkerType.RESOLVED -> 0xFF4DAB6E.toInt()
-                    MapMarkerType.EVENT -> 0xFF8B5CF6.toInt()
-                    MapMarkerType.PROBLEM -> when (marker.status) {
-                        com.example.cleancity.model.ProblemStatus.IN_WORK -> 0xFFF59E0B.toInt()
-                        else -> 0xFFE8453C.toInt()
-                    }
-                }
-                val bitmap = createPinBitmap(color)
-                val imageProvider = ImageProvider.fromBitmap(bitmap)
-                val placemark = map.mapObjects.addPlacemark().apply {
-                    geometry = point
-                    setIcon(imageProvider)
-                }
-                val listener = MapObjectTapListener { _, _ ->
-                    onMarkerClick(marker)
-                    true
-                }
-                tapListeners[marker.id] = listener
-                placemark.addTapListener(listener)
+                // Add initial markers
+                updateMarkers(this, currentMarkers, tapListeners, currentOnMarkerClick)
             }
         },
         onRelease = { view ->
             view.onStop()
         }
     )
+}
+
+private fun updateMarkers(
+    view: MapView,
+    markers: List<MapMarker>,
+    tapListeners: MutableMap<String, MapObjectTapListener>,
+    onMarkerClick: (MapMarker) -> Unit,
+) {
+    val map = view.map
+    map.mapObjects.clear()
+    tapListeners.clear()
+
+    markers.forEach { marker ->
+        val point = Point(marker.latitude, marker.longitude)
+        val color = when (marker.type) {
+            MapMarkerType.RESOLVED -> 0xFF4DAB6E.toInt()
+            MapMarkerType.EVENT -> 0xFF8B5CF6.toInt()
+            MapMarkerType.PROBLEM -> when (marker.status) {
+                com.example.cleancity.model.ProblemStatus.IN_WORK -> 0xFFF59E0B.toInt()
+                else -> 0xFFE8453C.toInt()
+            }
+        }
+        val bitmap = createPinBitmap(color)
+        val imageProvider = ImageProvider.fromBitmap(bitmap)
+        val placemark = map.mapObjects.addPlacemark().apply {
+            geometry = point
+            setIcon(imageProvider)
+        }
+        val listener = MapObjectTapListener { _, _ ->
+            onMarkerClick(marker)
+            true
+        }
+        tapListeners[marker.id] = listener
+        placemark.addTapListener(listener)
+    }
 }
 
 private fun createPinBitmap(color: Int): Bitmap {

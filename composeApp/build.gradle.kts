@@ -31,6 +31,7 @@ kotlin {
             implementation(libs.voyager.screenmodel)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
+            implementation(project(":shared"))
         }
         androidMain.dependencies {
             implementation(libs.mapkit.android)

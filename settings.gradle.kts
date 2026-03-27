@@ -28,3 +28,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "CleanCity"
 include(":composeApp")
+include(":shared")

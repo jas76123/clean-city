@@ -3,6 +3,9 @@ package com.example.cleancity.markers
 import com.example.cleancity.database.tables.Complaints
 import com.example.cleancity.database.tables.Subbotniks
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.lessEq
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -97,8 +100,26 @@ class MarkerRepository {
         Complaints.selectAll().map { it.toComplaintRow() }
     }
 
+    fun getComplaintsInBounds(swLat: Double, swLon: Double, neLat: Double, neLon: Double): List<ComplaintRow> = transaction {
+        Complaints.selectAll().where {
+            (Complaints.latitude greaterEq swLat) and
+            (Complaints.latitude lessEq neLat) and
+            (Complaints.longitude greaterEq swLon) and
+            (Complaints.longitude lessEq neLon)
+        }.map { it.toComplaintRow() }
+    }
+
     fun getAllSubbotniks(): List<SubbotnikRow> = transaction {
         Subbotniks.selectAll().map { it.toSubbotnikRow() }
+    }
+
+    fun getSubbotniksInBounds(swLat: Double, swLon: Double, neLat: Double, neLon: Double): List<SubbotnikRow> = transaction {
+        Subbotniks.selectAll().where {
+            (Subbotniks.latitude greaterEq swLat) and
+            (Subbotniks.latitude lessEq neLat) and
+            (Subbotniks.longitude greaterEq swLon) and
+            (Subbotniks.longitude lessEq neLon)
+        }.map { it.toSubbotnikRow() }
     }
 
     fun getComplaintById(id: Long): ComplaintRow? = transaction {

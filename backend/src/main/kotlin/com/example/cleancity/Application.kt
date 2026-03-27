@@ -41,7 +41,8 @@ fun Application.module() {
     val storagePath = environment.config.propertyOrNull("storage.path")?.getString()
         ?: System.getenv("STORAGE_PATH")
         ?: "./uploads"
-    val baseUrl = "http://localhost:${environment.config.port}"
+    val port = environment.config.propertyOrNull("ktor.deployment.port")?.getString() ?: "8080"
+    val baseUrl = "http://localhost:$port"
 
     val storage = LocalStorageService(storagePath, baseUrl)
     val repository = MarkerRepository()

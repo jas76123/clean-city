@@ -27,6 +27,8 @@ dependencies {
     implementation(libs.bcrypt)
     implementation(libs.jakarta.mail.api)
     implementation(libs.angus.mail)
+    implementation(libs.totp)
+    implementation(libs.commons.codec)
 
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)

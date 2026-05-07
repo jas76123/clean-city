@@ -1,5 +1,6 @@
 package com.example.cleancity.auth
 
+import com.example.cleancity.database.tables.AuditLog
 import com.example.cleancity.database.tables.EmailTokenPurpose
 import com.example.cleancity.database.tables.EmailTokens
 import com.example.cleancity.database.tables.RefreshTokens
@@ -40,12 +41,15 @@ class AuthServiceTest {
     private lateinit var jwt: JwtConfig
     private lateinit var service: AuthService
 
+    private lateinit var totp: TotpService
+    private lateinit var audit: DbAuditLogger
+
     @BeforeTest
     fun setup() {
         Database.connect("jdbc:h2:mem:auth-${System.nanoTime()};DB_CLOSE_DELAY=-1;MODE=PostgreSQL", driver = "org.h2.Driver")
         transaction {
-            SchemaUtils.drop(RefreshTokens, EmailTokens, Users)
-            SchemaUtils.create(Users, EmailTokens, RefreshTokens)
+            SchemaUtils.drop(RefreshTokens, EmailTokens, AuditLog, Users)
+            SchemaUtils.create(Users, EmailTokens, RefreshTokens, AuditLog)
         }
         users = UserRepository()
         tokens = TokenRepository()
@@ -55,7 +59,9 @@ class AuthServiceTest {
             issuer = "cleancity-test",
             audience = "cleancity-test-api"
         )
-        service = AuthService(users, tokens, email, jwt, baseUrl = "http://localhost:8080")
+        totp = TotpService()
+        audit = DbAuditLogger()
+        service = AuthService(users, tokens, email, jwt, baseUrl = "http://localhost:8080", totp = totp, audit = audit)
     }
 
     @Test
@@ -147,12 +153,12 @@ class AuthServiceTest {
         val token = email.lastTokenLink()
         service.verifyEmail(token, null, null)
 
-        val auth = service.login(LoginInput("ok@example.com", "password123"), null, null)
+        val result = service.login(LoginInput("ok@example.com", "password123"), null, null)
 
+        val auth = (result as LoginResult.Success).auth
         assertNotNull(auth.accessToken)
         assertNotNull(auth.refreshToken)
         assertTrue(auth.user.emailVerified)
-        // Verify that JWT can be parsed
         val decoded = jwt.verifier.verify(auth.accessToken)
         assertEquals(auth.user.id.toString(), decoded.subject)
         assertEquals("RESIDENT", decoded.getClaim("role").asString())
@@ -225,7 +231,7 @@ class AuthServiceTest {
             service.login(LoginInput("reset@example.com", "oldpass123"), null, null)
         }
         // New password works
-        val newAuth = service.login(LoginInput("reset@example.com", "newpass456"), null, null)
+        val newAuth = (service.login(LoginInput("reset@example.com", "newpass456"), null, null) as LoginResult.Success).auth
         assertNotNull(newAuth.accessToken)
     }
 }

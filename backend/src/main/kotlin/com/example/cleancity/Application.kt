@@ -2,8 +2,11 @@ package com.example.cleancity
 
 import com.auth0.jwt.exceptions.JWTVerificationException
 import com.example.cleancity.auth.AuthService
+import com.example.cleancity.auth.DbAuditLogger
 import com.example.cleancity.auth.JwtConfig
+import com.example.cleancity.auth.RateLimiter
 import com.example.cleancity.auth.TokenRepository
+import com.example.cleancity.auth.TotpService
 import com.example.cleancity.auth.UserRepository
 import com.example.cleancity.auth.authRoutes
 import com.example.cleancity.config.configureDatabase
@@ -87,14 +90,17 @@ fun Application.module() {
         tokens = TokenRepository(),
         email = emailService,
         jwt = jwtConfig,
-        baseUrl = baseUrl
+        baseUrl = baseUrl,
+        totp = TotpService(),
+        audit = DbAuditLogger()
     )
+    val rateLimiter = RateLimiter()
 
     routing {
         get("/health") {
             call.respond(mapOf("status" to "ok"))
         }
-        authRoutes(authService)
+        authRoutes(authService, rateLimiter)
         markerRoutes(markerService, storage)
     }
 }

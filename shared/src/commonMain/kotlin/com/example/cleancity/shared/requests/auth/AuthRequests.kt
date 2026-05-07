@@ -40,3 +40,26 @@ data class ResetPasswordRequest(
     val token: String,
     val newPassword: String
 )
+
+@Serializable
+data class LoginTwoFactorRequest(
+    val challengeToken: String,
+    val code: String
+)
+
+@Serializable
+data class TwoFactorVerifyRequest(
+    val code: String
+)
+
+@Serializable
+data class AdminInviteRequest(
+    val email: String,
+    val role: String   // ADMIN | OPERATOR | INSPECTOR
+)
+
+@Serializable
+data class AcceptInviteRequest(
+    val token: String,
+    val password: String
+)

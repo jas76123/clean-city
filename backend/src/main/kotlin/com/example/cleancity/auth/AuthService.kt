@@ -1,17 +1,24 @@
 package com.example.cleancity.auth
 
+import com.example.cleancity.database.tables.AuditAction
 import com.example.cleancity.database.tables.EmailTokenPurpose
 import com.example.cleancity.email.EmailService
 import com.example.cleancity.email.EmailTemplates
 import com.example.cleancity.shared.models.AuthResponse
 import com.example.cleancity.shared.models.UserResponse
 import com.example.cleancity.shared.models.UserRole
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 
 private const val MIN_PASSWORD_LENGTH_RESIDENT = 8
 private const val MIN_PASSWORD_LENGTH_ADMIN = 12
 
 private const val VERIFY_TOKEN_TTL_SECONDS = 24L * 60 * 60         // 24 часа
 private const val RESET_TOKEN_TTL_SECONDS = 60L * 60                // 1 час
+private const val INVITE_TOKEN_TTL_SECONDS = 7L * 24 * 60 * 60       // 7 дней
+
+const val MAX_FAILED_LOGIN_ATTEMPTS = 5
+const val LOCKOUT_DURATION_MINUTES = 15L
 
 private val EMAIL_REGEX = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")
 
@@ -21,13 +28,35 @@ class TokenInvalidException(msg: String = "Invalid or expired token") : RuntimeE
 class WeakPasswordException(msg: String) : IllegalArgumentException(msg)
 class InvalidEmailException(msg: String = "Invalid email format") : IllegalArgumentException(msg)
 class EmailAlreadyRegisteredException(msg: String = "Email already registered") : RuntimeException(msg)
+class AccountLockedException(val lockedUntil: OffsetDateTime) :
+    RuntimeException("Account locked until $lockedUntil")
+class TwoFactorAlreadyEnabledException : RuntimeException("2FA already enabled")
+class TwoFactorNotConfiguredException : RuntimeException("2FA not configured")
+class InvalidTotpCodeException : RuntimeException("Invalid 2FA code")
+class TwoFactorRoleException : RuntimeException("2FA available only for admin/operator/inspector")
+
+/**
+ * Результат шага 1 логина: либо успех (резидент или админ без 2FA),
+ * либо требование 2FA с challenge-токеном.
+ */
+sealed class LoginResult {
+    data class Success(val auth: AuthResponse) : LoginResult()
+    data class TwoFactorRequired(val challengeToken: String, val expiresInSeconds: Long) : LoginResult()
+}
+
+data class TwoFactorSetupResponse(
+    val secretBase32: String,
+    val otpAuthUri: String
+)
 
 class AuthService(
     private val users: UserRepository,
     private val tokens: TokenRepository,
     private val email: EmailService,
     private val jwt: JwtConfig,
-    private val baseUrl: String
+    private val baseUrl: String,
+    private val totp: TotpService = TotpService(),
+    private val audit: AuditLogger = NoopAuditLogger
 ) {
 
     /**
@@ -73,21 +102,70 @@ class AuthService(
         users.markEmailVerified(user.id)
         users.updateLastLogin(user.id, ip)
 
-        return issueAuthResponse(user.copy(emailVerified = true), ip, userAgent)
+        val refreshed = user.copy(emailVerified = true)
+        return issueAuthResponse(refreshed, ip, userAgent).also {
+            audit.log(AuditAction.LOGIN_SUCCESS, refreshed.id, "user", refreshed.id.toString(), ip, userAgent)
+        }
     }
 
     /**
-     * Вход. Возвращает 403-сигнал через [EmailNotVerifiedException], если email не подтверждён.
+     * Шаг 1 входа. Возвращает либо AuthResponse (если 2FA не требуется),
+     * либо TwoFactorRequired с challenge-токеном.
+     *
+     * Lockout: после [MAX_FAILED_LOGIN_ATTEMPTS] подряд неуспешных попыток
+     * аккаунт блокируется на [LOCKOUT_DURATION_MINUTES] минут.
      */
-    fun login(req: LoginInput, ip: String?, userAgent: String?): AuthResponse {
+    fun login(req: LoginInput, ip: String?, userAgent: String?): LoginResult {
         val user = users.findByEmail(req.email) ?: throw InvalidCredentialsException()
+
+        // 1) Активный замок?
+        user.lockedUntil?.let { until ->
+            if (until.isAfter(OffsetDateTime.now(ZoneOffset.UTC))) {
+                audit.log(AuditAction.LOGIN_LOCKED, user.id, "user", user.id.toString(), ip, userAgent)
+                throw AccountLockedException(until)
+            }
+        }
+
         if (!user.isActive) throw InvalidCredentialsException()
+
+        // 2) Пароль
         if (!PasswordHasher.verify(req.password, user.passwordHash)) {
+            handleFailedAttempt(user, ip, userAgent)
             throw InvalidCredentialsException()
         }
-        if (!user.emailVerified) throw EmailNotVerifiedException()
+
+        if (!user.emailVerified) {
+            audit.log(AuditAction.LOGIN_FAIL, user.id, "user", user.id.toString(), ip, userAgent, "email_not_verified")
+            throw EmailNotVerifiedException()
+        }
+
+        // 3) Если у юзера включена 2FA — возвращаем challenge, токены не выдаём
+        if (user.totpEnabled) {
+            val challenge = jwt.issueTwoFactorChallengeToken(user.id, user.role)
+            return LoginResult.TwoFactorRequired(challenge.token, challenge.expiresInSeconds)
+        }
 
         users.updateLastLogin(user.id, ip)
+        audit.log(AuditAction.LOGIN_SUCCESS, user.id, "user", user.id.toString(), ip, userAgent)
+        return LoginResult.Success(issueAuthResponse(user, ip, userAgent))
+    }
+
+    /**
+     * Шаг 2 двухшагового входа: обмен challenge-токена + TOTP-кода на access/refresh.
+     */
+    fun loginWithTwoFactor(challengeToken: String, code: String, ip: String?, userAgent: String?): AuthResponse {
+        val userId = jwt.decodeTwoFactorChallenge(challengeToken) ?: throw TokenInvalidException()
+        val user = users.findById(userId) ?: throw TokenInvalidException()
+        if (!user.isActive || !user.totpEnabled || user.totpSecret == null) {
+            throw TokenInvalidException()
+        }
+        if (!totp.verify(user.totpSecret, code)) {
+            audit.log(AuditAction.TWOFA_FAIL, user.id, "user", user.id.toString(), ip, userAgent)
+            throw InvalidTotpCodeException()
+        }
+
+        users.updateLastLogin(user.id, ip)
+        audit.log(AuditAction.TWOFA_LOGIN_SUCCESS, user.id, "user", user.id.toString(), ip, userAgent)
         return issueAuthResponse(user, ip, userAgent)
     }
 
@@ -107,6 +185,7 @@ class AuthService(
     fun logout(rawRefreshToken: String) {
         val record = tokens.findValidRefreshToken(rawRefreshToken) ?: return
         tokens.revokeRefreshToken(record.id)
+        audit.log(AuditAction.REFRESH_REVOKED, record.userId, "refresh_token", record.id.toString())
     }
 
     /**
@@ -124,7 +203,7 @@ class AuthService(
     /**
      * Reset password — после успеха инвалидируем все refresh-токены пользователя.
      */
-    fun resetPassword(token: String, newPassword: String) {
+    fun resetPassword(token: String, newPassword: String, ip: String? = null, userAgent: String? = null) {
         val emailToken = tokens.findValidEmailToken(token, EmailTokenPurpose.RESET_PASSWORD)
             ?: throw TokenInvalidException()
         val user = users.findById(emailToken.userId) ?: throw TokenInvalidException()
@@ -133,9 +212,129 @@ class AuthService(
         users.updatePasswordHash(user.id, PasswordHasher.hash(newPassword))
         tokens.consumeEmailToken(emailToken.id)
         tokens.revokeAllUserRefreshTokens(user.id)
+        audit.log(AuditAction.PASSWORD_RESET, user.id, "user", user.id.toString(), ip, userAgent)
+    }
+
+    // ----- 2FA setup -----
+
+    /**
+     * Старт настройки 2FA для админа/оператора/инспектора.
+     * Если 2FA уже включён — кидаем 409. Если просто настраивается заново — перетираем secret.
+     */
+    fun setupTwoFactor(userId: Long, ip: String?, userAgent: String?): TwoFactorSetupResponse {
+        val user = users.findById(userId) ?: throw TokenInvalidException()
+        if (user.role == UserRole.RESIDENT) throw TwoFactorRoleException()
+        if (user.totpEnabled) throw TwoFactorAlreadyEnabledException()
+
+        val secret = totp.generateSecretBase32()
+        users.setTotpSecret(user.id, secret)
+        val uri = totp.otpAuthUri(secret, user.email)
+
+        audit.log(AuditAction.TWOFA_SETUP_STARTED, user.id, "user", user.id.toString(), ip, userAgent)
+        return TwoFactorSetupResponse(secret, uri)
+    }
+
+    fun enableTwoFactor(userId: Long, code: String, ip: String?, userAgent: String?) {
+        val user = users.findById(userId) ?: throw TokenInvalidException()
+        if (user.totpEnabled) throw TwoFactorAlreadyEnabledException()
+        val secret = user.totpSecret ?: throw TwoFactorNotConfiguredException()
+        if (!totp.verify(secret, code)) {
+            audit.log(AuditAction.TWOFA_FAIL, user.id, "user", user.id.toString(), ip, userAgent)
+            throw InvalidTotpCodeException()
+        }
+        users.enableTotp(user.id)
+        audit.log(AuditAction.TWOFA_ENABLED, user.id, "user", user.id.toString(), ip, userAgent)
+    }
+
+    // ----- Sessions -----
+
+    fun listSessions(userId: Long): List<SessionView> = tokens.listActiveRefreshTokens(userId).map {
+        SessionView(
+            id = it.id,
+            issuedIp = it.issuedIp,
+            userAgent = it.userAgent,
+            createdAt = it.createdAt.toString(),
+            expiresAt = it.expiresAt.toString()
+        )
+    }
+
+    /**
+     * Возвращает true, если сессия принадлежала юзеру и была отозвана.
+     */
+    fun revokeSession(userId: Long, sessionId: Long, ip: String?, userAgent: String?): Boolean {
+        val ok = tokens.revokeRefreshTokenIfOwnedBy(userId, sessionId)
+        if (ok) audit.log(AuditAction.SESSION_REVOKED, userId, "refresh_token", sessionId.toString(), ip, userAgent)
+        return ok
+    }
+
+    // ----- Admin invite -----
+
+    /**
+     * Приглашение нового администратора. Создаёт неактивного юзера + email-токен ADMIN_INVITE.
+     * Отправляет письмо с ссылкой `/accept-invite?token=...`.
+     */
+    suspend fun inviteAdmin(
+        actorId: Long,
+        targetEmail: String,
+        targetRole: UserRole,
+        ip: String?,
+        userAgent: String?
+    ): UserResponse {
+        if (targetRole == UserRole.RESIDENT) throw IllegalArgumentException("Use registration for residents")
+        validateEmail(targetEmail)
+        val existing = users.findByEmail(targetEmail)
+        if (existing != null) throw EmailAlreadyRegisteredException()
+
+        // Placeholder-хэш — будет перезаписан в acceptInvite. is_active=false до активации.
+        val placeholder = PasswordHasher.hash(java.util.UUID.randomUUID().toString())
+        val user = users.create(
+            email = targetEmail,
+            passwordHash = placeholder,
+            role = targetRole,
+            fullName = null,
+            isActive = false,
+            emailVerified = false,
+            mustChangePassword = true
+        )
+
+        val token = tokens.createEmailToken(user.id, EmailTokenPurpose.ADMIN_INVITE, INVITE_TOKEN_TTL_SECONDS)
+        val link = "$baseUrl/accept-invite?token=$token"
+        val invitedBy = users.findById(actorId)?.email ?: "Администратор CleanCity"
+        val (subject, html) = EmailTemplates.adminInvite(link, invitedBy)
+        email.send(user.email, subject, html)
+
+        audit.log(AuditAction.ADMIN_INVITE_SENT, actorId, "user", user.id.toString(), ip, userAgent, "role=${targetRole.name}")
+        return user.toResponse()
+    }
+
+    fun acceptInvite(token: String, password: String, ip: String?, userAgent: String?): AuthResponse {
+        val emailToken = tokens.findValidEmailToken(token, EmailTokenPurpose.ADMIN_INVITE)
+            ?: throw TokenInvalidException()
+        val user = users.findById(emailToken.userId) ?: throw TokenInvalidException()
+        validatePassword(password, role = user.role)
+
+        users.updatePasswordHash(user.id, PasswordHasher.hash(password))
+        users.markEmailVerifiedAndActive(user.id)
+        tokens.consumeEmailToken(emailToken.id)
+
+        val activated = user.copy(emailVerified = true, isActive = true)
+        users.updateLastLogin(user.id, ip)
+        audit.log(AuditAction.ADMIN_INVITE_ACCEPTED, user.id, "user", user.id.toString(), ip, userAgent)
+        return issueAuthResponse(activated, ip, userAgent)
     }
 
     // ----- private helpers -----
+
+    private fun handleFailedAttempt(user: UserRow, ip: String?, userAgent: String?) {
+        val newCount = users.incrementFailedAttempts(user.id)
+        if (newCount >= MAX_FAILED_LOGIN_ATTEMPTS) {
+            val until = OffsetDateTime.now(ZoneOffset.UTC).plusMinutes(LOCKOUT_DURATION_MINUTES)
+            users.lockUntil(user.id, until)
+            audit.log(AuditAction.LOGIN_LOCKED, user.id, "user", user.id.toString(), ip, userAgent)
+        } else {
+            audit.log(AuditAction.LOGIN_FAIL, user.id, "user", user.id.toString(), ip, userAgent, "attempt=$newCount")
+        }
+    }
 
     private suspend fun sendVerifyEmail(to: String, token: String) {
         val link = "$baseUrl/verify-email?token=$token"
@@ -168,7 +367,6 @@ class AuthService(
             throw WeakPasswordException("Password must be at least $minLen characters long")
         }
         if (role != UserRole.RESIDENT) {
-            // Админу строже: цифра + буква в верхнем регистре + спецсимвол
             require(password.any { it.isDigit() }) { throw WeakPasswordException("Password must contain a digit") }
             require(password.any { it.isUpperCase() }) { throw WeakPasswordException("Password must contain an uppercase letter") }
             require(password.any { !it.isLetterOrDigit() }) { throw WeakPasswordException("Password must contain a special character") }
@@ -194,4 +392,12 @@ data class RegisterInput(
 data class LoginInput(
     val email: String,
     val password: String
+)
+
+data class SessionView(
+    val id: Long,
+    val issuedIp: String?,
+    val userAgent: String?,
+    val createdAt: String,
+    val expiresAt: String
 )

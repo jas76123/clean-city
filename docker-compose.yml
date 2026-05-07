@@ -25,7 +25,7 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     ports:
-      - "${KTOR_PORT:-8080}:8080"
+      - "${KTOR_PORT:-8080}:${KTOR_PORT:-8080}"
     depends_on:
       db:
         condition: service_healthy

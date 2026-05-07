@@ -4,11 +4,35 @@
 /.idea
 .DS_Store
 /build
+**/build/
 /captures
 .externalNativeBuild
 .cxx
 local.properties
-/composeApp/build
-/iosApp/build
 .kotlin/
 *.hprof
+
+# ============================================================================
+# Секреты — НИКОГДА не коммитить
+# ============================================================================
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*-key.json
+fcm.json
+service-account*.json
+google-services.json
+
+# Загруженные пользовательские файлы (фото жалоб)
+/backend/uploads/
+
+# IDE
+*.swp
+*.swo
+.vscode/
+
+# OS
+Thumbs.db

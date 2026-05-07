@@ -1,8 +1,10 @@
 package com.example.cleancity.markers
 
-import com.example.cleancity.shared.models.*
+import com.example.cleancity.shared.models.ComplaintResponse
+import com.example.cleancity.shared.models.ComplaintStatus
+import com.example.cleancity.shared.models.MapMarkersResponse
+import com.example.cleancity.shared.models.ProblemCategory
 import com.example.cleancity.shared.requests.CreateComplaintRequest
-import com.example.cleancity.shared.requests.CreateSubbotnikRequest
 import com.example.cleancity.storage.StorageService
 
 class MarkerService(
@@ -23,7 +25,7 @@ class MarkerService(
 
         val savedPath = storage.save(photoFileName, photoBytes)
         val row = repository.createComplaint(
-            type = request.type.name,
+            category = request.category.name,
             description = request.description,
             photoPath = savedPath,
             latitude = request.latitude,
@@ -35,52 +37,18 @@ class MarkerService(
         return row.toComplaintResponse()
     }
 
-    fun createSubbotnik(
-        request: CreateSubbotnikRequest,
-        photoBytes: ByteArray?,
-        photoFileName: String?
-    ): SubbotnikResponse {
-        if (photoBytes != null && photoFileName != null) {
-            validatePhoto(photoBytes, photoFileName)
-        }
-
-        val savedPath = if (photoBytes != null && photoFileName != null) {
-            storage.save(photoFileName, photoBytes)
-        } else null
-
-        val row = repository.createSubbotnik(
-            title = request.title,
-            description = request.description,
-            photoPath = savedPath,
-            latitude = request.latitude,
-            longitude = request.longitude,
-            address = request.address,
-            eventDate = request.date,
-            eventTime = request.time,
-            deviceId = request.deviceId
-        )
-
-        return row.toSubbotnikResponse()
-    }
-
     fun getAllMarkers(): MapMarkersResponse {
         val complaints = repository.getAllComplaints().map { it.toComplaintResponse() }
-        val subbotniks = repository.getAllSubbotniks().map { it.toSubbotnikResponse() }
-        return MapMarkersResponse(complaints, subbotniks)
+        return MapMarkersResponse(complaints)
     }
 
     fun getMarkersInBounds(swLat: Double, swLon: Double, neLat: Double, neLon: Double): MapMarkersResponse {
         val complaints = repository.getComplaintsInBounds(swLat, swLon, neLat, neLon).map { it.toComplaintResponse() }
-        val subbotniks = repository.getSubbotniksInBounds(swLat, swLon, neLat, neLon).map { it.toSubbotnikResponse() }
-        return MapMarkersResponse(complaints, subbotniks)
+        return MapMarkersResponse(complaints)
     }
 
     fun getComplaintById(id: Long): ComplaintResponse? {
         return repository.getComplaintById(id)?.toComplaintResponse()
-    }
-
-    fun getSubbotnikById(id: Long): SubbotnikResponse? {
-        return repository.getSubbotnikById(id)?.toSubbotnikResponse()
     }
 
     private fun validatePhoto(bytes: ByteArray, fileName: String) {
@@ -95,26 +63,13 @@ class MarkerService(
 
     private fun ComplaintRow.toComplaintResponse() = ComplaintResponse(
         id = id,
-        type = ProblemType.valueOf(type),
+        category = ProblemCategory.valueOf(category),
         description = description,
         photoUrl = storage.getUrl(photoPath),
         latitude = latitude,
         longitude = longitude,
         address = address,
-        status = MarkerStatus.valueOf(status),
-        createdAt = createdAt.toString()
-    )
-
-    private fun SubbotnikRow.toSubbotnikResponse() = SubbotnikResponse(
-        id = id,
-        title = title,
-        description = description,
-        photoUrl = photoPath?.let { storage.getUrl(it) },
-        date = eventDate,
-        time = eventTime,
-        latitude = latitude,
-        longitude = longitude,
-        address = address,
+        status = ComplaintStatus.valueOf(status),
         createdAt = createdAt.toString()
     )
 }

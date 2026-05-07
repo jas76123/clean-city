@@ -1,0 +1,29 @@
+package com.example.cleancity.shared.models
+
+import kotlinx.serialization.Serializable
+
+/**
+ * 18 категорий жалоб. Источник правды: SPEC.md § 3.1.
+ * Локализованные имена и иконки — в [CategoryMeta] (TODO Day 2).
+ */
+@Serializable
+enum class ProblemCategory {
+    GARBAGE,         // Мусор и санитарное состояние
+    ROADS,           // Дороги и ямы
+    SIDEWALKS,       // Тротуары и пешеходные зоны
+    LIGHTING,        // Уличное освещение
+    GREENERY,        // Озеленение и деревья
+    LANDSCAPING,     // Благоустройство территорий
+    PLAYGROUNDS,     // Детские и спортивные площадки
+    PARKS,           // Общественные пространства и парки
+    BEACHES,         // Пляжи и зоны отдыха
+    SAFETY,          // Безопасность и правонарушения
+    VANDALISM,       // Вандализм и повреждение имущества
+    WATER_SUPPLY,    // Водоснабжение
+    SEWAGE,          // Канализация и ливневые стоки
+    ELECTRICITY,     // Электроснабжение
+    ECOLOGY,         // Экология и загрязнение окружающей среды
+    ACCESSIBILITY,   // Доступная среда для маломобильных граждан
+    TRADE,           // Торговля и незаконные объекты
+    OTHER            // Прочее
+}

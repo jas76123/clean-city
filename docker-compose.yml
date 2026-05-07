@@ -1,17 +1,21 @@
+# Локальная разработка. Все секреты подтягиваются из ./.env (НЕ в git).
+# Шаблон значений лежит в .env.example. Для production — отдельный compose-файл
+# с подключением Yandex Lockbox или секретов через CI.
 services:
   db:
     image: postgis/postgis:16-3.4
     platform: linux/amd64
     ports:
       - "5433:5432"
+    env_file: .env
     environment:
-      POSTGRES_DB: cleancity
-      POSTGRES_USER: cleancity
-      POSTGRES_PASSWORD: cleancity
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cleancity"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -21,15 +25,16 @@ services:
       context: .
       dockerfile: backend/Dockerfile
     ports:
-      - "8080:8080"
+      - "${KTOR_PORT:-8080}:8080"
     depends_on:
       db:
         condition: service_healthy
+    env_file: .env
     environment:
-      DB_URL: jdbc:postgresql://db:5432/cleancity
-      DB_USER: cleancity
-      DB_PASSWORD: cleancity
-      STORAGE_PATH: /app/uploads
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      STORAGE_PATH: ${STORAGE_PATH:-/app/uploads}
     volumes:
       - uploads:/app/uploads
 

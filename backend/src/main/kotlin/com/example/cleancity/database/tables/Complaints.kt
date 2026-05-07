@@ -5,7 +5,7 @@ import org.jetbrains.exposed.sql.javatime.timestampWithTimeZone
 
 object Complaints : Table("complaints") {
     val id = long("id").autoIncrement()
-    val type = varchar("type", 20)
+    val category = varchar("category", 30)
     val description = text("description")
     val photoPath = varchar("photo_path", 500)
     val latitude = double("latitude")

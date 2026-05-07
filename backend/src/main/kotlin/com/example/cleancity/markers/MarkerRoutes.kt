@@ -1,7 +1,6 @@
 package com.example.cleancity.markers
 
 import com.example.cleancity.shared.requests.CreateComplaintRequest
-import com.example.cleancity.shared.requests.CreateSubbotnikRequest
 import com.example.cleancity.storage.StorageService
 import io.ktor.http.*
 import io.ktor.http.content.*
@@ -48,42 +47,6 @@ fun Route.markerRoutes(service: MarkerService, storage: StorageService) {
             }
         }
 
-        post("/subbotniks") {
-            val multipart = call.receiveMultipart()
-            var requestJson: String? = null
-            var photoBytes: ByteArray? = null
-            var photoFileName: String? = null
-
-            multipart.forEachPart { part ->
-                when (part) {
-                    is PartData.FormItem -> {
-                        if (part.name == "data") requestJson = part.value
-                    }
-                    is PartData.FileItem -> {
-                        if (part.name == "photo") {
-                            photoBytes = part.streamProvider().readBytes()
-                            photoFileName = part.originalFileName ?: "upload.jpg"
-                        }
-                    }
-                    else -> {}
-                }
-                part.dispose()
-            }
-
-            if (requestJson == null) {
-                call.respond(HttpStatusCode.BadRequest, "Missing required field: data")
-                return@post
-            }
-
-            try {
-                val request = Json.decodeFromString<CreateSubbotnikRequest>(requestJson!!)
-                val response = service.createSubbotnik(request, photoBytes, photoFileName)
-                call.respond(HttpStatusCode.Created, response)
-            } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, e.message ?: "Invalid request")
-            }
-        }
-
         get("/markers") {
             val swLat = call.request.queryParameters["swLat"]?.toDoubleOrNull()
             val swLon = call.request.queryParameters["swLon"]?.toDoubleOrNull()
@@ -104,14 +67,6 @@ fun Route.markerRoutes(service: MarkerService, storage: StorageService) {
             val complaint = service.getComplaintById(id)
                 ?: return@get call.respond(HttpStatusCode.NotFound, "Complaint not found")
             call.respond(complaint)
-        }
-
-        get("/subbotniks/{id}") {
-            val id = call.parameters["id"]?.toLongOrNull()
-                ?: return@get call.respond(HttpStatusCode.BadRequest, "Invalid id")
-            val subbotnik = service.getSubbotnikById(id)
-                ?: return@get call.respond(HttpStatusCode.NotFound, "Subbotnik not found")
-            call.respond(subbotnik)
         }
 
         get("/photos/{filename}") {

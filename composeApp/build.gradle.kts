@@ -1,9 +1,20 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
 }
+
+val secretsFile = rootProject.file("local.properties")
+val secrets = Properties().apply {
+    if (secretsFile.exists()) secretsFile.inputStream().use { load(it) }
+}
+val yandexMapsApiKey: String =
+    secrets.getProperty("YANDEX_MAPS_API_KEY")
+        ?: System.getenv("YANDEX_MAPS_API_KEY")
+        ?: ""
 
 kotlin {
     androidTarget {
@@ -49,10 +60,16 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField("String", "YANDEX_MAPS_API_KEY", "\"$yandexMapsApiKey\"")
+        manifestPlaceholders["YANDEX_MAPS_API_KEY"] = yandexMapsApiKey
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 }

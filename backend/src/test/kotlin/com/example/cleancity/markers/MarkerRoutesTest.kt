@@ -1,10 +1,8 @@
 package com.example.cleancity.markers
 
 import com.example.cleancity.database.tables.Complaints
-import com.example.cleancity.database.tables.Subbotniks
 import com.example.cleancity.shared.models.ComplaintResponse
 import com.example.cleancity.shared.models.MapMarkersResponse
-import com.example.cleancity.shared.models.SubbotnikResponse
 import com.example.cleancity.storage.LocalStorageService
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
@@ -22,7 +20,6 @@ import java.io.File
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class MarkerRoutesTest {
 
@@ -34,8 +31,8 @@ class MarkerRoutesTest {
     fun setup() {
         Database.connect("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL", driver = "org.h2.Driver")
         transaction {
-            SchemaUtils.drop(Complaints, Subbotniks)
-            SchemaUtils.create(Complaints, Subbotniks)
+            SchemaUtils.drop(Complaints)
+            SchemaUtils.create(Complaints)
         }
         val storagePath = File(System.getProperty("java.io.tmpdir"), "cleancity-test-${System.currentTimeMillis()}").absolutePath
         storage = LocalStorageService(storagePath, "http://localhost:8080")
@@ -54,7 +51,7 @@ class MarkerRoutesTest {
         val response = client.submitFormWithBinaryData(
             url = "/api/complaints",
             formData = formData {
-                append("data", """{"type":"DUMP","description":"Illegal dump","latitude":43.585,"longitude":39.723,"address":"ул. Ленина, 42","deviceId":"device-1"}""")
+                append("data", """{"category":"GARBAGE","description":"Незаконная свалка","latitude":43.585,"longitude":39.723,"address":"ул. Ленина, 42","deviceId":"device-1"}""")
                 append("photo", "fake-jpeg".toByteArray(), Headers.build {
                     append(HttpHeaders.ContentDisposition, "filename=\"photo.jpg\"")
                     append(HttpHeaders.ContentType, "image/jpeg")
@@ -64,7 +61,7 @@ class MarkerRoutesTest {
 
         assertEquals(HttpStatusCode.Created, response.status)
         val body = json.decodeFromString<ComplaintResponse>(response.bodyAsText())
-        assertEquals("Illegal dump", body.description)
+        assertEquals("Незаконная свалка", body.description)
     }
 
     @Test
@@ -74,7 +71,7 @@ class MarkerRoutesTest {
         val response = client.submitFormWithBinaryData(
             url = "/api/complaints",
             formData = formData {
-                append("data", """{"type":"DUMP","description":"desc","latitude":43.0,"longitude":39.0,"address":"addr","deviceId":"d1"}""")
+                append("data", """{"category":"GARBAGE","description":"desc","latitude":43.0,"longitude":39.0,"address":"addr","deviceId":"d1"}""")
             }
         )
 
@@ -82,29 +79,13 @@ class MarkerRoutesTest {
     }
 
     @Test
-    fun `POST subbotnik without photo returns 201`() = testApplication {
-        configureTestApp()
-
-        val response = client.submitFormWithBinaryData(
-            url = "/api/subbotniks",
-            formData = formData {
-                append("data", """{"title":"Cleanup","description":"Bring gloves","date":"2026-04-01","time":"10:00","latitude":43.585,"longitude":39.723,"address":"Сквер Победы","deviceId":"device-1"}""")
-            }
-        )
-
-        assertEquals(HttpStatusCode.Created, response.status)
-        val body = json.decodeFromString<SubbotnikResponse>(response.bodyAsText())
-        assertEquals("Cleanup", body.title)
-    }
-
-    @Test
-    fun `GET markers returns all markers`() = testApplication {
+    fun `GET markers returns all complaints`() = testApplication {
         configureTestApp()
 
         client.submitFormWithBinaryData(
             url = "/api/complaints",
             formData = formData {
-                append("data", """{"type":"ROAD","description":"Pothole","latitude":43.0,"longitude":39.0,"address":"addr","deviceId":"d1"}""")
+                append("data", """{"category":"ROADS","description":"Pothole","latitude":43.0,"longitude":39.0,"address":"addr","deviceId":"d1"}""")
                 append("photo", "jpeg".toByteArray(), Headers.build {
                     append(HttpHeaders.ContentDisposition, "filename=\"p.jpg\"")
                     append(HttpHeaders.ContentType, "image/jpeg")
@@ -117,7 +98,6 @@ class MarkerRoutesTest {
         assertEquals(HttpStatusCode.OK, response.status)
         val body = json.decodeFromString<MapMarkersResponse>(response.bodyAsText())
         assertEquals(1, body.complaints.size)
-        assertEquals(0, body.subbotniks.size)
     }
 
     @Test
@@ -127,7 +107,7 @@ class MarkerRoutesTest {
         val createResponse = client.submitFormWithBinaryData(
             url = "/api/complaints",
             formData = formData {
-                append("data", """{"type":"DUMP","description":"desc","latitude":43.0,"longitude":39.0,"address":"addr","deviceId":"d1"}""")
+                append("data", """{"category":"GARBAGE","description":"desc","latitude":43.0,"longitude":39.0,"address":"addr","deviceId":"d1"}""")
                 append("photo", "jpeg".toByteArray(), Headers.build {
                     append(HttpHeaders.ContentDisposition, "filename=\"p.jpg\"")
                     append(HttpHeaders.ContentType, "image/jpeg")

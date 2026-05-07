@@ -52,6 +52,37 @@ data class JwtConfig(
         return IssuedToken(token, ttl.seconds)
     }
 
+    /**
+     * Короткоживущий (5 минут) токен между шагом 1 (логин/пароль) и шагом 2 (TOTP)
+     * двухшагового входа администратора.
+     */
+    fun issueTwoFactorChallengeToken(userId: Long, role: UserRole): IssuedToken {
+        val ttlSeconds = 5L * 60
+        val now = Instant.now()
+        val token = JWT.create()
+            .withIssuer(issuer)
+            .withAudience(audience)
+            .withSubject(userId.toString())
+            .withClaim("role", role.name)
+            .withClaim("type", "2fa-challenge")
+            .withJWTId(UUID.randomUUID().toString())
+            .withIssuedAt(Date.from(now))
+            .withExpiresAt(Date.from(now.plusSeconds(ttlSeconds)))
+            .sign(algorithm)
+        return IssuedToken(token, ttlSeconds)
+    }
+
+    /**
+     * Возвращает userId, если токен — валидный 2fa-challenge. Иначе null.
+     */
+    fun decodeTwoFactorChallenge(rawToken: String): Long? = try {
+        val payload = verifier.verify(rawToken)
+        if (payload.getClaim("type").asString() != "2fa-challenge") null
+        else payload.subject?.toLongOrNull()
+    } catch (_: Exception) {
+        null
+    }
+
     companion object {
         fun fromEnvironment(env: ApplicationEnvironment): JwtConfig {
             val secret = env.config.propertyOrNull("jwt.secret")?.getString()?.takeIf { it.isNotBlank() }

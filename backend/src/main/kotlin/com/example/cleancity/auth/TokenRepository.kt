@@ -25,6 +25,9 @@ data class RefreshTokenRow(
     val id: Long,
     val userId: Long,
     val tokenHash: String,
+    val issuedIp: String?,
+    val userAgent: String?,
+    val createdAt: OffsetDateTime,
     val expiresAt: OffsetDateTime,
     val revokedAt: OffsetDateTime?
 )
@@ -106,6 +109,31 @@ class TokenRepository {
         }
     }
 
+    fun listActiveRefreshTokens(userId: Long): List<RefreshTokenRow> = transaction {
+        val now = OffsetDateTime.now(ZoneOffset.UTC)
+        RefreshTokens.selectAll().where {
+            (RefreshTokens.userId eq userId) and
+                RefreshTokens.revokedAt.isNull() and
+                (RefreshTokens.expiresAt greater now)
+        }.map { it.toRefreshTokenRow() }
+    }
+
+    /**
+     * Отзывает refresh-токен, только если он принадлежит указанному пользователю
+     * и ещё не отозван. Возвращает true, если запись была обновлена.
+     */
+    fun revokeRefreshTokenIfOwnedBy(userId: Long, tokenId: Long): Boolean = transaction {
+        val now = OffsetDateTime.now(ZoneOffset.UTC)
+        val rows = RefreshTokens.update({
+            (RefreshTokens.id eq tokenId) and
+                (RefreshTokens.userId eq userId) and
+                RefreshTokens.revokedAt.isNull()
+        }) {
+            it[RefreshTokens.revokedAt] = now
+        }
+        rows > 0
+    }
+
     private fun ResultRow.toEmailTokenRow() = EmailTokenRow(
         id = this[EmailTokens.id],
         userId = this[EmailTokens.userId],
@@ -119,6 +147,9 @@ class TokenRepository {
         id = this[RefreshTokens.id],
         userId = this[RefreshTokens.userId],
         tokenHash = this[RefreshTokens.tokenHash],
+        issuedIp = this[RefreshTokens.issuedIp],
+        userAgent = this[RefreshTokens.userAgent],
+        createdAt = this[RefreshTokens.createdAt],
         expiresAt = this[RefreshTokens.expiresAt],
         revokedAt = this[RefreshTokens.revokedAt]
     )

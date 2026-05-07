@@ -1,7 +1,8 @@
-FROM gradle:8.5-jdk17 AS build
+FROM gradle:8.11.1-jdk17 AS build
 WORKDIR /app
 COPY . .
-RUN gradle :backend:installDist --no-daemon
+RUN sed -i '/include(":composeApp")/d' settings.gradle.kts \
+    && gradle :backend:installDist --no-daemon
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app

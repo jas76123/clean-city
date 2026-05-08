@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Чистый Город — Mobile v3 (Compose Multiplatform)</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700;900&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green-900: #0d2b1a; --green-800: #1a4229; --green-700: #1f5233;
+  --green-600: #2d6e45; --green-500: #3a8a58; --green-400: #4dab6e;
+  --green-300: #72c48e; --green-200: #a8ddb8; --green-100: #d4f0de;
+  --green-50: #eef8f2;
+  --accent: #5DDE8A; --accent-dark: #3ab868;
+  --red: #E8453C; --red-light: #fdecea;
+  --blue: #3B82F6; --blue-light: #EFF6FF;
+  --amber: #F59E0B; --amber-light: rgba(245,158,11,0.1);
+  --purple: #8B5CF6;
+  --white: #FFFFFF;
+  --gray-50: #F8FAFB; --gray-100: #F1F4F2; --gray-200: #E2E8E4;
+  --gray-300: #C8D4CC; --gray-400: #9AAFA0; --gray-500: #6B8070;
+  --gray-600: #4A6055; --gray-700: #2E3F38; --gray-800: #1C2922; --gray-900: #0F1A14;
+  --font-display: 'Unbounded', sans-serif;
+  --font-body: 'Golos Text', sans-serif;
+  --radius-sm: 10px; --radius-md: 16px; --radius-lg: 24px; --radius-xl: 32px;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body { font-family: var(--font-body); background: var(--green-900); min-height: 100vh; display: flex; flex-direction: column; align-items: center; overflow-x: hidden; }
+
+/* PAGE HEADER */
+.page-header { width: 100%; padding: 32px 24px 24px; text-align: center; background: linear-gradient(180deg, var(--green-800) 0%, transparent 100%); }
+.page-header h1 { font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.page-header p { font-size: 12px; color: var(--gray-400); letter-spacing: 0.05em; }
+
+.screen-nav { display: flex; gap: 8px; padding: 0 24px 24px; width: 100%; justify-content: center; flex-wrap: wrap; max-width: 1200px; margin: 0 auto; }
+.nav-btn { font-family: var(--font-body); font-size: 11px; font-weight: 600; letter-spacing: 0.05em; padding: 8px 14px; border-radius: 100px; border: 1.5px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--gray-400); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.nav-btn.active, .nav-btn:hover { background: var(--accent); border-color: var(--accent); color: var(--green-900); }
+
+/* PHONE FRAME */
+.phone-wrap { position: relative; width: 375px; margin: 0 auto 48px; filter: drop-shadow(0 40px 80px rgba(0,0,0,0.5)); }
+.phone-frame { width: 375px; height: 812px; background: var(--gray-50); border-radius: 50px; overflow: hidden; position: relative; border: 10px solid var(--gray-800); }
+.status-bar { height: 44px; background: var(--white); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: relative; z-index: 10; }
+.status-bar .time { font-family: var(--font-display); font-size: 11px; font-weight: 600; color: var(--gray-800); }
+.status-bar .icons { display:flex; gap:6px; align-items:center; font-size:10px; color:var(--gray-700); }
+.notch { width: 120px; height: 32px; background: var(--gray-800); border-radius: 0 0 20px 20px; position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 20; }
+
+.screen { display: none; height: calc(812px - 44px); overflow-y: auto; overflow-x: hidden; background: var(--gray-50); flex-direction: column; }
+.screen::-webkit-scrollbar { display: none; }
+.screen.active { display: flex !important; }
+.screen-scroll { flex: 1; overflow-y: auto; padding-bottom: 90px; }
+.screen-scroll::-webkit-scrollbar { display: none; }
+
+/* BOTTOM NAV (4 items) */
+.bottom-nav { position: absolute; bottom: 0; left: 0; right: 0; height: 78px; background: var(--white); border-top: 1px solid var(--gray-100); display: flex; align-items: flex-start; padding-top: 10px; z-index: 100; }
+.bnav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 4px 0; }
+.bnav-icon { width: 28px; height: 28px; border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; position: relative; }
+.bnav-item.active .bnav-icon { background: var(--green-100); }
+.bnav-item svg { width: 20px; height: 20px; }
+.bnav-item.active svg { color: var(--green-600); }
+.bnav-item:not(.active) svg { color: var(--gray-400); }
+.bnav-label { font-size: 10px; font-weight: 600; }
+.bnav-item.active .bnav-label { color: var(--green-600); }
+.bnav-item:not(.active) .bnav-label { color: var(--gray-400); }
+.bnav-badge { position: absolute; top: -3px; right: -3px; width: 16px; height: 16px; background: var(--red); border-radius: 50%; font-size: 9px; font-weight: 700; color: var(--white); display: flex; align-items: center; justify-content: center; border: 2px solid var(--white); }
+
+/* SPLASH */
+.splash-screen { background: linear-gradient(160deg, var(--green-800) 0%, var(--green-900) 60%); height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 60px 32px 48px; position: relative; overflow: hidden; }
+.splash-bg-circle { position: absolute; border-radius: 50%; opacity: 0.08; }
+.splash-bg-circle:nth-child(1) { width: 300px; height: 300px; background: var(--accent); top: -80px; right: -80px; }
+.splash-bg-circle:nth-child(2) { width: 200px; height: 200px; background: var(--green-400); bottom: 100px; left: -60px; }
+.splash-logo { display: flex; flex-direction: column; align-items: center; gap: 20px; z-index: 1; }
+.splash-icon { width: 88px; height: 88px; background: linear-gradient(135deg, var(--accent), var(--green-400)); border-radius: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 20px 40px rgba(93,222,138,0.3); }
+.splash-icon svg { width: 48px; height: 48px; color: var(--green-900); }
+.splash-title { font-family: var(--font-display); font-size: 28px; font-weight: 700; color: var(--white); text-align: center; line-height: 1.2; }
+.splash-title span { color: var(--accent); }
+.splash-sub { font-size: 14px; color: rgba(255,255,255,0.55); text-align: center; line-height: 1.6; margin-top: -8px; }
+.splash-actions { width: 100%; display: flex; flex-direction: column; gap: 12px; z-index: 1; }
+.btn-primary { width: 100%; height: 54px; background: var(--accent); border: none; border-radius: 16px; font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: 0.05em; color: var(--green-900); cursor: pointer; box-shadow: 0 8px 24px rgba(93,222,138,0.3); }
+.btn-secondary { width: 100%; height: 54px; background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15); border-radius: 16px; font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: 0.05em; color: var(--white); cursor: pointer; }
+.splash-terms { font-size: 11px; color: rgba(255,255,255,0.3); text-align: center; z-index: 1; }
+
+/* AUTH */
+.auth-screen { background: var(--white); height: 100%; display: flex; flex-direction: column; padding: 40px 28px 40px; overflow-y: auto; }
+.auth-back { width: 40px; height: 40px; border-radius: 12px; background: var(--gray-100); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-bottom: 28px; }
+.auth-back svg { width: 18px; height: 18px; color: var(--gray-700); }
+.auth-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--green-50); border: 1px solid var(--green-200); padding: 6px 12px; border-radius: 100px; font-size: 11px; font-weight: 600; color: var(--green-700); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 12px; }
+.auth-tag::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--green-500); }
+.auth-title { font-family: var(--font-display); font-size: 26px; font-weight: 700; color: var(--gray-900); line-height: 1.2; margin-bottom: 8px; }
+.auth-sub { font-size: 14px; color: var(--gray-500); line-height: 1.5; margin-bottom: 32px; }
+.form-group { margin-bottom: 16px; }
+.form-label { font-size: 12px; font-weight: 600; color: var(--gray-600); letter-spacing: 0.05em; text-transform: uppercase; display: block; margin-bottom: 8px; }
+.form-input { width: 100%; height: 52px; border: 1.5px solid var(--gray-200); border-radius: 14px; padding: 0 16px; font-family: var(--font-body); font-size: 15px; color: var(--gray-900); background: var(--white); outline: none; transition: all 0.2s; }
+.form-input:focus { border-color: var(--green-400); box-shadow: 0 0 0 4px rgba(93,222,138,0.12); }
+.form-input::placeholder { color: var(--gray-300); }
+.auth-link-row { text-align: center; font-size: 14px; color: var(--gray-500); margin-top: 20px; }
+.auth-link-row a { color: var(--green-600); font-weight: 600; text-decoration: none; }
+
+/* SCREEN HEADER (in-app) */
+.screen-header { background: var(--white); padding: 18px 20px 14px; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 5; }
+.screen-header h2 { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--gray-900); flex: 1; }
+.notif-btn { width: 36px; height: 36px; border-radius: 12px; background: var(--gray-100); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; position: relative; }
+.notif-btn svg { width: 18px; height: 18px; color: var(--gray-700); }
+.notif-btn .dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: var(--red); border-radius: 50%; border: 2px solid var(--white); }
+.back-btn { width: 36px; height: 36px; border-radius: 12px; background: var(--gray-100); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.back-btn svg { width: 18px; height: 18px; color: var(--gray-700); }
+
+/* FEED */
+.feed-toggle { background: var(--white); padding: 14px 20px 12px; display: flex; gap: 8px; border-bottom: 1px solid var(--gray-100); }
+.toggle-btn { flex: 1; height: 38px; border: 1.5px solid var(--gray-200); background: var(--white); border-radius: 12px; font-family: var(--font-body); font-size: 12px; font-weight: 600; color: var(--gray-500); cursor: pointer; }
+.toggle-btn.active { background: var(--green-50); border-color: var(--green-400); color: var(--green-700); }
+
+.feed-list { padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.feed-card { background: var(--white); border-radius: 18px; padding: 14px; box-shadow: 0 2px 12px rgba(13,43,26,0.04); border: 1px solid var(--gray-100); }
+.feed-photo { height: 130px; background: linear-gradient(135deg, var(--green-700), var(--green-900)); border-radius: 12px; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+.feed-photo svg { width: 38px; height: 38px; color: rgba(255,255,255,0.4); }
+.feed-photo-tag { position: absolute; top: 10px; left: 10px; background: rgba(13,43,26,0.65); backdrop-filter: blur(10px); color: var(--white); font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 100px; }
+.feed-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.feed-title { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--gray-900); flex: 1; line-height: 1.3; }
+.feed-addr { font-size: 12px; color: var(--gray-500); display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
+.feed-addr svg { width: 12px; height: 12px; }
+.feed-meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--gray-500); }
+.feed-votes { display: flex; align-items: center; gap: 4px; font-weight: 700; color: var(--gray-700); }
+.feed-votes svg { width: 12px; height: 12px; color: var(--green-500); }
+
+.status-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 100px; white-space: nowrap; }
+.status-badge.new { background: var(--amber-light); color: var(--amber); }
+.status-badge.progress { background: var(--blue-light); color: var(--blue); }
+.status-badge.done { background: var(--green-50); color: var(--green-600); }
+.status-badge.rejected { background: var(--red-light); color: var(--red); }
+.status-badge.duplicate { background: var(--gray-100); color: var(--gray-500); }
+
+/* MAP */
+.map-container { flex: 1; position: relative; background: linear-gradient(135deg, #d8ead4 0%, #b8d4b0 100%); overflow: hidden; }
+.map-sochi-bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.map-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(45,110,69,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(45,110,69,0.04) 1px, transparent 1px); background-size: 28px 28px; pointer-events: none; }
+.map-pin { position: absolute; width: 36px; height: 36px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.25); transition: transform 0.15s; z-index: 4; }
+.map-pin:hover { transform: rotate(-45deg) scale(1.1); }
+.map-pin:active { transform: rotate(-45deg) scale(0.95); }
+.map-pin::after { content: ''; width: 12px; height: 12px; border-radius: 50%; background: var(--white); transform: rotate(45deg); }
+.map-pin.amber { background: var(--amber); }
+.map-pin.blue { background: var(--blue); }
+.map-pin.green { background: var(--accent-dark); }
+.map-pin.red { background: var(--red); }
+.map-pin.gray { background: var(--gray-400); }
+
+.map-search { position: absolute; top: 12px; left: 16px; right: 16px; background: var(--white); border-radius: 14px; box-shadow: 0 4px 16px rgba(13,43,26,0.1); padding: 10px 14px; display: flex; align-items: center; gap: 10px; z-index: 5; }
+.map-search svg { width: 18px; height: 18px; color: var(--gray-400); flex-shrink: 0; }
+.map-search input { flex: 1; border: none; outline: none; font-family: var(--font-body); font-size: 13px; color: var(--gray-900); background: transparent; }
+.map-filters { position: absolute; top: 70px; left: 16px; right: 16px; display: flex; gap: 6px; overflow-x: auto; z-index: 5; padding-bottom: 4px; }
+.map-filters::-webkit-scrollbar { display: none; }
+.map-chip { background: var(--white); padding: 6px 12px; border-radius: 100px; font-size: 11px; font-weight: 600; color: var(--gray-600); white-space: nowrap; box-shadow: 0 2px 8px rgba(13,43,26,0.08); border: 1px solid transparent; }
+.map-chip.active { background: var(--green-700); color: var(--white); }
+
+.map-legend { position: absolute; bottom: 110px; left: 16px; background: var(--white); border-radius: 12px; padding: 10px 12px; box-shadow: 0 4px 16px rgba(13,43,26,0.1); display: flex; flex-direction: column; gap: 6px; z-index: 5; }
+.map-legend-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--gray-700); font-weight: 500; }
+.map-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+.map-fab-group { position: absolute; bottom: 100px; right: 16px; display: flex; flex-direction: column; gap: 10px; z-index: 5; }
+.map-fab { width: 52px; height: 52px; border-radius: 16px; background: var(--white); border: none; box-shadow: 0 4px 16px rgba(13,43,26,0.15); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
+.map-fab:active { transform: scale(0.95); }
+.map-fab svg { width: 22px; height: 22px; color: var(--gray-700); }
+.map-fab.primary { background: var(--accent); box-shadow: 0 8px 24px rgba(93,222,138,0.4); }
+.map-fab.primary svg { width: 24px; height: 24px; color: var(--green-900); }
+
+/* MAP CREATE */
+.create-screen { background: var(--gray-50); height: 100%; display: flex; flex-direction: column; }
+.create-form { padding: 16px 20px 90px; flex: 1; overflow-y: auto; }
+.create-photo-block { background: var(--white); border-radius: 18px; padding: 14px; margin-bottom: 14px; border: 1.5px dashed var(--gray-300); display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
+.create-photo-icon { width: 48px; height: 48px; border-radius: 16px; background: var(--green-50); display: flex; align-items: center; justify-content: center; }
+.create-photo-icon svg { width: 24px; height: 24px; color: var(--green-600); }
+.create-photo-text { font-size: 13px; color: var(--gray-700); font-weight: 600; }
+.create-photo-hint { font-size: 11px; color: var(--gray-400); }
+
+.create-section { background: var(--white); border-radius: 18px; padding: 16px; margin-bottom: 14px; }
+.create-section-label { font-size: 11px; font-weight: 600; color: var(--gray-500); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; }
+.create-input { width: 100%; height: 44px; border: 1.5px solid var(--gray-200); border-radius: 12px; padding: 0 14px; font-family: var(--font-body); font-size: 14px; color: var(--gray-900); outline: none; }
+.create-input:focus { border-color: var(--green-400); }
+.create-textarea { width: 100%; min-height: 90px; border: 1.5px solid var(--gray-200); border-radius: 12px; padding: 12px 14px; font-family: var(--font-body); font-size: 14px; color: var(--gray-900); outline: none; resize: vertical; }
+
+.type-search { width: 100%; height: 38px; border: 1.5px solid var(--gray-200); border-radius: 12px; padding: 0 14px; font-family: var(--font-body); font-size: 13px; color: var(--gray-900); outline: none; margin-bottom: 10px; background: var(--white); }
+.type-search:focus { border-color: var(--green-400); }
+.type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; max-height: 280px; overflow-y: auto; padding-right: 2px; }
+.type-grid::-webkit-scrollbar { width: 4px; }
+.type-grid::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 4px; }
+.type-card { padding: 10px 6px; border: 1.5px solid var(--gray-200); border-radius: 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; min-height: 78px; }
+.type-card.active { background: var(--green-50); border-color: var(--green-400); }
+.type-icon { font-size: 22px; line-height: 1; }
+.type-name { font-size: 10.5px; font-weight: 600; color: var(--gray-700); line-height: 1.2; }
+.type-card.active .type-name { color: var(--green-700); }
+.type-hidden { display: none !important; }
+
+.address-row { display: flex; gap: 8px; align-items: center; padding: 10px 12px; background: var(--green-50); border-radius: 12px; margin-top: 8px; }
+.address-row svg { width: 16px; height: 16px; color: var(--green-600); flex-shrink: 0; }
+.address-text { font-size: 12px; color: var(--green-700); font-weight: 500; flex: 1; }
+
+/* DUPLICATE DETECTOR */
+.dup-warning {
+  background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.04));
+  border: 1.5px solid rgba(245,158,11,0.3);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.dup-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.dup-icon { width: 32px; height: 32px; border-radius: 10px; background: var(--amber); color: var(--white); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.dup-icon svg { width: 16px; height: 16px; }
+.dup-title { font-size: 13px; font-weight: 700; color: var(--gray-900); }
+.dup-sub { font-size: 11px; color: var(--gray-600); margin-top: 2px; }
+.dup-list { display: flex; flex-direction: column; gap: 6px; }
+.dup-item { background: var(--white); border-radius: 10px; padding: 8px 10px; display: flex; align-items: center; gap: 10px; }
+.dup-item-photo { width: 36px; height: 36px; background: var(--green-700); border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.dup-item-photo svg { width: 16px; height: 16px; color: rgba(255,255,255,0.5); }
+.dup-item-body { flex: 1; min-width: 0; }
+.dup-item-title { font-size: 12px; font-weight: 600; color: var(--gray-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dup-item-meta { font-size: 10px; color: var(--gray-500); margin-top: 2px; }
+.dup-item-action { font-size: 11px; font-weight: 700; color: var(--green-600); background: var(--green-50); border: none; padding: 6px 10px; border-radius: 8px; cursor: pointer; flex-shrink: 0; }
+
+.create-submit { position: absolute; bottom: 0; left: 0; right: 0; background: var(--white); padding: 14px 20px 24px; border-top: 1px solid var(--gray-100); }
+.create-submit .btn-primary { color: var(--white); background: var(--green-700); }
+
+/* COMPLAINT DETAIL */
+.detail-screen { background: var(--gray-50); height: 100%; display: flex; flex-direction: column; }
+.detail-photo { height: 280px; background: linear-gradient(135deg, var(--green-700), var(--green-900)); display: flex; align-items: center; justify-content: center; position: relative; }
+.detail-photo svg { width: 64px; height: 64px; color: rgba(255,255,255,0.3); }
+.detail-photo-back { position: absolute; top: 16px; left: 16px; width: 40px; height: 40px; background: rgba(255,255,255,0.95); border-radius: 12px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.detail-photo-back svg { width: 20px; height: 20px; color: var(--gray-800); stroke: var(--gray-800); }
+.detail-photo-thumbs { position: absolute; bottom: 12px; right: 12px; display: flex; gap: 4px; }
+.detail-photo-thumb { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.5); }
+.detail-photo-thumb.active { background: var(--white); }
+
+.detail-body { flex: 1; padding: 18px 20px 90px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+.detail-title-row { display: flex; align-items: flex-start; gap: 8px; }
+.detail-title { font-family: var(--font-display); font-size: 19px; font-weight: 700; color: var(--gray-900); line-height: 1.3; flex: 1; }
+.detail-meta { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--gray-600); }
+.detail-meta-row { display: flex; align-items: center; gap: 6px; }
+.detail-meta-row svg { width: 13px; height: 13px; color: var(--gray-400); }
+
+/* VOTES SECTION */
+.detail-votes { background: var(--white); border-radius: 16px; padding: 14px; box-shadow: 0 2px 8px rgba(13,43,26,0.04); }
+.detail-votes-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.detail-votes-title { font-size: 12px; font-weight: 700; color: var(--gray-700); }
+.detail-votes-sub { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+.vote-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.vote-btn { height: 44px; border: 1.5px solid; background: var(--white); border-radius: 12px; font-family: var(--font-body); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.vote-btn svg { width: 16px; height: 16px; }
+.vote-btn.yes { border-color: var(--green-400); color: var(--green-700); }
+.vote-btn.yes.active { background: var(--green-50); }
+.vote-btn.no { border-color: var(--gray-200); color: var(--gray-600); }
+.vote-bar-wrap { height: 8px; background: var(--red-light); border-radius: 4px; overflow: hidden; }
+.vote-bar-yes { background: var(--accent); height: 100%; border-radius: 4px 0 0 4px; }
+.vote-numbers { display: flex; justify-content: space-between; font-size: 11px; margin-top: 6px; }
+.vote-yes-count { color: var(--green-600); font-weight: 700; }
+.vote-no-count { color: var(--red); font-weight: 700; }
+
+.detail-section { background: var(--white); border-radius: 16px; padding: 14px; box-shadow: 0 2px 8px rgba(13,43,26,0.04); }
+.detail-section-label { font-size: 11px; font-weight: 700; color: var(--gray-500); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 10px; }
+.detail-description { font-size: 14px; color: var(--gray-800); line-height: 1.6; }
+.detail-mini-map { height: 120px; background: linear-gradient(135deg, #c8e6d4, #a8d4b8); border-radius: 12px; position: relative; overflow: hidden; }
+.detail-mini-map::before { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(45,110,69,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(45,110,69,0.1) 1px, transparent 1px); background-size: 24px 24px; }
+.detail-mini-map .map-pin { top: 50%; left: 50%; transform: translate(-50%, -100%) rotate(-45deg); }
+.detail-mini-map .map-pin::after { transform: rotate(45deg); }
+
+/* TIMELINE */
+.timeline { display: flex; flex-direction: column; gap: 0; position: relative; padding-left: 24px; }
+.timeline::before { content: ''; position: absolute; left: 8px; top: 8px; bottom: 8px; width: 2px; background: var(--gray-200); }
+.tl-item { position: relative; padding: 4px 0 16px; }
+.tl-item::before { content: ''; position: absolute; left: -24px; top: 4px; width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--white); box-shadow: 0 0 0 2px var(--gray-200); }
+.tl-item.new::before { background: var(--amber); box-shadow: 0 0 0 2px var(--amber); }
+.tl-item.progress::before { background: var(--blue); box-shadow: 0 0 0 2px var(--blue); }
+.tl-item.done::before { background: var(--accent); box-shadow: 0 0 0 2px var(--accent-dark); }
+.tl-item.rejected::before { background: var(--red); box-shadow: 0 0 0 2px var(--red); }
+.tl-status { font-size: 13px; font-weight: 700; color: var(--gray-900); }
+.tl-meta { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+.tl-comment { font-size: 12px; color: var(--gray-700); line-height: 1.5; margin-top: 8px; background: var(--gray-100); border-left: 3px solid var(--green-400); padding: 8px 10px; border-radius: 0 8px 8px 0; }
+
+/* NOTIFICATIONS */
+.notif-list { padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.notif-item { background: var(--white); border-radius: 14px; padding: 12px; display: flex; gap: 10px; align-items: flex-start; box-shadow: 0 2px 8px rgba(13,43,26,0.04); }
+.notif-item.unread { background: var(--green-50); border-left: 3px solid var(--green-400); }
+.notif-icon { width: 36px; height: 36px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.notif-icon.green { background: var(--green-100); color: var(--green-600); }
+.notif-icon.amber { background: rgba(245,158,11,0.15); color: var(--amber); }
+.notif-icon.blue { background: var(--blue-light); color: var(--blue); }
+.notif-icon.red { background: var(--red-light); color: var(--red); }
+.notif-icon svg { width: 18px; height: 18px; }
+.notif-body { flex: 1; min-width: 0; }
+.notif-title { font-size: 13px; font-weight: 600; color: var(--gray-900); margin-bottom: 2px; }
+.notif-text { font-size: 12px; color: var(--gray-600); line-height: 1.4; }
+.notif-time { font-size: 11px; color: var(--gray-400); margin-top: 4px; }
+
+/* PROFILE */
+.profile-header { background: linear-gradient(160deg, var(--green-700), var(--green-900)); padding: 28px 24px 24px; color: var(--white); position: relative; }
+.profile-avatar-row { display: flex; align-items: center; gap: 14px; }
+.profile-avatar { width: 64px; height: 64px; border-radius: 20px; background: linear-gradient(135deg, var(--accent), var(--green-400)); color: var(--green-900); font-family: var(--font-display); font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.profile-name { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+.profile-email { font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+.profile-edit { position: absolute; top: 24px; right: 24px; width: 36px; height: 36px; border-radius: 12px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.profile-edit svg { width: 16px; height: 16px; color: var(--white); }
+
+.profile-stats { padding: 16px 16px 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; position: relative; z-index: 1; }
+.stat-card { background: var(--white); border-radius: 18px; padding: 16px; box-shadow: 0 4px 16px rgba(13,43,26,0.08); }
+.stat-value { font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--gray-900); }
+.stat-label { font-size: 11px; font-weight: 600; color: var(--gray-500); margin-top: 4px; letter-spacing: 0.03em; text-transform: uppercase; }
+.stat-icon { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+.stat-icon svg { width: 16px; height: 16px; }
+.stat-icon.amber { background: rgba(245,158,11,0.12); color: var(--amber); }
+.stat-icon.blue { background: var(--blue-light); color: var(--blue); }
+.stat-icon.green { background: var(--green-50); color: var(--green-600); }
+.stat-icon.purple { background: rgba(139,92,246,0.1); color: var(--purple); }
+
+.profile-menu { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.menu-item { background: var(--white); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; box-shadow: 0 2px 8px rgba(13,43,26,0.04); }
+.menu-icon { width: 32px; height: 32px; border-radius: 10px; background: var(--gray-100); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.menu-icon svg { width: 16px; height: 16px; color: var(--gray-600); }
+.menu-label { flex: 1; font-size: 13px; font-weight: 600; color: var(--gray-900); }
+.menu-arrow { color: var(--gray-300); }
+.menu-arrow svg { width: 14px; height: 14px; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>🌿 Чистый Город — Mobile v3</h1>
+  <p>Compose Multiplatform · Android · без чатов / субботников</p>
+</div>
+
+<div class="screen-nav">
+  <button class="nav-btn active" onclick="showScreen('splash', this)">Splash</button>
+  <button class="nav-btn" onclick="showScreen('register', this)">Регистрация</button>
+  <button class="nav-btn" onclick="showScreen('login', this)">Вход</button>
+  <button class="nav-btn" onclick="showScreen('feed', this)">Лента</button>
+  <button class="nav-btn" onclick="showScreen('map', this)">Карта</button>
+  <button class="nav-btn" onclick="showScreen('create', this)">Создать жалобу</button>
+  <button class="nav-btn" onclick="showScreen('detail', this)">Деталь жалобы</button>
+  <button class="nav-btn" onclick="showScreen('notifications', this)">Уведомления</button>
+  <button class="nav-btn" onclick="showScreen('profile', this)">Профиль</button>
+</div>
+
+<div class="phone-wrap">
+  <div class="phone-frame">
+    <div class="notch"></div>
+    <div class="status-bar">
+      <span class="time">9:41</span>
+      <div class="icons">●●● 4G ▮▮▮ 80%</div>
+    </div>
+
+    <!-- ════════════ SPLASH ════════════ -->
+    <div class="screen active" id="screen-splash">
+      <div class="splash-screen">
+        <div class="splash-bg-circle"></div>
+        <div class="splash-bg-circle"></div>
+        <div class="splash-logo">
+          <div class="splash-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L4 7v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V7l-8-5z"/><path d="M9 12l2 2 4-4"/></svg>
+          </div>
+          <div class="splash-title">Чистый <span>Город</span></div>
+          <div class="splash-sub">Сообщайте о проблемах<br>Влияйте на свой город</div>
+        </div>
+        <div class="splash-actions">
+          <button class="btn-primary" onclick="go('register')">Зарегистрироваться</button>
+          <button class="btn-secondary" onclick="go('login')">Уже есть аккаунт — Войти</button>
+        </div>
+        <div class="splash-terms">Продолжая, вы соглашаетесь с <a href="#">Условиями</a> и <a href="#">Политикой данных</a></div>
+      </div>
+    </div>
+
+    <!-- ════════════ REGISTER ════════════ -->
+    <div class="screen" id="screen-register">
+      <div class="auth-screen">
+        <button class="auth-back" onclick="go('splash')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+        <div class="auth-tag">Создание аккаунта</div>
+        <div class="auth-title">Присоединяйтесь к<br>чистому городу</div>
+        <div class="auth-sub">За 30 секунд — и вы можете влиять на состояние Сочи.</div>
+
+        <div class="form-group">
+          <label class="form-label">Имя</label>
+          <input class="form-input" type="text" value="Александр Иванов">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" value="alex.ivanov@mail.ru">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Пароль</label>
+          <input class="form-input" type="password" value="••••••••••">
+        </div>
+
+        <button class="btn-primary" style="background:var(--green-700);color:var(--white);box-shadow:0 8px 24px rgba(13,43,26,0.3);margin-top:12px" onclick="go('feed')">Зарегистрироваться</button>
+        <div class="auth-link-row">Уже есть аккаунт? <a href="#" onclick="go('login');return false">Войти</a></div>
+      </div>
+    </div>
+
+    <!-- ════════════ LOGIN ════════════ -->
+    <div class="screen" id="screen-login">
+      <div class="auth-screen">
+        <button class="auth-back" onclick="go('splash')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+        <div class="auth-tag">Вход</div>
+        <div class="auth-title">С возвращением!</div>
+        <div class="auth-sub">Войдите, чтобы продолжить.</div>
+
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" value="alex.ivanov@mail.ru">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Пароль</label>
+          <input class="form-input" type="password" value="••••••••••">
+        </div>
+
+        <button class="btn-primary" style="background:var(--green-700);color:var(--white);box-shadow:0 8px 24px rgba(13,43,26,0.3);margin-top:12px;margin-bottom:16px" onclick="go('feed')">Войти</button>
+        <div class="auth-link-row">Нет аккаунта? <a href="#" onclick="go('register');return false">Зарегистрироваться</a></div>
+      </div>
+    </div>
+
+    <!-- ════════════ FEED ════════════ -->
+    <div class="screen" id="screen-feed">
+      <div class="screen-scroll">
+        <div class="screen-header">
+          <div style="flex:1;display:flex;align-items:center;gap:8px">
+            <div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--green-400));display:flex;align-items:center;justify-content:center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#0d2b1a" stroke-width="2.5" style="width:16px;height:16px"><path d="M12 2L4 7v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V7l-8-5z"/><path d="M9 12l2 2 4-4"/></svg>
+            </div>
+            <h2 style="font-size:16px;margin:0">Чистый Город</h2>
+          </div>
+          <button class="notif-btn" onclick="go('notifications')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+            <div class="dot"></div>
+          </button>
+        </div>
+
+        <!-- ANNOUNCEMENTS BANNER -->
+        <div style="padding:14px 16px 0">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-size:11px;font-weight:700;color:var(--gray-500);letter-spacing:0.05em;text-transform:uppercase">📣 Администрация Сочи</div>
+            <button onclick="flash('Все объявления')" style="font-size:11px;font-weight:600;color:var(--green-600);background:none;border:none;cursor:pointer">Все →</button>
+          </div>
+          <div style="display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px">
+            <div onclick="flash('Объявление: вывоз мусора')" style="flex:0 0 280px;background:linear-gradient(135deg,var(--green-700),var(--green-900));color:var(--white);border-radius:14px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:var(--accent);letter-spacing:0.05em;text-transform:uppercase">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><polyline points="20 6 9 17 4 12"/></svg>
+                Свалка ликвидирована
+              </div>
+              <div style="font-family:var(--font-display);font-size:13px;font-weight:700;line-height:1.3">Незаконная свалка на ул. Транспортной убрана</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.7);line-height:1.4">МУП «Сочиспецавтохозяйство» вывез 8 тонн отходов. Спасибо за сигнал!</div>
+              <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:auto">18 окт · Все районы</div>
+            </div>
+            <div onclick="flash('Объявление: проверка пляжей')" style="flex:0 0 280px;background:var(--white);border:1.5px solid var(--gray-200);border-radius:14px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:var(--amber);letter-spacing:0.05em;text-transform:uppercase">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                Внимание
+              </div>
+              <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--gray-900);line-height:1.3">Проверка пляжей Адлера 20–25 окт</div>
+              <div style="font-size:11px;color:var(--gray-600);line-height:1.4">Сообщайте о нарушениях через приложение — будем быстрее реагировать.</div>
+              <div style="font-size:10px;color:var(--gray-400);margin-top:auto">17 окт · Адлер</div>
+            </div>
+            <div onclick="flash('Объявление: новые баки')" style="flex:0 0 280px;background:var(--white);border:1.5px solid var(--gray-200);border-radius:14px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:var(--blue);letter-spacing:0.05em;text-transform:uppercase">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:12px;height:12px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Инфо
+              </div>
+              <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--gray-900);line-height:1.3">Новые контейнеры в Хостинском</div>
+              <div style="font-size:11px;color:var(--gray-600);line-height:1.4">Установлено 14 площадок для раздельного сбора. Адреса — на карте.</div>
+              <div style="font-size:10px;color:var(--gray-400);margin-top:auto">14 окт · Хостинский</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="feed-toggle">
+          <button class="toggle-btn active" onclick="toggleChip(this)">🌍 Все жалобы</button>
+          <button class="toggle-btn" onclick="toggleChip(this)">📌 Мои (4)</button>
+        </div>
+        <div class="feed-list">
+          <div class="feed-card" onclick="go('detail')">
+            <div class="feed-photo">
+              <span class="feed-photo-tag">📍 ул. Транспортная</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+            </div>
+            <div class="feed-row">
+              <div class="feed-title">Незаконная свалка у р. Сочи</div>
+              <span class="status-badge new">В обработке</span>
+            </div>
+            <div class="feed-addr">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              ул. Транспортная, 14 · Центральный
+            </div>
+            <div class="feed-meta">
+              <span>Сегодня, 09:42</span> ·
+              <span>👤 А. Иванов</span>
+              <div style="margin-left:auto" class="feed-votes">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>
+                142
+              </div>
+            </div>
+          </div>
+
+          <div class="feed-card" onclick="go('detail')">
+            <div class="feed-photo">
+              <span class="feed-photo-tag">☣ Экология</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+            </div>
+            <div class="feed-row">
+              <div class="feed-title">Выброс химических отходов</div>
+              <span class="status-badge new">В обработке</span>
+            </div>
+            <div class="feed-addr">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              промзона Адлера
+            </div>
+            <div class="feed-meta">
+              <span>4 дня назад</span> ·
+              <span>👤 М. Соколов</span>
+              <div style="margin-left:auto" class="feed-votes">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>
+                118
+              </div>
+            </div>
+          </div>
+
+          <div class="feed-card" onclick="go('detail')">
+            <div class="feed-photo" style="background: linear-gradient(135deg, var(--blue), var(--green-700));">
+              <span class="feed-photo-tag">🏖 Пляжи</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+            </div>
+            <div class="feed-row">
+              <div class="feed-title">Загрязнение пляжа Ривьера</div>
+              <span class="status-badge progress">В работе</span>
+            </div>
+            <div class="feed-addr">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              Курортный просп., 1
+            </div>
+            <div class="feed-meta">
+              <span>Вчера</span> ·
+              <span>👤 Е. Петрова</span>
+              <div style="margin-left:auto" class="feed-votes">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>
+                87
+              </div>
+            </div>
+          </div>
+
+          <div class="feed-card" onclick="go('detail')">
+            <div class="feed-photo" style="background: linear-gradient(135deg, var(--green-500), var(--green-800));">
+              <span class="feed-photo-tag">✓ Решено</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+            </div>
+            <div class="feed-row">
+              <div class="feed-title">Мусор на туристической тропе</div>
+              <span class="status-badge done">Решено</span>
+            </div>
+            <div class="feed-addr">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              Агурское ущелье
+            </div>
+            <div class="feed-meta">
+              <span>15.10</span> ·
+              <span>👤 Д. Кузнецов</span>
+              <div style="margin-left:auto" class="feed-votes">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>
+                41
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <div class="bnav-item active">
+          <div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+          <span class="bnav-label">Лента</span>
+        </div>
+        <div class="bnav-item">
+          <div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></div>
+          <span class="bnav-label">Карта</span>
+        </div>
+        <div class="bnav-item">
+          <div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><div class="bnav-badge">3</div></div>
+          <span class="bnav-label">Уведомл.</span>
+        </div>
+        <div class="bnav-item">
+          <div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <span class="bnav-label">Профиль</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ MAP ════════════ -->
+    <div class="screen" id="screen-map">
+      <div class="map-container">
+        <svg class="map-sochi-bg" viewBox="0 0 375 720" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="seaGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#a8c8d0"/>
+              <stop offset="100%" stop-color="#7ba0aa"/>
+            </linearGradient>
+            <linearGradient id="landGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#deebd4"/>
+              <stop offset="100%" stop-color="#b8d8b8"/>
+            </linearGradient>
+            <linearGradient id="mountainGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#c8d8b8"/>
+              <stop offset="100%" stop-color="#a0c0a0"/>
+            </linearGradient>
+          </defs>
+          <!-- Land -->
+          <rect width="375" height="720" fill="url(#landGrad)"/>
+          <!-- Mountains (left side, Caucasus) -->
+          <path d="M0,0 L0,720 L80,720 Q60,580 70,440 Q40,300 80,180 Q60,80 0,0 Z" fill="url(#mountainGrad)" opacity="0.55"/>
+          <path d="M0,80 Q30,60 60,90 M0,200 Q40,180 80,210 M0,340 Q30,310 70,340 M0,500 Q40,470 80,490" stroke="rgba(45,110,69,0.18)" stroke-width="1.5" fill="none"/>
+          <!-- Black Sea (right side with coastline curve) -->
+          <path d="M375,0 L290,0 Q280,80 275,180 Q260,280 250,400 Q245,520 260,640 Q265,690 270,720 L375,720 Z" fill="url(#seaGrad)"/>
+          <!-- Coastline highlight -->
+          <path d="M290,0 Q280,80 275,180 Q260,280 250,400 Q245,520 260,640 Q265,690 270,720" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" fill="none"/>
+          <!-- Wave hints in sea -->
+          <path d="M310,120 Q320,124 330,120 M320,260 Q330,264 340,260 M315,420 Q325,424 335,420 M325,560 Q335,564 345,560" stroke="rgba(255,255,255,0.5)" stroke-width="1" fill="none"/>
+          <!-- Major road A-147 (parallel to coast) -->
+          <path d="M250,0 Q245,80 240,180 Q230,300 222,420 Q220,540 232,720" stroke="rgba(255,255,255,0.85)" stroke-width="3" fill="none"/>
+          <path d="M250,0 Q245,80 240,180 Q230,300 222,420 Q220,540 232,720" stroke="rgba(245,158,11,0.7)" stroke-width="1" stroke-dasharray="6 4" fill="none"/>
+          <!-- Roads connecting to coast -->
+          <path d="M80,140 Q160,150 240,160" stroke="rgba(255,255,255,0.65)" stroke-width="2" fill="none"/>
+          <path d="M80,310 Q160,315 232,320" stroke="rgba(255,255,255,0.65)" stroke-width="2" fill="none"/>
+          <path d="M80,470 Q160,475 226,478" stroke="rgba(255,255,255,0.65)" stroke-width="2" fill="none"/>
+          <path d="M80,620 Q160,625 230,628" stroke="rgba(255,255,255,0.65)" stroke-width="2" fill="none"/>
+          <!-- Mzymta river (south, through Adler) -->
+          <path d="M40,640 Q120,620 200,630 Q240,640 270,650" stroke="rgba(123,160,170,0.7)" stroke-width="2.5" fill="none"/>
+          <!-- Sochi river (central) -->
+          <path d="M50,300 Q100,290 160,310 Q200,320 240,330" stroke="rgba(123,160,170,0.6)" stroke-width="2" fill="none"/>
+          <!-- Park areas (green spots) -->
+          <circle cx="130" cy="220" r="22" fill="rgba(93,222,138,0.18)"/>
+          <circle cx="170" cy="380" r="28" fill="rgba(93,222,138,0.18)"/>
+          <circle cx="100" cy="540" r="20" fill="rgba(93,222,138,0.18)"/>
+          <!-- District labels -->
+          <text x="100" y="100" font-family="Golos Text, sans-serif" font-size="10" font-weight="600" fill="rgba(45,80,55,0.65)" letter-spacing="0.05em" text-transform="uppercase">Лазаревский</text>
+          <text x="105" y="270" font-family="Golos Text, sans-serif" font-size="10" font-weight="600" fill="rgba(45,80,55,0.65)" letter-spacing="0.05em" text-transform="uppercase">Центральный</text>
+          <text x="105" y="430" font-family="Golos Text, sans-serif" font-size="10" font-weight="600" fill="rgba(45,80,55,0.65)" letter-spacing="0.05em" text-transform="uppercase">Хостинский</text>
+          <text x="120" y="600" font-family="Golos Text, sans-serif" font-size="10" font-weight="600" fill="rgba(45,80,55,0.65)" letter-spacing="0.05em" text-transform="uppercase">Адлерский</text>
+          <!-- Sea label -->
+          <text x="320" y="380" font-family="Golos Text, sans-serif" font-size="11" font-weight="500" fill="rgba(255,255,255,0.85)" text-anchor="middle" font-style="italic">Чёрное море</text>
+          <text x="320" y="396" font-family="Golos Text, sans-serif" font-size="9" fill="rgba(255,255,255,0.65)" text-anchor="middle">Black Sea</text>
+          <!-- City of Sochi label -->
+          <text x="160" y="365" font-family="Unbounded, sans-serif" font-size="13" font-weight="700" fill="rgba(45,80,55,0.85)" letter-spacing="0.08em">СОЧИ</text>
+        </svg>
+        <div class="map-grid"></div>
+        <div class="map-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Поиск адреса в Сочи…">
+        </div>
+        <div class="map-filters">
+          <div class="map-chip active">Все</div>
+          <div class="map-chip">🗑 Мусор</div>
+          <div class="map-chip">🛣 Дороги</div>
+          <div class="map-chip">💡 Освещение</div>
+          <div class="map-chip">🌳 Озеленение</div>
+          <div class="map-chip">🏖 Пляжи</div>
+          <div class="map-chip">🚨 Безопасность</div>
+          <div class="map-chip">⋯ Ещё</div>
+        </div>
+
+        <div class="map-pin amber" style="top:38%;left:30%"></div>
+        <div class="map-pin amber" style="top:48%;left:62%"></div>
+        <div class="map-pin blue" style="top:55%;left:42%"></div>
+        <div class="map-pin green" style="top:65%;left:25%"></div>
+        <div class="map-pin amber" style="top:30%;left:55%"></div>
+        <div class="map-pin blue" style="top:60%;left:75%"></div>
+
+        <div class="map-legend">
+          <div class="map-legend-row"><div class="map-legend-dot" style="background:var(--amber)"></div>В обработке</div>
+          <div class="map-legend-row"><div class="map-legend-dot" style="background:var(--blue)"></div>В работе</div>
+          <div class="map-legend-row"><div class="map-legend-dot" style="background:var(--accent-dark)"></div>Решено</div>
+        </div>
+
+        <div class="map-fab-group">
+          <button class="map-fab" onclick="flash('Геолокация: вы рядом с центром Сочи')" title="Моё местоположение">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="9"/>
+              <line x1="12" y1="2" x2="12" y2="5"/>
+              <line x1="12" y1="19" x2="12" y2="22"/>
+              <line x1="2" y1="12" x2="5" y2="12"/>
+              <line x1="19" y1="12" x2="22" y2="12"/>
+              <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
+            </svg>
+          </button>
+          <button class="map-fab primary" onclick="go('create')" title="Сообщить о проблеме">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="bnav-item"><div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><span class="bnav-label">Лента</span></div>
+        <div class="bnav-item active"><div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></div><span class="bnav-label">Карта</span></div>
+        <div class="bnav-item"><div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><div class="bnav-badge">3</div></div><span class="bnav-label">Уведомл.</span></div>
+        <div class="bnav-item"><div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="bnav-label">Профиль</span></div>
+      </div>
+    </div>
+
+    <!-- ════════════ CREATE COMPLAINT ════════════ -->
+    <div class="screen" id="screen-create">
+      <div class="screen-header">
+        <button class="back-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+        <h2>Новая жалоба</h2>
+      </div>
+      <div class="create-form">
+        <div class="create-photo-block">
+          <div class="create-photo-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+          <div class="create-photo-text">Сделать фото или загрузить</div>
+          <div class="create-photo-hint">Можно до 5 фотографий</div>
+        </div>
+
+        <!-- DUPLICATE WARNING -->
+        <div class="dup-warning">
+          <div class="dup-head">
+            <div class="dup-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div>
+            <div>
+              <div class="dup-title">Возможно, эта проблема уже есть</div>
+              <div class="dup-sub">Нашли 2 жалобы рядом с вашим адресом (&lt;100м)</div>
+            </div>
+          </div>
+          <div class="dup-list">
+            <div class="dup-item">
+              <div class="dup-item-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/></svg></div>
+              <div class="dup-item-body">
+                <div class="dup-item-title">Незаконная свалка у р. Сочи</div>
+                <div class="dup-item-meta">142 голоса · 30м · В обработке</div>
+              </div>
+              <button class="dup-item-action">+1 голос</button>
+            </div>
+            <div class="dup-item">
+              <div class="dup-item-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/></svg></div>
+              <div class="dup-item-body">
+                <div class="dup-item-title">Свалка строит. отходов</div>
+                <div class="dup-item-meta">38 голосов · 78м · В работе</div>
+              </div>
+              <button class="dup-item-action">+1 голос</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="create-section">
+          <div class="create-section-label">Тип проблемы</div>
+          <input class="type-search" type="text" placeholder="🔍 Найти категорию…" oninput="filterTypes(this.value)">
+          <div class="type-grid" id="type-grid">
+            <div class="type-card active" data-name="мусор санитарное состояние"><div class="type-icon">🗑</div><div class="type-name">Мусор</div></div>
+            <div class="type-card" data-name="дороги ямы"><div class="type-icon">🛣</div><div class="type-name">Дороги и ямы</div></div>
+            <div class="type-card" data-name="тротуары пешеходные зоны"><div class="type-icon">🚶</div><div class="type-name">Тротуары</div></div>
+            <div class="type-card" data-name="уличное освещение"><div class="type-icon">💡</div><div class="type-name">Освещение</div></div>
+            <div class="type-card" data-name="озеленение деревья"><div class="type-icon">🌳</div><div class="type-name">Озеленение</div></div>
+            <div class="type-card" data-name="благоустройство территорий"><div class="type-icon">🏗</div><div class="type-name">Благоустройство</div></div>
+            <div class="type-card" data-name="детские спортивные площадки"><div class="type-icon">🛝</div><div class="type-name">Площадки</div></div>
+            <div class="type-card" data-name="общественные пространства парки"><div class="type-icon">🏞</div><div class="type-name">Парки</div></div>
+            <div class="type-card" data-name="пляжи зоны отдыха"><div class="type-icon">🏖</div><div class="type-name">Пляжи</div></div>
+            <div class="type-card" data-name="безопасность правонарушения"><div class="type-icon">🚨</div><div class="type-name">Безопасность</div></div>
+            <div class="type-card" data-name="вандализм повреждение имущества"><div class="type-icon">🎨</div><div class="type-name">Вандализм</div></div>
+            <div class="type-card" data-name="водоснабжение"><div class="type-icon">🚰</div><div class="type-name">Вода</div></div>
+            <div class="type-card" data-name="канализация ливневые стоки"><div class="type-icon">🌊</div><div class="type-name">Канализация</div></div>
+            <div class="type-card" data-name="электроснабжение"><div class="type-icon">⚡</div><div class="type-name">Электричество</div></div>
+            <div class="type-card" data-name="экология загрязнение окружающей среды"><div class="type-icon">☣</div><div class="type-name">Экология</div></div>
+            <div class="type-card" data-name="доступная среда маломобильных"><div class="type-icon">♿</div><div class="type-name">Доступная среда</div></div>
+            <div class="type-card" data-name="торговля незаконные объекты"><div class="type-icon">🏪</div><div class="type-name">Торговля</div></div>
+            <div class="type-card" data-name="прочее другое"><div class="type-icon">❓</div><div class="type-name">Прочее</div></div>
+          </div>
+        </div>
+
+        <div class="create-section">
+          <div class="create-section-label">Адрес</div>
+          <input class="create-input" type="text" value="ул. Транспортная, 14">
+          <div class="address-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <div class="address-text">Геопозиция определена автоматически</div>
+          </div>
+        </div>
+
+        <div class="create-section">
+          <div class="create-section-label">Описание</div>
+          <textarea class="create-textarea" placeholder="Опишите проблему как можно подробнее…">На берегу реки рядом с автомойкой образовалась стихийная свалка — строительные отходы, мешки с мусором, старая мебель.</textarea>
+        </div>
+      </div>
+      <div class="create-submit">
+        <button class="btn-primary">Отправить жалобу</button>
+      </div>
+    </div>
+
+    <!-- ════════════ COMPLAINT DETAIL ════════════ -->
+    <div class="screen" id="screen-detail">
+      <div class="detail-screen">
+        <div class="detail-photo">
+          <button class="detail-photo-back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+          <div class="detail-photo-thumbs">
+            <div class="detail-photo-thumb active"></div>
+            <div class="detail-photo-thumb"></div>
+            <div class="detail-photo-thumb"></div>
+          </div>
+        </div>
+        <div class="detail-body">
+          <div>
+            <div class="detail-title-row">
+              <div class="detail-title">Незаконная свалка у реки Сочи</div>
+              <span class="status-badge new">В обработке</span>
+            </div>
+            <div class="detail-meta" style="margin-top:10px">
+              <div class="detail-meta-row">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                ул. Транспортная, 14 · Центральный
+              </div>
+              <div class="detail-meta-row">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Сегодня, 09:42 · 6 ч в очереди
+              </div>
+              <div class="detail-meta-row">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Иванов А. М.
+              </div>
+            </div>
+          </div>
+
+          <!-- VOTES -->
+          <div class="detail-votes">
+            <div class="detail-votes-head">
+              <div>
+                <div class="detail-votes-title">Поддерживаете жалобу?</div>
+                <div class="detail-votes-sub">Голос помогает админу определить приоритет</div>
+              </div>
+            </div>
+            <div style="background:var(--green-50);border:1px solid var(--green-200);border-radius:12px;padding:16px;text-align:center;margin-top:6px">
+              <div style="font-family:var(--font-display);font-size:34px;font-weight:700;color:var(--green-700);line-height:1">142</div>
+              <div style="font-size:11px;color:var(--green-600);font-weight:700;margin-top:4px;letter-spacing:0.03em;text-transform:uppercase">жителя подтверждают проблему</div>
+            </div>
+            <div class="vote-buttons" style="grid-template-columns:1fr;margin-top:6px">
+              <button class="vote-btn yes active" style="height:48px">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>
+                Подтверждаю
+              </button>
+            </div>
+          </div>
+
+          <!-- DESCRIPTION -->
+          <div class="detail-section">
+            <div class="detail-section-label">Описание</div>
+            <div class="detail-description">
+              На берегу реки рядом с автомойкой образовалась стихийная свалка — строительные отходы, мешки с мусором, старая мебель. Объём около 8–10 кубометров. Запах усиливается, рядом детская площадка. Просим срочно вывезти и установить камеру наблюдения.
+            </div>
+          </div>
+
+          <!-- MAP -->
+          <div class="detail-section">
+            <div class="detail-section-label">Местоположение</div>
+            <div class="detail-mini-map">
+              <div class="map-pin red"></div>
+            </div>
+          </div>
+
+          <!-- TIMELINE -->
+          <div class="detail-section">
+            <div class="detail-section-label">История статусов</div>
+            <div class="timeline">
+              <div class="tl-item progress">
+                <div class="tl-status">В работе</div>
+                <div class="tl-meta">18 окт, 14:20 · Смирнова Е. В., главный эколог</div>
+                <div class="tl-comment">Передано в МУП «Сочиспецавтохозяйство». Вывоз планируется до 19 октября, 14:00. Обновим статус после вывоза.</div>
+              </div>
+              <div class="tl-item new">
+                <div class="tl-status">В обработке</div>
+                <div class="tl-meta">18 окт, 09:42 · автоматически при подаче</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════ NOTIFICATIONS ════════════ -->
+    <div class="screen" id="screen-notifications">
+      <div class="screen-scroll">
+        <div class="screen-header">
+          <button class="back-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg></button>
+          <h2>Уведомления</h2>
+        </div>
+
+        <div class="notif-list">
+          <div class="notif-item unread">
+            <div class="notif-icon blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+            </div>
+            <div class="notif-body">
+              <div class="notif-title">Жалоба «Незаконная свалка» — В работе</div>
+              <div class="notif-text">«Передано в МУП Сочиспецавтохозяйство. Вывоз до 19 октября, 14:00» — Смирнова Е. В.</div>
+              <div class="notif-time">2 мин назад</div>
+            </div>
+          </div>
+
+          <div class="notif-item unread">
+            <div class="notif-icon green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="notif-body">
+              <div class="notif-title">Жалоба «Мусор на тропе» — Решено</div>
+              <div class="notif-text">«Тропа очищена силами лесников. Установлены урны.» — Петров А. И.</div>
+              <div class="notif-time">2 ч назад</div>
+            </div>
+          </div>
+
+          <div class="notif-item unread">
+            <div class="notif-icon amber">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 11-5.8-1.6"/></svg>
+            </div>
+            <div class="notif-body">
+              <div class="notif-title">Объявление администрации</div>
+              <div class="notif-text">Плановая проверка пляжей Адлерского района с 20 по 25 октября.</div>
+              <div class="notif-time">Вчера</div>
+            </div>
+          </div>
+
+          <div class="notif-item">
+            <div class="notif-icon green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>
+            </div>
+            <div class="notif-body">
+              <div class="notif-title">Ваша жалоба набрала 100 голосов!</div>
+              <div class="notif-text">«Незаконная свалка у р. Сочи» получила приоритет в обработке.</div>
+              <div class="notif-time">2 дня назад</div>
+            </div>
+          </div>
+
+          <div class="notif-item">
+            <div class="notif-icon red">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+            <div class="notif-body">
+              <div class="notif-title">Жалоба отклонена</div>
+              <div class="notif-text">«Реклама на остановке» — это не нарушение городского экологического стандарта. Перенаправьте в адм. ОМС.</div>
+              <div class="notif-time">3 дня назад</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="bnav-item"><div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><span class="bnav-label">Лента</span></div>
+        <div class="bnav-item"><div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></div><span class="bnav-label">Карта</span></div>
+        <div class="bnav-item active"><div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div><span class="bnav-label">Уведомл.</span></div>
+        <div class="bnav-item"><div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="bnav-label">Профиль</span></div>
+      </div>
+    </div>
+
+    <!-- ════════════ PROFILE ════════════ -->
+    <div class="screen" id="screen-profile">
+      <div class="screen-scroll" style="padding:0 0 90px">
+        <div class="profile-header">
+          <button class="profile-edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <div class="profile-avatar-row">
+            <div class="profile-avatar">АИ</div>
+            <div>
+              <div class="profile-name">Александр Иванов</div>
+              <div class="profile-email">alex.ivanov@mail.ru</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-stats">
+          <div class="stat-card">
+            <div class="stat-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+            <div class="stat-value">3</div>
+            <div class="stat-label">В обработке</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
+            <div class="stat-value">5</div>
+            <div class="stat-label">В работе</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+            <div class="stat-value">16</div>
+            <div class="stat-label">Решено</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon purple"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg></div>
+            <div class="stat-value">87</div>
+            <div class="stat-label">Подтверждено</div>
+          </div>
+        </div>
+
+        <div class="profile-menu">
+          <div class="menu-item">
+            <div class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></div>
+            <div class="menu-label">Мои жалобы</div>
+            <div class="menu-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </div>
+          <div class="menu-item">
+            <div class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+            <div class="menu-label">Настройки уведомлений</div>
+            <div class="menu-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </div>
+          <div class="menu-item">
+            <div class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
+            <div class="menu-label">О приложении</div>
+            <div class="menu-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </div>
+          <div class="menu-item" style="color:var(--red)">
+            <div class="menu-icon" style="background:var(--red-light)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--red)"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></div>
+            <div class="menu-label" style="color:var(--red)">Выйти</div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="bnav-item"><div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><span class="bnav-label">Лента</span></div>
+        <div class="bnav-item"><div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></div><span class="bnav-label">Карта</span></div>
+        <div class="bnav-item"><div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg><div class="bnav-badge">3</div></div><span class="bnav-label">Уведомл.</span></div>
+        <div class="bnav-item active"><div class="bnav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><span class="bnav-label">Профиль</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function showScreen(name, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const target = document.getElementById('screen-' + name);
+  if (target) target.classList.add('active');
+  if (btn && btn.classList) {
+    btn.classList.add('active');
+  } else {
+    const navBtn = document.querySelector(".nav-btn[onclick*=\"'" + name + "'\"]");
+    if (navBtn) navBtn.classList.add('active');
+  }
+  document.querySelector('.phone-frame').scrollTop = 0;
+}
+function go(name) { showScreen(name); }
+function toggleVote(btn) {
+  btn.parentNode.querySelectorAll('.vote-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function toggleChip(el) {
+  el.parentNode.querySelectorAll('.toggle-btn,.map-chip,.filter-chip,.type-card').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+function filterTypes(q) {
+  const query = (q||'').trim().toLowerCase();
+  document.querySelectorAll('#type-grid .type-card').forEach(card => {
+    const name = (card.dataset.name||'') + ' ' + (card.querySelector('.type-name')||{}).textContent.toLowerCase();
+    if (!query || name.includes(query)) card.classList.remove('type-hidden');
+    else card.classList.add('type-hidden');
+  });
+}
+function flash(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#0d2b1a;color:#5DDE8A;padding:12px 20px;border-radius:14px;font-family:Golos Text,sans-serif;font-size:13px;font-weight:600;box-shadow:0 12px 40px rgba(0,0,0,0.4);z-index:9999;border:1px solid rgba(93,222,138,0.3)';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 1800);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const bnavMap = { 'Лента':'feed', 'Карта':'map', 'Уведомл.':'notifications', 'Профиль':'profile' };
+  document.querySelectorAll('.bnav-item').forEach(item => {
+    const label = (item.querySelector('.bnav-label')||{}).textContent;
+    const target = bnavMap[(label||'').trim()];
+    if (target) { item.style.cursor='pointer'; item.onclick = () => go(target); }
+  });
+  document.querySelectorAll('.map-fab.primary').forEach(b => b.onclick = () => go('create'));
+  document.querySelectorAll('.create-screen .back-btn, .detail-photo-back').forEach(b => b.onclick = () => go('feed'));
+  document.querySelectorAll('#screen-notifications .back-btn').forEach(b => b.onclick = () => go('feed'));
+  document.querySelectorAll('.create-submit .btn-primary').forEach(b => b.onclick = () => { flash('Жалоба отправлена'); setTimeout(()=>go('feed'), 1000); });
+  document.querySelectorAll('.dup-item-action').forEach(b => b.onclick = (e) => { e.stopPropagation(); flash('+1 голос за существующую жалобу'); });
+  document.querySelectorAll('.vote-btn').forEach(b => b.onclick = () => { toggleVote(b); flash('Голос учтён'); });
+  document.querySelectorAll('.type-card').forEach(c => c.onclick = () => toggleChip(c));
+  document.querySelectorAll('.map-chip').forEach(c => c.onclick = () => toggleChip(c));
+  document.querySelectorAll('.menu-item').forEach(m => {
+    const label = (m.querySelector('.menu-label')||{}).textContent || '';
+    if (label.includes('Выйти')) m.onclick = () => go('splash');
+    else m.onclick = () => flash(label.trim());
+  });
+  document.querySelectorAll('.profile-edit').forEach(b => b.onclick = () => flash('Редактирование профиля'));
+  document.querySelectorAll('.notif-item').forEach(n => { n.style.cursor = 'pointer'; n.onclick = () => go('detail'); });
+  document.querySelectorAll('.map-pin').forEach(p => { p.onclick = () => go('detail'); });
+  document.querySelectorAll('#screen-map .map-search input').forEach(i => i.addEventListener('focus', () => flash('Поиск адресов через Yandex Search API')));
+});
+</script>
+</body>
+</html>

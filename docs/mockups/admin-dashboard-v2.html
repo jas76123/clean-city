@@ -1,0 +1,1896 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Чистый Город — Кабинет Администрации v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700;900&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green-900: #0d2b1a; --green-800: #1a4229; --green-700: #1f5233;
+  --green-600: #2d6e45; --green-500: #3a8a58; --green-400: #4dab6e;
+  --green-300: #72c48e; --green-200: #a8ddb8; --green-100: #d4f0de;
+  --green-50: #eef8f2;
+  --accent: #5DDE8A; --accent-dark: #3ab868;
+  --red: #E8453C; --blue: #3B82F6; --amber: #F59E0B; --purple: #8B5CF6;
+  --amber-light: rgba(245,158,11,0.12);
+  --white: #FFFFFF;
+  --gray-50: #F8FAFB; --gray-100: #F1F4F2; --gray-200: #E2E8E4;
+  --gray-300: #C8D4CC; --gray-400: #9AAFA0; --gray-500: #6B8070;
+  --gray-600: #4A6055; --gray-700: #2E3F38; --gray-800: #1C2922; --gray-900: #0F1A14;
+  --font-display: 'Unbounded', sans-serif;
+  --font-body: 'Golos Text', sans-serif;
+  --radius-sm: 10px; --radius-md: 16px; --radius-lg: 24px; --radius-xl: 32px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: var(--font-body);
+  background: var(--green-900);
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 32px 16px 64px;
+}
+
+/* ════════════ LOGIN SCREEN ════════════ */
+.login-page {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; min-height: calc(100vh - 96px);
+  width: 100%;
+}
+.login-card {
+  width: 440px; max-width: 95vw;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-xl);
+  padding: 40px 36px;
+  display: flex; flex-direction: column; gap: 20px;
+  backdrop-filter: blur(12px);
+}
+.login-logo {
+  width: 72px; height: 72px; margin: 0 auto 8px;
+  background: linear-gradient(135deg, var(--accent), var(--green-400));
+  border-radius: 22px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 16px 40px rgba(93,222,138,0.25);
+}
+.login-logo svg { width: 38px; height: 38px; color: var(--green-900); }
+.login-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(93,222,138,0.12);
+  border: 1px solid rgba(93,222,138,0.25);
+  border-radius: 100px;
+  padding: 4px 12px;
+  font-family: var(--font-display);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  text-transform: uppercase;
+  width: fit-content;
+  margin: 0 auto;
+}
+.login-badge span { width:6px; height:6px; background:var(--accent); border-radius:50%; }
+.login-title {
+  font-family: var(--font-display);
+  font-size: 22px; font-weight: 700;
+  color: var(--white); text-align: center;
+}
+.login-title em { color: var(--accent); font-style: normal; }
+.login-sub {
+  font-size: 13px; color: var(--gray-400);
+  text-align: center; margin-top: -8px;
+}
+.login-field { display: flex; flex-direction: column; gap: 6px; }
+.login-label {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--gray-400);
+}
+.login-input {
+  height: 48px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 0 16px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--white);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.login-input:focus { border-color: var(--accent); }
+.login-input::placeholder { color: var(--gray-600); }
+.login-btn {
+  height: 50px; margin-top: 8px;
+  background: var(--accent); border: none;
+  border-radius: 14px;
+  font-family: var(--font-display);
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--green-900);
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(93,222,138,0.25);
+  transition: transform 0.15s;
+}
+.login-btn:hover { transform: translateY(-1px); }
+.login-foot {
+  font-size: 11px; color: var(--gray-500);
+  text-align: center; margin-top: 4px;
+  line-height: 1.6;
+}
+
+/* ════════════ APP SHELL ════════════ */
+.app-shell { width: 100%; max-width: 1240px; display: none; flex-direction: column; }
+.app-shell.active { display: flex; }
+
+/* PAGE HEADER */
+.page-header {
+  width: 100%;
+  padding: 0 0 28px;
+  display: flex;
+  align-items: center; justify-content: space-between;
+}
+.page-header-left { display: flex; flex-direction: column; gap: 4px; }
+.page-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(93,222,138,0.12);
+  border: 1px solid rgba(93,222,138,0.25);
+  border-radius: 100px;
+  padding: 4px 12px;
+  font-family: var(--font-display);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  text-transform: uppercase;
+  width: fit-content; margin-bottom: 6px;
+}
+.page-badge span { width:6px; height:6px; background:var(--accent); border-radius:50%; animation: blink 1.6s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.page-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--white); line-height: 1.2; }
+.page-title span { color: var(--accent); }
+.page-sub { font-size: 13px; color: var(--gray-400); margin-top: 2px; }
+.page-header-right { display: flex; align-items: center; gap: 12px; }
+.admin-avatar {
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, var(--accent), var(--green-400));
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-size: 14px; font-weight: 700;
+  color: var(--green-900);
+}
+.admin-info { display: flex; flex-direction: column; gap: 2px; text-align: right; }
+.admin-name { font-size: 13px; font-weight: 600; color: var(--white); }
+.admin-role { font-size: 11px; color: var(--gray-400); }
+.logout-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--gray-300);
+  font-size: 11px; font-weight: 600;
+  padding: 8px 12px; border-radius: 10px;
+  cursor: pointer; margin-left: 8px;
+  transition: all 0.15s;
+}
+.logout-btn:hover { background: rgba(232,69,60,0.1); border-color: rgba(232,69,60,0.3); color: var(--red); }
+
+/* TAB NAV */
+.tab-nav {
+  width: 100%;
+  display: flex; gap: 4px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  margin-bottom: 28px;
+}
+.tab-btn {
+  flex: 1; height: 38px;
+  border: none; border-radius: 10px;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 12px; font-weight: 600;
+  color: var(--gray-400);
+  cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.tab-btn.active { background: var(--accent); color: var(--green-900); }
+.tab-btn svg { width:14px; height:14px; }
+.notif-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px;
+  background: var(--red); border-radius: 50%;
+  font-size: 9px; font-weight: 700; color: var(--white);
+}
+
+/* SCREEN */
+.screen { display: none; flex-direction: column; gap: 20px; }
+.screen.active { display: flex; }
+
+/* CARD */
+.card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.card-header { display: flex; align-items: center; justify-content: space-between; }
+.card-title { font-family: var(--font-display); font-size: 12px; font-weight: 600; letter-spacing: 0.05em; color: var(--white); }
+.card-sub { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+
+/* KPI */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.kpi-card {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-lg);
+  padding: 20px; position: relative; overflow: hidden;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+.kpi-card.green::before { background: var(--accent); }
+.kpi-card.amber::before { background: var(--amber); }
+.kpi-card.red::before { background: var(--red); }
+.kpi-card.blue::before { background: var(--blue); }
+.kpi-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.kpi-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.kpi-icon.green { background: rgba(93,222,138,0.15); color: var(--accent); }
+.kpi-icon.amber { background: var(--amber-light); color: var(--amber); }
+.kpi-icon.red { background: rgba(232,69,60,0.12); color: var(--red); }
+.kpi-icon.blue { background: rgba(59,130,246,0.12); color: var(--blue); }
+.kpi-icon svg { width:18px; height:18px; }
+.kpi-delta { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 100px; }
+.kpi-delta.up { background: rgba(93,222,138,0.12); color: var(--accent); }
+.kpi-delta.down { background: rgba(232,69,60,0.12); color: var(--red); }
+.kpi-value { font-family: var(--font-display); font-size: 28px; font-weight: 700; color: var(--white); }
+.kpi-label { font-size: 12px; color: var(--gray-400); }
+
+/* SLA ALERT */
+.sla-alert {
+  background: rgba(232,69,60,0.08);
+  border: 1px solid rgba(232,69,60,0.2);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  display: flex; align-items: center; gap: 12px;
+}
+.sla-alert svg { width:18px; height:18px; color: var(--red); flex-shrink:0; }
+.sla-alert-text { font-size: 12px; color: var(--gray-200); line-height: 1.5; }
+.sla-alert-text strong { color: var(--red); }
+
+/* PIPELINE */
+.pipeline { display: flex; gap: 0; }
+.pipeline-stage {
+  flex: 1;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 8px;
+  position: relative;
+}
+.pipeline-stage:first-child { border-radius: var(--radius-md) 0 0 var(--radius-md); }
+.pipeline-stage:last-child { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+.pipeline-stage:not(:last-child) { border-right: none; }
+.pipeline-dot { width: 32px; height: 32px; border-radius: 10px; display:flex; align-items:center; justify-content:center; }
+.pipeline-dot.amber { background: var(--amber-light); color: var(--amber); }
+.pipeline-dot.blue { background: rgba(59,130,246,0.12); color: var(--blue); }
+.pipeline-dot.green { background: rgba(93,222,138,0.12); color: var(--accent); }
+.pipeline-dot.red { background: rgba(232,69,60,0.12); color: var(--red); }
+.pipeline-dot svg { width: 16px; height: 16px; }
+.pipeline-count { font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--white); }
+.pipeline-label { font-size: 11px; color: var(--gray-400); }
+
+/* COMPLAINTS LIST */
+.complaints-layout { display: grid; grid-template-columns: 1fr; gap: 14px; transition: grid-template-columns 0.3s; }
+.complaints-layout.with-panel { grid-template-columns: 1fr 460px; }
+.complaints-table { display: flex; flex-direction: column; gap: 0; }
+.ct-toolbar {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+.ct-sort {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 11px; font-weight: 600;
+  color: var(--gray-300);
+  cursor: pointer; transition: all 0.15s;
+}
+.ct-sort.active { background: rgba(93,222,138,0.12); border-color: rgba(93,222,138,0.3); color: var(--accent); }
+.ct-sort svg { width: 12px; height: 12px; }
+.ct-head, .ct-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 0.8fr 0.7fr 90px;
+  gap: 12px;
+  padding: 12px;
+  align-items: center;
+}
+.ct-head {
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 8px 12px;
+}
+.ct-row {
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ct-row:hover { background: rgba(255,255,255,0.03); }
+.ct-row.selected { background: rgba(93,222,138,0.06); border-left: 3px solid var(--accent); padding-left: 9px; }
+.ct-title { font-size: 13px; color: var(--white); font-weight: 500; }
+.ct-addr { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+.ct-district { font-size: 11px; color: var(--gray-300); }
+.ct-date { font-size: 11px; color: var(--gray-400); }
+.ct-type { font-size: 11px; color: var(--gray-300); display: flex; align-items: center; gap: 5px; }
+.ct-type-dot { width: 6px; height: 6px; border-radius: 2px; }
+.ct-votes {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12px; font-weight: 700; color: var(--white);
+}
+.ct-votes svg { width: 12px; height: 12px; color: var(--accent); }
+.ct-votes.high { color: var(--accent); }
+
+.status-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.status-badge.new { background: var(--amber-light); color: var(--amber); }
+.status-badge.progress { background: rgba(59,130,246,0.12); color: var(--blue); }
+.status-badge.done { background: rgba(93,222,138,0.12); color: var(--accent); }
+.status-badge.rejected { background: rgba(232,69,60,0.12); color: var(--red); }
+.status-badge.duplicate { background: rgba(255,255,255,0.06); color: var(--gray-400); }
+
+/* FILTER CHIPS */
+.filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 4px; }
+.filter-chip {
+  height: 32px; padding: 0 14px;
+  border-radius: 100px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  font-size: 11px; font-weight: 600;
+  color: var(--gray-400);
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.filter-chip.active { background: rgba(93,222,138,0.12); border-color: rgba(93,222,138,0.3); color: var(--accent); }
+.filter-row.scrollable { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; margin-top: 4px; }
+.filter-row.scrollable::-webkit-scrollbar { height: 4px; }
+.filter-row.scrollable::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.filter-row.scrollable .filter-chip { flex-shrink: 0; }
+.filter-label { font-size: 11px; color: var(--gray-500); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; flex-shrink: 0; padding-right: 4px; }
+
+/* ════════════ DETAIL PANEL ════════════ */
+.detail-panel {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-lg);
+  padding: 0;
+  display: flex; flex-direction: column;
+  position: sticky; top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+}
+.dp-head {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.dp-head-title {
+  font-family: var(--font-display);
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--accent);
+}
+.dp-close {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  border: none;
+  color: var(--gray-300);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.dp-close:hover { background: rgba(232,69,60,0.15); color: var(--red); }
+.dp-close svg { width: 14px; height: 14px; }
+.dp-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.dp-body::-webkit-scrollbar { width: 4px; }
+.dp-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+.dp-photos {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 6px;
+  height: 180px;
+}
+.dp-photo {
+  background: linear-gradient(135deg, var(--green-700), var(--green-900));
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.3);
+  font-size: 11px;
+  position: relative;
+  overflow: hidden;
+}
+.dp-photo svg { width: 32px; height: 32px; opacity: 0.5; }
+.dp-photo-thumbs { display: flex; flex-direction: column; gap: 6px; }
+.dp-photo-thumb {
+  flex: 1;
+  background: linear-gradient(135deg, var(--green-700), var(--green-800));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+}
+.dp-photo-thumb svg { width: 18px; height: 18px; color: rgba(255,255,255,0.3); }
+
+.dp-title {
+  font-family: var(--font-display);
+  font-size: 16px; font-weight: 700;
+  color: var(--white);
+  line-height: 1.3;
+}
+.dp-meta {
+  display: flex; flex-wrap: wrap; gap: 6px 10px;
+  font-size: 11px;
+  color: var(--gray-400);
+}
+.dp-meta-item { display: flex; align-items: center; gap: 4px; }
+.dp-meta-item svg { width: 11px; height: 11px; }
+
+.dp-section-label {
+  font-family: var(--font-display);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--gray-500);
+}
+
+.dp-votes {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.dp-votes-head { display: flex; align-items: center; justify-content: space-between; }
+.dp-votes-priority {
+  font-size: 10px; font-weight: 700;
+  background: rgba(232,69,60,0.15);
+  color: var(--red);
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+}
+.dp-votes-priority.high { background: rgba(93,222,138,0.15); color: var(--accent); }
+.dp-votes-bar {
+  height: 8px;
+  background: rgba(232,69,60,0.15);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+}
+.dp-votes-bar-yes {
+  background: var(--accent);
+  height: 100%;
+  border-radius: 4px 0 0 4px;
+}
+.dp-votes-numbers { display: flex; justify-content: space-between; font-size: 11px; }
+.dp-votes-yes { color: var(--accent); font-weight: 700; }
+.dp-votes-no { color: var(--red); font-weight: 700; }
+
+.dp-map {
+  height: 140px;
+  background: linear-gradient(135deg, #2a4a35, #1a3825);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.dp-map::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(93,222,138,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(93,222,138,0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.dp-map-pin {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -100%);
+  width: 28px; height: 28px;
+  background: var(--red);
+  border-radius: 50% 50% 50% 0;
+  transform: translate(-50%, -100%) rotate(-45deg);
+  box-shadow: 0 4px 12px rgba(232,69,60,0.4);
+}
+.dp-map-pin::after {
+  content: ''; position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px; height: 10px;
+  background: var(--white);
+  border-radius: 50%;
+}
+
+.dp-description {
+  font-size: 13px;
+  color: var(--gray-200);
+  line-height: 1.6;
+}
+
+/* TIMELINE */
+.dp-timeline {
+  display: flex; flex-direction: column; gap: 0;
+  position: relative;
+  padding-left: 22px;
+}
+.dp-timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px; top: 8px; bottom: 8px;
+  width: 2px;
+  background: rgba(255,255,255,0.1);
+}
+.dp-tl-item {
+  position: relative;
+  padding: 4px 0 14px;
+}
+.dp-tl-item::before {
+  content: '';
+  position: absolute;
+  left: -22px; top: 4px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--green-900);
+}
+.dp-tl-item.new::before { background: var(--amber); }
+.dp-tl-item.progress::before { background: var(--blue); }
+.dp-tl-item.done::before { background: var(--accent); }
+.dp-tl-item.rejected::before { background: var(--red); }
+.dp-tl-status { font-size: 12px; font-weight: 700; color: var(--white); }
+.dp-tl-meta { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+.dp-tl-comment {
+  font-size: 12px; color: var(--gray-200);
+  line-height: 1.5; margin-top: 6px;
+  background: rgba(255,255,255,0.04);
+  border-left: 2px solid rgba(255,255,255,0.15);
+  padding: 6px 10px;
+  border-radius: 0 8px 8px 0;
+}
+
+/* DETAIL PANEL ACTIONS */
+.dp-actions {
+  border-top: 1px solid rgba(255,255,255,0.07);
+  padding: 16px 20px;
+  background: rgba(0,0,0,0.15);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.dp-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dp-action-btn {
+  height: 40px;
+  border: none; border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: all 0.15s;
+}
+.dp-action-btn svg { width: 14px; height: 14px; }
+.dp-action-btn.progress { background: rgba(59,130,246,0.15); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
+.dp-action-btn.progress:hover { background: rgba(59,130,246,0.25); }
+.dp-action-btn.done { background: rgba(93,222,138,0.15); color: var(--accent); border: 1px solid rgba(93,222,138,0.3); }
+.dp-action-btn.done:hover { background: rgba(93,222,138,0.25); }
+.dp-action-btn.reject { background: rgba(232,69,60,0.1); color: var(--red); border: 1px solid rgba(232,69,60,0.25); }
+.dp-action-btn.reject:hover { background: rgba(232,69,60,0.2); }
+.dp-action-btn.duplicate { background: rgba(255,255,255,0.05); color: var(--gray-300); border: 1px solid rgba(255,255,255,0.12); }
+.dp-action-btn.duplicate:hover { background: rgba(255,255,255,0.1); }
+
+.dp-comment-input {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--white);
+  outline: none;
+  resize: vertical;
+  min-height: 56px;
+}
+.dp-comment-input:focus { border-color: var(--accent); }
+.dp-comment-input::placeholder { color: var(--gray-600); }
+.dp-comment-hint { font-size: 10px; color: var(--gray-500); margin-top: -4px; }
+.dp-comment-hint strong { color: var(--accent); }
+
+/* ANNOUNCEMENTS */
+.announce-form {
+  background: rgba(93,222,138,0.05);
+  border: 1px dashed rgba(93,222,138,0.2);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.form-label { font-size: 11px; font-weight: 600; color: var(--gray-400); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; display: block; }
+.form-input {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--white);
+  outline: none;
+}
+.form-input:focus { border-color: var(--accent); }
+.form-input::placeholder { color: var(--gray-600); }
+.form-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.add-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--accent);
+  border: none; border-radius: var(--radius-md);
+  padding: 10px 18px;
+  font-family: var(--font-display);
+  font-size: 11px; font-weight: 600;
+  color: var(--green-900);
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(93,222,138,0.25);
+}
+.add-btn svg { width: 14px; height: 14px; }
+
+.announce-list { display: flex; flex-direction: column; gap: 10px; }
+.announce-item {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex; gap: 12px; align-items: flex-start;
+}
+.announce-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.announce-icon.green { background: rgba(93,222,138,0.12); color: var(--accent); }
+.announce-icon.amber { background: var(--amber-light); color: var(--amber); }
+.announce-icon.blue { background: rgba(59,130,246,0.12); color: var(--blue); }
+.announce-icon svg { width: 16px; height: 16px; }
+.announce-body { flex: 1; }
+.announce-title { font-size: 12px; font-weight: 600; color: var(--white); margin-bottom: 3px; }
+.announce-text { font-size: 11px; color: var(--gray-400); line-height: 1.5; }
+.announce-meta { font-size: 10px; color: var(--gray-500); margin-top: 5px; }
+
+/* ANALYTICS */
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.row-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; }
+.analytics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.trend-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+.trend-title { font-size: 11px; color: var(--gray-400); margin-bottom: 8px; }
+.trend-value { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--white); }
+.trend-sub { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
+.mini-bar-chart { display: flex; align-items: flex-end; gap: 3px; height: 40px; margin-top: 10px; }
+.mini-bar { flex: 1; border-radius: 2px 2px 0 0; background: rgba(93,222,138,0.2); min-height: 4px; }
+.mini-bar.highlight { background: var(--accent); }
+
+.district-list { display: flex; flex-direction: column; gap: 10px; }
+.district-row { display: flex; align-items: center; gap: 10px; }
+.district-name { font-size: 12px; color: var(--gray-300); width: 90px; flex-shrink: 0; }
+.district-bar-wrap { flex: 1; height: 6px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; }
+.district-bar { height: 100%; border-radius: 3px; }
+.district-count { font-size: 12px; font-weight: 600; color: var(--white); width: 28px; text-align: right; }
+
+/* SCREEN NOTE */
+.screen-note {
+  font-size: 11px; color: var(--gray-600); text-align: center;
+  padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+/* ANIMATIONS */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.screen.active > * { animation: fadeUp 0.35s ease both; }
+.screen.active > *:nth-child(2) { animation-delay: 0.05s; }
+.screen.active > *:nth-child(3) { animation-delay: 0.1s; }
+.screen.active > *:nth-child(4) { animation-delay: 0.15s; }
+.detail-panel { animation: slideIn 0.3s ease both; }
+@keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+.export-card:hover { transform: translateY(-2px); border-color: currentColor; }
+.export-pdf-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--green-400));
+  border: none; border-radius: 12px;
+  padding: 10px 16px;
+  font-family: var(--font-display);
+  font-size: 11px; font-weight: 600;
+  color: var(--green-900);
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(93,222,138,0.25);
+  transition: transform 0.15s;
+}
+.export-pdf-cta:hover { transform: translateY(-1px); }
+.export-pdf-cta svg { width: 14px; height: 14px; }
+.team-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.team-row:hover { background: rgba(255,255,255,0.06); border-color: rgba(93,222,138,0.25); transform: translateX(2px); }
+.role-card { transition: all 0.15s; }
+.role-card:hover { border-color: rgba(93,222,138,0.4) !important; background: rgba(93,222,138,0.06) !important; }
+.role-card.active { background: rgba(93,222,138,0.1) !important; border-color: var(--accent) !important; }
+.role-card.active > div > div:nth-child(2),
+.role-card.active > div { color: var(--accent) !important; }
+.dist-chip { transition: all 0.15s; }
+.dist-chip:hover { border-color: rgba(93,222,138,0.3) !important; color: var(--gray-200) !important; }
+.dist-chip.active { background: rgba(93,222,138,0.12) !important; border-color: rgba(93,222,138,0.3) !important; color: var(--accent) !important; }
+.dist-chip.active::before { content: '✓ '; }
+@keyframes modalIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+#member-modal.open > div { animation: modalIn 0.2s ease both; }
+</style>
+</head>
+<body>
+
+<!-- ════════════ LOGIN PAGE ════════════ -->
+<div class="login-page" id="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L4 7v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V7l-8-5z"/><path d="M9 12l2 2 4-4"/></svg>
+    </div>
+    <div class="login-badge"><span></span> Защищённый кабинет</div>
+    <div class="login-title">Чистый <em>Город</em></div>
+    <div class="login-sub">Кабинет администрации г. Сочи</div>
+
+    <div class="login-field">
+      <label class="login-label">Email</label>
+      <input class="login-input" type="email" placeholder="admin@sochi.gov.ru" value="smirnova@sochi.gov.ru">
+    </div>
+    <div class="login-field">
+      <label class="login-label">Пароль</label>
+      <input class="login-input" type="password" placeholder="••••••••••" value="••••••••••">
+    </div>
+    <button class="login-btn" onclick="enterApp()">Войти в кабинет</button>
+    <div class="login-foot">
+      Только для уполномоченных сотрудников администрации.<br>
+      Доступ выдаётся главным экологом города.
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ APP SHELL ════════════ -->
+<div class="app-shell" id="app-shell">
+
+<!-- HEADER -->
+<div class="page-header">
+  <div class="page-header-left">
+    <div class="page-title">Чистый <span>Город</span> — Администрация</div>
+    <div class="page-sub">г. Сочи · Управление городской экологией</div>
+  </div>
+  <div class="page-header-right">
+    <div class="admin-info">
+      <div class="admin-name">Смирнова Е. В.</div>
+      <div class="admin-role">Главный эколог города</div>
+    </div>
+    <div class="admin-avatar">СЕ</div>
+    <button class="logout-btn" onclick="exitApp()">Выйти</button>
+  </div>
+</div>
+
+<!-- TAB NAV -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="showScreen('dashboard', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Дашборд
+  </button>
+  <button class="tab-btn" onclick="showScreen('complaints', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+    Жалобы
+    <span class="notif-badge">12</span>
+  </button>
+  <button class="tab-btn" onclick="showScreen('announcements', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 11-5.8-1.6"/></svg>
+    Объявления
+  </button>
+  <button class="tab-btn" onclick="showScreen('analytics', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 9l-5 5-3-3-5 5"/></svg>
+    Аналитика
+  </button>
+  <button class="tab-btn" onclick="showScreen('settings', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    Настройки
+  </button>
+</div>
+
+<!-- ════════════ SCREEN: DASHBOARD ════════════ -->
+<div class="screen active" id="screen-dashboard">
+
+  <div class="sla-alert">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <div class="sla-alert-text">
+      <strong>8 жалоб</strong> превысили SLA (72 часа). Адлер — 5, Хостинский — 3.
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card green">
+      <div class="kpi-top">
+        <div class="kpi-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></div>
+        <span class="kpi-delta up">+23%</span>
+      </div>
+      <div class="kpi-value">247</div>
+      <div class="kpi-label">Жалоб за месяц</div>
+    </div>
+    <div class="kpi-card amber">
+      <div class="kpi-top">
+        <div class="kpi-icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <span class="kpi-delta down">−18%</span>
+      </div>
+      <div class="kpi-value">41ч</div>
+      <div class="kpi-label">Среднее время решения</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-top">
+        <div class="kpi-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <span class="kpi-delta up">+7%</span>
+      </div>
+      <div class="kpi-value">78%</div>
+      <div class="kpi-label">Решено за 7 дней</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-top">
+        <div class="kpi-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg></div>
+        <span class="kpi-delta down">+3</span>
+      </div>
+      <div class="kpi-value">8</div>
+      <div class="kpi-label">Нарушений SLA</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Распределение по статусам</div>
+        <div class="card-sub">Текущее состояние очереди</div>
+      </div>
+    </div>
+    <div class="pipeline">
+      <div class="pipeline-stage">
+        <div class="pipeline-dot amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div class="pipeline-count">47</div>
+        <div class="pipeline-label">В обработке</div>
+      </div>
+      <div class="pipeline-stage">
+        <div class="pipeline-dot blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
+        <div class="pipeline-count">63</div>
+        <div class="pipeline-label">В работе</div>
+      </div>
+      <div class="pipeline-stage">
+        <div class="pipeline-dot green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="pipeline-count">137</div>
+        <div class="pipeline-label">Решено</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row-2">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Топ районов по жалобам</div>
+          <div class="card-sub">Октябрь 2025</div>
+        </div>
+      </div>
+      <div class="district-list">
+        <div class="district-row"><div class="district-name">Адлерский</div><div class="district-bar-wrap"><div class="district-bar" style="width:85%;background:var(--red)"></div></div><div class="district-count">98</div></div>
+        <div class="district-row"><div class="district-name">Центральный</div><div class="district-bar-wrap"><div class="district-bar" style="width:60%;background:var(--amber)"></div></div><div class="district-count">62</div></div>
+        <div class="district-row"><div class="district-name">Хостинский</div><div class="district-bar-wrap"><div class="district-bar" style="width:45%;background:var(--blue)"></div></div><div class="district-count">47</div></div>
+        <div class="district-row"><div class="district-name">Лазаревский</div><div class="district-bar-wrap"><div class="district-bar" style="width:38%;background:var(--accent)"></div></div><div class="district-count">40</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Топ-5 по голосам жителей</div>
+          <div class="card-sub">Самые приоритетные жалобы</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div style="font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--accent);width:24px">1</div>
+          <div style="flex:1;font-size:12px;color:var(--white)">Незаконная свалка у р. Сочи</div>
+          <div class="ct-votes high"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>142</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div style="font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--accent);width:24px">2</div>
+          <div style="flex:1;font-size:12px;color:var(--white)">Выброс химических отходов</div>
+          <div class="ct-votes high"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>118</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div style="font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--accent);width:24px">3</div>
+          <div style="flex:1;font-size:12px;color:var(--white)">Загрязнение пляжа Ривьера</div>
+          <div class="ct-votes high"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>87</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+          <div style="font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--gray-400);width:24px">4</div>
+          <div style="flex:1;font-size:12px;color:var(--white)">Переполнены мусорные баки</div>
+          <div class="ct-votes"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>54</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0">
+          <div style="font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--gray-400);width:24px">5</div>
+          <div style="flex:1;font-size:12px;color:var(--white)">Мусор на туристической тропе</div>
+          <div class="ct-votes"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>41</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-note">Данные обновляются в реальном времени · CleanCity v2 · Сочи 2026</div>
+</div>
+
+<!-- ════════════ SCREEN: COMPLAINTS ════════════ -->
+<div class="screen" id="screen-complaints">
+
+  <div class="filter-row">
+    <span style="font-size:12px;color:var(--gray-400);font-weight:600">Статус:</span>
+    <div class="filter-chip active">Все (247)</div>
+    <div class="filter-chip">В обработке (47)</div>
+    <div class="filter-chip">В работе (63)</div>
+    <div class="filter-chip">Решено (137)</div>
+    <div class="filter-chip">Отклонена (8)</div>
+    <div class="filter-chip">Дубликат (4)</div>
+    <div class="filter-chip" style="background:rgba(232,69,60,0.1);border-color:rgba(232,69,60,0.25);color:var(--red)">⚠ SLA (8)</div>
+    <div style="margin-left:auto" class="filter-chip">📍 Район ▾</div>
+  </div>
+
+  <div class="filter-row scrollable">
+    <span class="filter-label">Категория:</span>
+    <div class="filter-chip active">Все 18</div>
+    <div class="filter-chip">🗑 Мусор</div>
+    <div class="filter-chip">🛣 Дороги и ямы</div>
+    <div class="filter-chip">🚶 Тротуары</div>
+    <div class="filter-chip">💡 Освещение</div>
+    <div class="filter-chip">🌳 Озеленение</div>
+    <div class="filter-chip">🏗 Благоустройство</div>
+    <div class="filter-chip">🛝 Площадки</div>
+    <div class="filter-chip">🏞 Парки</div>
+    <div class="filter-chip">🏖 Пляжи</div>
+    <div class="filter-chip">🚨 Безопасность</div>
+    <div class="filter-chip">🎨 Вандализм</div>
+    <div class="filter-chip">🚰 Вода</div>
+    <div class="filter-chip">🌊 Канализация</div>
+    <div class="filter-chip">⚡ Электричество</div>
+    <div class="filter-chip">☣ Экология</div>
+    <div class="filter-chip">♿ Доступная среда</div>
+    <div class="filter-chip">🏪 Торговля</div>
+    <div class="filter-chip">❓ Прочее</div>
+  </div>
+
+  <div class="ct-toolbar">
+    <span style="font-size:11px;color:var(--gray-500);font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Сортировка:</span>
+    <div class="ct-sort">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+      По дате
+    </div>
+    <div class="ct-sort active">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>
+      По приоритету голосов
+    </div>
+    <div class="ct-sort">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      По времени ожидания (SLA)
+    </div>
+  </div>
+
+  <div class="complaints-layout with-panel" id="complaints-layout">
+
+    <!-- LEFT: TABLE -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Все обращения</div>
+          <div class="card-sub">Кликни по строке — справа откроется детальная карточка</div>
+        </div>
+      </div>
+      <div class="complaints-table">
+        <div class="ct-head">
+          <div>Проблема</div><div>Район</div><div>Тип</div><div>Дата</div><div>Голоса</div><div>Статус</div>
+        </div>
+        <div class="ct-row selected">
+          <div><div class="ct-title">Незаконная свалка у р. Сочи</div><div class="ct-addr">ул. Транспортная, 14 · 📸 3 фото</div></div>
+          <div class="ct-district">Центральный</div>
+          <div class="ct-type"><div class="ct-type-dot" style="background:#5DDE8A"></div>🗑 Мусор</div>
+          <div class="ct-date">Сегодня</div>
+          <div class="ct-votes high"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>142</div>
+          <div><span class="status-badge new">В обработке</span></div>
+        </div>
+        <div class="ct-row" style="background:rgba(232,69,60,0.04)">
+          <div><div class="ct-title">⚠ Выброс химических отходов</div><div class="ct-addr">промзона Адлера · 📸 5 фото</div></div>
+          <div class="ct-district">Адлер</div>
+          <div class="ct-type"><div class="ct-type-dot" style="background:#E8453C"></div>☣ Экология</div>
+          <div class="ct-date" style="color:var(--red)">4 дня назад</div>
+          <div class="ct-votes high"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>118</div>
+          <div><span class="status-badge new" style="background:rgba(232,69,60,0.15);color:var(--red)">⚠ SLA</span></div>
+        </div>
+        <div class="ct-row">
+          <div><div class="ct-title">Загрязнение пляжа Ривьера</div><div class="ct-addr">Курортный просп., 1 · 📸 2 фото</div></div>
+          <div class="ct-district">Центральный</div>
+          <div class="ct-type"><div class="ct-type-dot" style="background:#F59E0B"></div>🏖 Пляжи</div>
+          <div class="ct-date">Вчера</div>
+          <div class="ct-votes high"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>87</div>
+          <div><span class="status-badge progress">В работе</span></div>
+        </div>
+        <div class="ct-row">
+          <div><div class="ct-title">Переполнены мусорные баки</div><div class="ct-addr">ул. Горького, 38 · 📸 1 фото</div></div>
+          <div class="ct-district">Адлер</div>
+          <div class="ct-type"><div class="ct-type-dot" style="background:#5DDE8A"></div>🗑 Мусор</div>
+          <div class="ct-date">Вчера</div>
+          <div class="ct-votes"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>54</div>
+          <div><span class="status-badge progress">В работе</span></div>
+        </div>
+        <div class="ct-row">
+          <div><div class="ct-title">Мусор на туристической тропе</div><div class="ct-addr">Агурское ущелье · 📸 4 фото</div></div>
+          <div class="ct-district">Хостинский</div>
+          <div class="ct-type"><div class="ct-type-dot" style="background:#5DDE8A"></div>🗑 Мусор</div>
+          <div class="ct-date">15.10</div>
+          <div class="ct-votes"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>41</div>
+          <div><span class="status-badge done">Решено</span></div>
+        </div>
+        <div class="ct-row">
+          <div><div class="ct-title">Сломанная урна у парка</div><div class="ct-addr">Парк «Ривьера»</div></div>
+          <div class="ct-district">Центральный</div>
+          <div class="ct-type"><div class="ct-type-dot" style="background:#8B5CF6"></div>🏗 Благоустройство</div>
+          <div class="ct-date">14.10</div>
+          <div class="ct-votes"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>23</div>
+          <div><span class="status-badge done">Решено</span></div>
+        </div>
+        <div class="ct-row">
+          <div><div class="ct-title">Спам: реклама</div><div class="ct-addr">—</div></div>
+          <div class="ct-district">—</div>
+          <div class="ct-type"><div class="ct-type-dot" style="background:#9AAFA0"></div>❓ Прочее</div>
+          <div class="ct-date">12.10</div>
+          <div class="ct-votes"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg>2</div>
+          <div><span class="status-badge rejected">Отклонена</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: DETAIL PANEL -->
+    <div class="detail-panel">
+      <div class="dp-head">
+        <div class="dp-head-title">Детали жалобы #C-2031</div>
+        <button class="dp-close" onclick="closeDetail()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="dp-body">
+        <!-- PHOTOS -->
+        <div class="dp-photos">
+          <div class="dp-photo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+          </div>
+          <div class="dp-photo-thumbs">
+            <div class="dp-photo-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/></svg></div>
+            <div class="dp-photo-thumb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/></svg></div>
+          </div>
+        </div>
+
+        <!-- TITLE + META -->
+        <div>
+          <div class="dp-title">Незаконная свалка у реки Сочи</div>
+          <div class="dp-meta" style="margin-top:8px">
+            <div class="dp-meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              ул. Транспортная, 14 · Центральный р‑н
+            </div>
+            <div class="dp-meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Сегодня, 09:42 · 6 часов в очереди
+            </div>
+            <div class="dp-meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Иванов А. М. · «Активист» · 24 жалобы
+            </div>
+          </div>
+        </div>
+
+        <!-- VOTES -->
+        <div class="dp-votes">
+          <div class="dp-votes-head">
+            <div class="dp-section-label">Голоса жителей</div>
+            <div class="dp-votes-priority high">⚡ Топ-1 по приоритету</div>
+          </div>
+          <div class="dp-votes-bar">
+            <div class="dp-votes-bar-yes" style="width:90%"></div>
+          </div>
+          <div class="dp-votes-numbers">
+            <span class="dp-votes-yes">✓ Подтверждаю · 142</span>
+            <span class="dp-votes-no">✗ Не проблема · 16</span>
+          </div>
+        </div>
+
+        <!-- MAP -->
+        <div>
+          <div class="dp-section-label" style="margin-bottom:8px">Местоположение</div>
+          <div class="dp-map">
+            <div class="dp-map-pin"></div>
+          </div>
+        </div>
+
+        <!-- DESCRIPTION -->
+        <div>
+          <div class="dp-section-label" style="margin-bottom:8px">Описание</div>
+          <div class="dp-description">
+            На берегу реки рядом с автомойкой образовалась стихийная свалка — строительные отходы, мешки с мусором, старая мебель. Объём около 8–10 кубометров. Запах усиливается, рядом детская площадка. Просим срочно вывезти и установить камеру наблюдения.
+          </div>
+        </div>
+
+        <!-- TIMELINE -->
+        <div>
+          <div class="dp-section-label" style="margin-bottom:10px">История статусов</div>
+          <div class="dp-timeline">
+            <div class="dp-tl-item new">
+              <div class="dp-tl-status">В обработке</div>
+              <div class="dp-tl-meta">Сегодня, 09:42 · автоматически при подаче</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="dp-actions">
+        <textarea class="dp-comment-input" placeholder="Комментарий для гражданина (обязательно)…">Передано в МУП «Сочиспецавтохозяйство». Ориентировочное время вывоза — 18 октября до 14:00.</textarea>
+        <div class="dp-comment-hint"><strong>Важно:</strong> комментарий уйдёт автору жалобы как пуш‑уведомление.</div>
+        <div class="dp-action-grid">
+          <button class="dp-action-btn progress">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+            Принять в работу
+          </button>
+          <button class="dp-action-btn done">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            Решить
+          </button>
+          <button class="dp-action-btn reject">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            Отклонить
+          </button>
+          <button class="dp-action-btn duplicate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Дубликат
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ SCREEN: ANNOUNCEMENTS ════════════ -->
+<div class="screen" id="screen-announcements">
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Новое объявление</div>
+        <div class="card-sub">Будет опубликовано в приложении для горожан</div>
+      </div>
+      <button class="add-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Опубликовать
+      </button>
+    </div>
+    <div class="announce-form">
+      <div>
+        <label class="form-label">Заголовок</label>
+        <input class="form-input" type="text" placeholder="Например: Вывоз крупногабаритного мусора 25 октября">
+      </div>
+      <div>
+        <label class="form-label">Текст объявления</label>
+        <textarea class="form-input form-textarea" placeholder="Подробное описание, инструкции для горожан…"></textarea>
+      </div>
+      <div class="form-row">
+        <div>
+          <label class="form-label">Категория</label>
+          <input class="form-input" type="text" value="Вывоз отходов">
+        </div>
+        <div>
+          <label class="form-label">Район</label>
+          <input class="form-input" type="text" placeholder="Все районы / конкретный район">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Опубликованные объявления</div>
+        <div class="card-sub">Видны всем пользователям приложения</div>
+      </div>
+    </div>
+    <div class="announce-list">
+      <div class="announce-item">
+        <div class="announce-icon green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="announce-body">
+          <div class="announce-title">Незаконная свалка на ул. Транспортной ликвидирована</div>
+          <div class="announce-text">Выездная бригада МУП «Сочиспецавтохозяйство» вывезла более 8 тонн отходов. Территория рекультивирована.</div>
+          <div class="announce-meta">Опубликовано: 18 октября · Все районы</div>
+        </div>
+      </div>
+      <div class="announce-item">
+        <div class="announce-icon amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+        </div>
+        <div class="announce-body">
+          <div class="announce-title">Плановая проверка пляжей Адлерского района</div>
+          <div class="announce-text">С 20 по 25 октября инспекторы проверят состояние 12 пляжей. Просим горожан сообщать о нарушениях через приложение.</div>
+          <div class="announce-meta">Опубликовано: 17 октября · Адлер</div>
+        </div>
+      </div>
+      <div class="announce-item">
+        <div class="announce-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="announce-body">
+          <div class="announce-title">Новые контейнерные площадки в Хостинском районе</div>
+          <div class="announce-text">Установлено 14 новых площадок для раздельного сбора мусора. Адреса доступны на карте в приложении.</div>
+          <div class="announce-meta">Опубликовано: 14 октября · Хостинский</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ SCREEN: ANALYTICS ════════════ -->
+<div class="screen" id="screen-analytics">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:-4px">
+    <div>
+      <div style="font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--white)">Аналитика за октябрь 2025</div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:2px">Графики и тренды по жалобам, SLA и голосам жителей</div>
+    </div>
+    <button class="export-pdf-cta" onclick="flash('PDF готов · Загрузка…')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Экспорт PDF
+    </button>
+  </div>
+
+  <div class="analytics-grid">
+    <div class="trend-card">
+      <div class="trend-title">Эффективность, октябрь</div>
+      <div class="trend-value">78%</div>
+      <div class="trend-sub">решено за 7 дней ↑7% к сентябрю</div>
+      <div class="mini-bar-chart">
+        <div class="mini-bar" style="height:40%"></div>
+        <div class="mini-bar" style="height:55%"></div>
+        <div class="mini-bar" style="height:48%"></div>
+        <div class="mini-bar" style="height:65%"></div>
+        <div class="mini-bar" style="height:60%"></div>
+        <div class="mini-bar" style="height:72%"></div>
+        <div class="mini-bar highlight" style="height:78%"></div>
+      </div>
+    </div>
+    <div class="trend-card">
+      <div class="trend-title">Среднее голосов на жалобу</div>
+      <div class="trend-value">38</div>
+      <div class="trend-sub">показатель вовлечения жителей</div>
+      <div class="mini-bar-chart">
+        <div class="mini-bar" style="height:25%"></div>
+        <div class="mini-bar" style="height:40%"></div>
+        <div class="mini-bar" style="height:50%"></div>
+        <div class="mini-bar" style="height:55%"></div>
+        <div class="mini-bar" style="height:65%"></div>
+        <div class="mini-bar" style="height:78%"></div>
+        <div class="mini-bar highlight" style="height:90%"></div>
+      </div>
+    </div>
+    <div class="trend-card">
+      <div class="trend-title">Активных пользователей</div>
+      <div class="trend-value">1 842</div>
+      <div class="trend-sub">жителей Сочи используют приложение</div>
+      <div class="mini-bar-chart">
+        <div class="mini-bar" style="height:20%"></div>
+        <div class="mini-bar" style="height:35%"></div>
+        <div class="mini-bar" style="height:50%"></div>
+        <div class="mini-bar" style="height:60%"></div>
+        <div class="mini-bar" style="height:72%"></div>
+        <div class="mini-bar" style="height:85%"></div>
+        <div class="mini-bar highlight" style="height:100%"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row-2">
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">SLA по категориям</div>
+          <div class="card-sub">Нормативы и фактическое исполнение</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(232,69,60,0.07);border-radius:var(--radius-sm);border:1px solid rgba(232,69,60,0.15)">
+          <div><div style="font-size:12px;color:var(--white);font-weight:500">🗑 Мусор и санитарное состояние</div><div style="font-size:10px;color:var(--gray-500)">Норматив: 24ч</div></div>
+          <div style="text-align:right"><div style="font-size:14px;font-weight:700;color:var(--red)">38ч</div><div style="font-size:10px;color:var(--red)">Превышение</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(245,158,11,0.07);border-radius:var(--radius-sm);border:1px solid rgba(245,158,11,0.15)">
+          <div><div style="font-size:12px;color:var(--white);font-weight:500">☣ Экология</div><div style="font-size:10px;color:var(--gray-500)">Норматив: 24ч</div></div>
+          <div style="text-align:right"><div style="font-size:14px;font-weight:700;color:var(--amber)">22ч</div><div style="font-size:10px;color:var(--amber)">Близко к лимиту</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(93,222,138,0.05);border-radius:var(--radius-sm);border:1px solid rgba(93,222,138,0.12)">
+          <div><div style="font-size:12px;color:var(--white);font-weight:500">💡 Уличное освещение</div><div style="font-size:10px;color:var(--gray-500)">Норматив: 48ч</div></div>
+          <div style="text-align:right"><div style="font-size:14px;font-weight:700;color:var(--accent)">31ч</div><div style="font-size:10px;color:var(--accent)">В норме</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(93,222,138,0.05);border-radius:var(--radius-sm);border:1px solid rgba(93,222,138,0.12)">
+          <div><div style="font-size:12px;color:var(--white);font-weight:500">🛣 Дороги и ямы</div><div style="font-size:10px;color:var(--gray-500)">Норматив: 72ч</div></div>
+          <div style="text-align:right"><div style="font-size:14px;font-weight:700;color:var(--accent)">56ч</div><div style="font-size:10px;color:var(--accent)">В норме</div></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(245,158,11,0.07);border-radius:var(--radius-sm);border:1px solid rgba(245,158,11,0.15)">
+          <div><div style="font-size:12px;color:var(--white);font-weight:500">🏖 Пляжи и зоны отдыха</div><div style="font-size:10px;color:var(--gray-500)">Норматив: 48ч</div></div>
+          <div style="text-align:right"><div style="font-size:14px;font-weight:700;color:var(--amber)">44ч</div><div style="font-size:10px;color:var(--amber)">Близко к лимиту</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Голоса как сигнал приоритизации</div>
+          <div class="card-sub">Жалобы с ≥50 голосов решаются быстрее</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;margin-top:4px">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-300);margin-bottom:4px"><span>Жалобы с 50+ голосов</span><span style="color:var(--accent);font-weight:700">28ч в среднем</span></div>
+          <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:3px"><div style="height:100%;width:35%;background:var(--accent);border-radius:3px"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-300);margin-bottom:4px"><span>Жалобы с 10–49 голосов</span><span style="color:var(--amber);font-weight:700">52ч</span></div>
+          <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:3px"><div style="height:100%;width:65%;background:var(--amber);border-radius:3px"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gray-300);margin-bottom:4px"><span>Жалобы с &lt;10 голосов</span><span style="color:var(--gray-400);font-weight:700">79ч</span></div>
+          <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:3px"><div style="height:100%;width:99%;background:var(--gray-500);border-radius:3px"></div></div>
+        </div>
+        <div style="margin-top:4px;padding:12px;background:rgba(93,222,138,0.06);border-radius:var(--radius-sm);border:1px solid rgba(93,222,138,0.12)">
+          <div style="font-size:11px;color:var(--gray-300);line-height:1.6">
+            💡 <strong style="color:var(--accent)">Голосование жителей работает.</strong> Социальный сигнал помогает выявлять важные проблемы быстрее формального SLA.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-note">Аналитика за октябрь 2025</div>
+</div>
+
+<!-- ════════════ SCREEN: SETTINGS ════════════ -->
+<div class="screen" id="screen-settings">
+
+  <!-- ACCOUNT CARD -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Профиль администратора</div>
+        <div class="card-sub">Личные данные и роль в системе</div>
+      </div>
+      <button class="add-btn" onclick="flash('Изменения сохранены')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Сохранить
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:120px 1fr;gap:24px;align-items:start">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+        <div style="width:96px;height:96px;border-radius:24px;background:linear-gradient(135deg,var(--accent),var(--green-400));display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:32px;font-weight:700;color:var(--green-900)">СЕ</div>
+        <button class="dp-action-btn" style="height:32px;padding:0 12px;font-size:11px;background:rgba(255,255,255,0.05);color:var(--gray-300);border:1px solid rgba(255,255,255,0.12)" onclick="flash('Загрузка фото')">Сменить фото</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <label class="form-label">Имя</label>
+          <input class="form-input" type="text" value="Смирнова Елена">
+        </div>
+        <div>
+          <label class="form-label">Должность</label>
+          <input class="form-input" type="text" value="Главный эколог города">
+        </div>
+        <div>
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" value="smirnova@sochi.gov.ru">
+        </div>
+        <div>
+          <label class="form-label">Телефон</label>
+          <input class="form-input" type="tel" value="+7 (862) 264-23-86">
+        </div>
+        <div>
+          <label class="form-label">Закреплённые районы</label>
+          <input class="form-input" type="text" value="Все районы Сочи">
+        </div>
+        <div>
+          <label class="form-label">Роль</label>
+          <input class="form-input" type="text" value="Администратор" disabled style="opacity:0.6">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PDF EXPORT CENTER -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">📄 Экспорт отчётов в PDF</div>
+        <div class="card-sub">Готовые шаблоны для отчётов мэрии и внутренней документации</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="export-card" onclick="flash('Сводный отчёт за октябрь — PDF готов')" style="background:rgba(93,222,138,0.06);border:1px solid rgba(93,222,138,0.2);border-radius:14px;padding:16px;cursor:pointer;transition:all 0.15s">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(93,222,138,0.15);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="#5DDE8A" stroke-width="2" style="width:18px;height:18px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--white)">Сводный отчёт за месяц</div>
+        </div>
+        <div style="font-size:11px;color:var(--gray-400);line-height:1.5">KPI, статусы, SLA, активность жителей · Для отчёта мэрии</div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--accent);font-weight:600">⬇ Скачать PDF · 8 страниц</div>
+      </div>
+
+      <div class="export-card" onclick="flash('Отчёт по жалобам — PDF готов')" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:14px;padding:16px;cursor:pointer;transition:all 0.15s">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" style="width:18px;height:18px"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg></div>
+          <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--white)">Реестр жалоб</div>
+        </div>
+        <div style="font-size:11px;color:var(--gray-400);line-height:1.5">Список с фильтрами по району/типу/статусу · Excel и PDF</div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--blue);font-weight:600">⬇ Скачать · 247 записей</div>
+      </div>
+
+      <div class="export-card" onclick="flash('Отчёт по SLA — PDF готов')" style="background:rgba(232,69,60,0.05);border:1px solid rgba(232,69,60,0.2);border-radius:14px;padding:16px;cursor:pointer;transition:all 0.15s">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(232,69,60,0.15);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="#E8453C" stroke-width="2" style="width:18px;height:18px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--white)">Нарушения SLA</div>
+        </div>
+        <div style="font-size:11px;color:var(--gray-400);line-height:1.5">Жалобы с превышением норматива · Кому и почему</div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--red);font-weight:600">⬇ Скачать PDF · 8 случаев</div>
+      </div>
+
+      <div class="export-card" onclick="flash('Отчёт по голосованиям — PDF готов')" style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);border-radius:14px;padding:16px;cursor:pointer;transition:all 0.15s">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" fill="#8B5CF6" style="width:18px;height:18px"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3z"/></svg></div>
+          <div style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--white)">Голосование жителей</div>
+        </div>
+        <div style="font-size:11px;color:var(--gray-400);line-height:1.5">Топ‑жалобы по голосам, динамика вовлечения</div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--purple);font-weight:600">⬇ Скачать PDF</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- NOTIFICATIONS SETTINGS -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Уведомления</div>
+        <div class="card-sub">Что присылать на email и в браузер</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="settings-row" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:12px">
+        <div>
+          <div style="font-size:13px;color:var(--white);font-weight:500">Новая жалоба</div>
+          <div style="font-size:11px;color:var(--gray-500);margin-top:2px">Каждое новое обращение</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:44px;height:24px"><input type="checkbox" checked style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:var(--accent);border-radius:24px;transition:0.2s"></span><span style="position:absolute;height:18px;width:18px;left:23px;top:3px;background:var(--white);border-radius:50%;transition:0.2s"></span></label>
+      </div>
+      <div class="settings-row" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:12px">
+        <div>
+          <div style="font-size:13px;color:var(--white);font-weight:500">Превышение SLA</div>
+          <div style="font-size:11px;color:var(--gray-500);margin-top:2px">Когда жалоба не закрыта в норматив</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:44px;height:24px"><input type="checkbox" checked style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:var(--accent);border-radius:24px"></span><span style="position:absolute;height:18px;width:18px;left:23px;top:3px;background:var(--white);border-radius:50%"></span></label>
+      </div>
+      <div class="settings-row" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:12px">
+        <div>
+          <div style="font-size:13px;color:var(--white);font-weight:500">Жалоба набрала 50+ голосов</div>
+          <div style="font-size:11px;color:var(--gray-500);margin-top:2px">Высокоприоритетные обращения</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:44px;height:24px"><input type="checkbox" checked style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:var(--accent);border-radius:24px"></span><span style="position:absolute;height:18px;width:18px;left:23px;top:3px;background:var(--white);border-radius:50%"></span></label>
+      </div>
+      <div class="settings-row" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(255,255,255,0.03);border-radius:12px">
+        <div>
+          <div style="font-size:13px;color:var(--white);font-weight:500">Еженедельный дайджест</div>
+          <div style="font-size:11px;color:var(--gray-500);margin-top:2px">По понедельникам, 09:00</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:44px;height:24px"><input type="checkbox" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;inset:0;background:rgba(255,255,255,0.1);border-radius:24px"></span><span style="position:absolute;height:18px;width:18px;left:3px;top:3px;background:var(--white);border-radius:50%"></span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEAM -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Команда</div>
+        <div class="card-sub">3 активных сотрудника · 1 ожидает приглашения</div>
+      </div>
+      <button class="add-btn" onclick="toggleInvite()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Пригласить сотрудника
+      </button>
+    </div>
+
+    <!-- INVITE FORM (expandable) -->
+    <div id="invite-form" style="display:none;background:rgba(93,222,138,0.05);border:1px dashed rgba(93,222,138,0.3);border-radius:16px;padding:18px;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:-2px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#5DDE8A" stroke-width="2" style="width:18px;height:18px"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+        <div style="font-family:var(--font-display);font-size:12px;font-weight:600;color:var(--accent);letter-spacing:0.05em;text-transform:uppercase">Новое приглашение</div>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label class="form-label">ФИО сотрудника</label>
+          <input class="form-input" type="text" placeholder="Иванова Мария Петровна" id="inv-name">
+        </div>
+        <div>
+          <label class="form-label">Корпоративный Email</label>
+          <input class="form-input" type="email" placeholder="ivanova@sochi.gov.ru" id="inv-email">
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">Роль</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px">
+          <div class="role-card active" onclick="pickRole(this)" data-role="admin" style="background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;cursor:pointer">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--accent)"></div>
+              <div style="font-size:12px;font-weight:700;color:var(--gray-200)">Админ</div>
+              <span style="font-size:9px;font-weight:700;color:var(--green-900);background:var(--accent);padding:2px 6px;border-radius:5px;margin-left:auto">РЕК</span>
+            </div>
+            <div style="font-size:10px;color:var(--gray-400);line-height:1.4">Полный доступ ко всем функциям и районам</div>
+          </div>
+          <div class="role-card" onclick="pickRole(this)" data-role="inspector" style="background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;cursor:pointer">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--blue)"></div>
+              <div style="font-size:12px;font-weight:700;color:var(--gray-200)">Инспектор</div>
+            </div>
+            <div style="font-size:10px;color:var(--gray-400);line-height:1.4">Меняет статусы в своих районах · без приглашений</div>
+          </div>
+          <div class="role-card" onclick="pickRole(this)" data-role="operator" style="background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px;cursor:pointer">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--amber)"></div>
+              <div style="font-size:12px;font-weight:700;color:var(--gray-200)">Оператор</div>
+            </div>
+            <div style="font-size:10px;color:var(--gray-400);line-height:1.4">Только приёмка · передаёт инспектору</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--gray-500);margin-top:8px;line-height:1.5">💡 В MVP все роли = «Админ» (полные права). Разделение пригодится при росте команды.</div>
+      </div>
+
+      <div>
+        <label class="form-label">Закреплённые районы</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+          <div class="dist-chip active" onclick="toggleDist(this)" style="padding:6px 12px;border-radius:100px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);font-size:11px;font-weight:600;color:var(--gray-400);cursor:pointer">Все районы</div>
+          <div class="dist-chip" onclick="toggleDist(this)" style="padding:6px 12px;border-radius:100px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);font-size:11px;font-weight:600;color:var(--gray-400);cursor:pointer">Центральный</div>
+          <div class="dist-chip" onclick="toggleDist(this)" style="padding:6px 12px;border-radius:100px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);font-size:11px;font-weight:600;color:var(--gray-400);cursor:pointer">Адлерский</div>
+          <div class="dist-chip" onclick="toggleDist(this)" style="padding:6px 12px;border-radius:100px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);font-size:11px;font-weight:600;color:var(--gray-400);cursor:pointer">Хостинский</div>
+          <div class="dist-chip" onclick="toggleDist(this)" style="padding:6px 12px;border-radius:100px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);font-size:11px;font-weight:600;color:var(--gray-400);cursor:pointer">Лазаревский</div>
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">Сопроводительное сообщение (необязательно)</label>
+        <textarea class="form-input form-textarea" placeholder="Здравствуйте! Приглашаю вас в кабинет администрации Сочи как…">Здравствуйте! Приглашаю вас в кабинет администрации Сочи. Ссылка для активации придёт на email.</textarea>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="dp-action-btn duplicate" style="padding:0 16px;height:40px" onclick="toggleInvite()">Отмена</button>
+        <button class="add-btn" onclick="sendInvite()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Отправить приглашение
+        </button>
+      </div>
+    </div>
+
+    <!-- PENDING INVITATIONS -->
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2" style="width:14px;height:14px"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div style="font-family:var(--font-display);font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--amber)">Ожидают принятия (1)</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(245,158,11,0.06);border:1px dashed rgba(245,158,11,0.3);border-radius:12px">
+        <div class="admin-avatar" style="width:36px;height:36px;font-size:11px;background:rgba(255,255,255,0.08);color:var(--gray-400);border:1.5px dashed rgba(255,255,255,0.2)">?</div>
+        <div style="flex:1">
+          <div style="font-size:13px;color:var(--white);font-weight:600">Соколов Михаил</div>
+          <div style="font-size:11px;color:var(--gray-500)">sokolov@sochi.gov.ru · Приглашён 12 мин назад</div>
+        </div>
+        <span style="font-size:10px;font-weight:600;color:var(--amber);background:rgba(245,158,11,0.15);padding:4px 8px;border-radius:6px">Ожидает</span>
+        <button class="dp-action-btn duplicate" style="padding:0 10px;height:30px;font-size:11px" onclick="flash('Ссылка скопирована')" title="Скопировать ссылку приглашения">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        </button>
+        <button class="dp-action-btn reject" style="padding:0 10px;height:30px;font-size:11px" onclick="flash('Приглашение отозвано')" title="Отозвать">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ACTIVE MEMBERS -->
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#5DDE8A" stroke-width="2" style="width:14px;height:14px"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <div style="font-family:var(--font-display);font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent)">Активные сотрудники (3)</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="team-row" onclick="openMember(this)" data-name="Смирнова Елена" data-init="СЕ">
+          <div class="admin-avatar" style="width:40px;height:40px;font-size:12px">СЕ</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <div style="font-size:13px;color:var(--white);font-weight:600">Смирнова Елена</div>
+              <span style="font-size:9px;font-weight:700;color:var(--accent);background:rgba(93,222,138,0.12);padding:2px 6px;border-radius:5px">● ОНЛАЙН</span>
+              <span style="font-size:9px;font-weight:700;color:var(--green-900);background:var(--accent);padding:2px 6px;border-radius:5px">ВЫ</span>
+            </div>
+            <div style="font-size:11px;color:var(--gray-500);margin-top:2px">smirnova@sochi.gov.ru · все районы · последнее действие: только что</div>
+          </div>
+          <span style="font-size:10px;font-weight:600;color:var(--accent);background:rgba(93,222,138,0.12);padding:4px 8px;border-radius:6px">Админ</span>
+        </div>
+
+        <div class="team-row" onclick="openMember(this)" data-name="Петров Александр" data-init="ПА">
+          <div class="admin-avatar" style="width:40px;height:40px;font-size:12px;background:linear-gradient(135deg,#3B82F6,#1f5233)">ПА</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:13px;color:var(--white);font-weight:600">Петров Александр</div>
+              <span style="font-size:9px;font-weight:700;color:var(--gray-400);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:5px">был 1 ч назад</span>
+            </div>
+            <div style="font-size:11px;color:var(--gray-500);margin-top:2px">petrov@sochi.gov.ru · Адлерский · 12 жалоб обработано сегодня</div>
+          </div>
+          <span style="font-size:10px;font-weight:600;color:var(--accent);background:rgba(93,222,138,0.12);padding:4px 8px;border-radius:6px">Админ</span>
+        </div>
+
+        <div class="team-row" onclick="openMember(this)" data-name="Козлова Ирина" data-init="КИ">
+          <div class="admin-avatar" style="width:40px;height:40px;font-size:12px;background:linear-gradient(135deg,#F59E0B,#1f5233)">КИ</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:13px;color:var(--white);font-weight:600">Козлова Ирина</div>
+              <span style="font-size:9px;font-weight:700;color:var(--gray-400);background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:5px">был вчера</span>
+            </div>
+            <div style="font-size:11px;color:var(--gray-500);margin-top:2px">kozlova@sochi.gov.ru · Хостинский, Центральный · 8 приёмов сегодня</div>
+          </div>
+          <span style="font-size:10px;font-weight:600;color:var(--accent);background:rgba(93,222,138,0.12);padding:4px 8px;border-radius:6px">Админ</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT MEMBER MODAL -->
+  <div id="member-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)">
+    <div style="background:var(--green-900);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:28px;width:520px;max-width:100%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="admin-avatar" id="m-avatar" style="width:48px;height:48px;font-size:14px">СЕ</div>
+          <div>
+            <div id="m-name" style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--white)">Смирнова Елена</div>
+            <div style="font-size:11px;color:var(--gray-500)">Изменить роль, район, доступ</div>
+          </div>
+        </div>
+        <button class="dp-close" onclick="closeMember()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <label class="form-label">ФИО</label>
+          <input class="form-input" type="text" value="Смирнова Елена" id="m-name-input">
+        </div>
+        <div>
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" value="smirnova@sochi.gov.ru" disabled style="opacity:0.6">
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">Роль</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px">
+          <div class="role-card active" onclick="pickRole(this)" style="background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px;cursor:pointer;text-align:center">
+            <div style="font-size:11px;font-weight:700;color:var(--gray-300)">Админ</div>
+          </div>
+          <div class="role-card" onclick="pickRole(this)" style="background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px;cursor:pointer;text-align:center">
+            <div style="font-size:11px;font-weight:700;color:var(--gray-300)">Инспектор</div>
+          </div>
+          <div class="role-card" onclick="pickRole(this)" style="background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px;cursor:pointer;text-align:center">
+            <div style="font-size:11px;font-weight:700;color:var(--gray-300)">Оператор</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">Закреплённые районы</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+          <div class="dist-chip active" onclick="toggleDist(this)" style="padding:6px 12px;border-radius:100px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);font-size:11px;font-weight:600;color:var(--gray-400);cursor:pointer">Все районы</div>
+          <div class="dist-chip" onclick="toggleDist(this)" style="padding:6px 12px;border-radius:100px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);font-size:11px;font-weight:600;color:var(--gray-400);cursor:pointer">Центральный</div>
+          <div class="dist-chip" onclick="toggleDist(this)" style="padding:6px 12px;border-radius:100px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);font-size:11px;font-weight:600;color:var(--gray-400);cursor:pointer">Адлерский</div>
+          <div class="dist-chip" onclick="toggleDist(this)" style="padding:6px 12px;border-radius:100px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);font-size:11px;font-weight:600;color:var(--gray-400);cursor:pointer">Хостинский</div>
+          <div class="dist-chip" onclick="toggleDist(this)" style="padding:6px 12px;border-radius:100px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);font-size:11px;font-weight:600;color:var(--gray-400);cursor:pointer">Лазаревский</div>
+        </div>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:14px">
+        <div style="font-family:var(--font-display);font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--gray-500);margin-bottom:8px">Активность</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+          <div>
+            <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--white)">247</div>
+            <div style="font-size:10px;color:var(--gray-500)">жалоб обработано</div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--accent)">38ч</div>
+            <div style="font-size:10px;color:var(--gray-500)">среднее время решения</div>
+          </div>
+          <div>
+            <div style="font-family:var(--font-display);font-size:18px;font-weight:700;color:var(--white)">2 мин</div>
+            <div style="font-size:10px;color:var(--gray-500)">последнее действие</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.08);padding-top:14px">
+        <div style="display:flex;gap:8px">
+          <button class="dp-action-btn reject" style="padding:0 14px;height:38px" onclick="closeMember(); flash('Доступ заморожен')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/><line x1="20" y1="16" x2="4" y2="8"/><line x1="20" y1="8" x2="4" y2="16"/></svg>
+            Заморозить
+          </button>
+          <button class="dp-action-btn reject" style="padding:0 14px;height:38px" onclick="closeMember(); flash('Сотрудник удалён из команды')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            Удалить
+          </button>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="dp-action-btn duplicate" style="padding:0 16px;height:38px" onclick="closeMember()">Отмена</button>
+          <button class="add-btn" onclick="closeMember(); flash('Изменения сохранены')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            Сохранить
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-note">Настройки сохраняются автоматически · Версия CleanCity v2 · Российский сервер</div>
+</div>
+
+</div><!-- /app-shell -->
+
+<script>
+function showScreen(name, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const target = document.getElementById('screen-' + name);
+  if (target) target.classList.add('active');
+  if (btn && btn.classList) btn.classList.add('active');
+  else {
+    const tab = document.querySelector(".tab-btn[onclick*=\"'" + name + "'\"]");
+    if (tab) tab.classList.add('active');
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function enterApp() {
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('app-shell').classList.add('active');
+  flash('Добро пожаловать, Елена');
+}
+function exitApp() {
+  document.getElementById('login-page').style.display = 'flex';
+  document.getElementById('app-shell').classList.remove('active');
+}
+function closeDetail() {
+  const layout = document.getElementById('complaints-layout');
+  layout.classList.remove('with-panel');
+  document.querySelector('.detail-panel').style.display = 'none';
+  document.querySelectorAll('.ct-row').forEach(r => r.classList.remove('selected'));
+}
+function openDetail(row) {
+  const layout = document.getElementById('complaints-layout');
+  layout.classList.add('with-panel');
+  document.querySelector('.detail-panel').style.display = 'flex';
+  document.querySelectorAll('.ct-row').forEach(r => r.classList.remove('selected'));
+  if (row) row.classList.add('selected');
+}
+function flash(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#0d2b1a;color:#5DDE8A;padding:12px 20px;border-radius:14px;font-family:Golos Text,sans-serif;font-size:13px;font-weight:600;box-shadow:0 12px 40px rgba(0,0,0,0.4);z-index:9999;border:1px solid rgba(93,222,138,0.3)';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 1800);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.style.cursor = 'pointer';
+    chip.onclick = () => {
+      chip.parentNode.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    };
+  });
+  document.querySelectorAll('.ct-sort').forEach(s => {
+    s.onclick = () => {
+      s.parentNode.querySelectorAll('.ct-sort').forEach(c => c.classList.remove('active'));
+      s.classList.add('active');
+      flash('Сортировка обновлена');
+    };
+  });
+  document.querySelectorAll('.ct-row').forEach(row => {
+    row.onclick = () => openDetail(row);
+  });
+  document.querySelectorAll('.dp-action-btn.progress').forEach(b => b.onclick = () => flash('Статус → В работе. Гражданин уведомлён'));
+  document.querySelectorAll('.dp-action-btn.done').forEach(b => b.onclick = () => flash('Статус → Решено. Гражданин уведомлён'));
+  document.querySelectorAll('.dp-action-btn.reject').forEach(b => b.onclick = () => flash('Статус → Отклонена. Причина отправлена'));
+  document.querySelectorAll('.dp-action-btn.duplicate').forEach(b => b.onclick = () => flash('Помечено как дубликат'));
+  document.querySelectorAll('#screen-announcements .add-btn').forEach(b => b.onclick = () => flash('Объявление опубликовано'));
+});
+
+function toggleInvite() {
+  const f = document.getElementById('invite-form');
+  if (f.style.display === 'flex') {
+    f.style.display = 'none';
+  } else {
+    f.style.display = 'flex';
+    f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+function pickRole(card) {
+  const siblings = card.parentNode.querySelectorAll('.role-card');
+  siblings.forEach(s => s.classList.remove('active'));
+  card.classList.add('active');
+}
+function toggleDist(chip) {
+  const all = chip.parentNode.children;
+  const isAll = chip.textContent.includes('Все');
+  if (isAll) {
+    Array.from(all).forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+  } else {
+    chip.parentNode.querySelector('.dist-chip').classList.remove('active');
+    chip.classList.toggle('active');
+    const anyActive = Array.from(all).some((c, i) => i > 0 && c.classList.contains('active'));
+    if (!anyActive) chip.parentNode.querySelector('.dist-chip').classList.add('active');
+  }
+}
+function sendInvite() {
+  const name = document.getElementById('inv-name').value || 'Новый сотрудник';
+  toggleInvite();
+  flash('Приглашение отправлено: ' + name);
+  document.getElementById('inv-name').value = '';
+  document.getElementById('inv-email').value = '';
+}
+function openMember(row) {
+  const modal = document.getElementById('member-modal');
+  const name = row.dataset.name;
+  const init = row.dataset.init;
+  document.getElementById('m-name').textContent = name;
+  document.getElementById('m-name-input').value = name;
+  document.getElementById('m-avatar').textContent = init;
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+}
+function closeMember() {
+  const modal = document.getElementById('member-modal');
+  modal.style.display = 'none';
+  modal.classList.remove('open');
+}
+</script>
+</body>
+</html>

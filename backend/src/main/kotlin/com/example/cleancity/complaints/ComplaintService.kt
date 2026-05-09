@@ -58,14 +58,15 @@ class ComplaintService(
             processAndStore(upload, sortOrder = i)
         }
 
+        val address = req.address.trim()
         val id = repo.create(
             authorId = authorId,
             category = req.category,
-            title = req.title.trim(),
+            title = generateTitle(req.category, address),
             description = req.description.trim(),
             latitude = req.latitude,
             longitude = req.longitude,
-            address = req.address.trim(),
+            address = address,
             district = req.district?.trim()?.takeIf { it.isNotBlank() }
         )
 
@@ -128,13 +129,16 @@ class ComplaintService(
 
     private fun validate(req: CreateComplaintRequest, photos: List<PhotoUpload>) {
         require(photos.size in MIN_PHOTOS..MAX_PHOTOS) { "Need $MIN_PHOTOS to $MAX_PHOTOS photos" }
-        require(req.title.isNotBlank()) { "Title is required" }
-        require(req.title.length <= 300) { "Title is too long" }
         require(req.description.isNotBlank()) { "Description is required" }
         require(req.description.length <= 5000) { "Description is too long" }
         require(req.address.isNotBlank()) { "Address is required" }
         require(req.latitude in SOCHI_MIN_LAT..SOCHI_MAX_LAT) { "Latitude outside Sochi" }
         require(req.longitude in SOCHI_MIN_LON..SOCHI_MAX_LON) { "Longitude outside Sochi" }
+    }
+
+    private fun generateTitle(category: ProblemCategory, address: String): String {
+        val street = address.split(',').firstOrNull()?.trim()?.ifBlank { null } ?: address
+        return "${category.localizedLabel} · $street".take(300)
     }
 
     private fun processAndStore(upload: PhotoUpload, sortOrder: Int): NewPhoto {

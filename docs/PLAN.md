@@ -99,7 +99,7 @@ Web admin может быть проще (показываем основной 
 
 ### День 5 (12.05) — Голоса + смена статусов + дубликаты
 
-- [ ] Миграция V3: `votes`, `status_changes` (название миграции: `V4__create_votes_and_status_changes.sql`, т.к. V3 уже занята audit-логом)
+- [ ] Миграция: `votes`, `status_changes` (название: `V5__create_votes_and_status_changes.sql`, т.к. V3 — audit-лог, V4 — выравнивание `users` под решения 2026-05-07/08)
 - [ ] `POST /complaints/{id}/votes` (идемпотентно) и `DELETE` (отозвать)
 - [ ] **Блокировка голосов на терминальные статусы:** для `REJECTED` и `DUPLICATE` оба endpoint возвращают 409 Conflict с `{message: "Голосование закрыто: жалоба <статус>"}`.
 - [ ] `GET /complaints/voted` (мои голоса, включая закрытые)

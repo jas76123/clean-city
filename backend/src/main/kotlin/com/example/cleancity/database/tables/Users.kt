@@ -9,7 +9,6 @@ object Users : Table("users") {
     val passwordHash = varchar("password_hash", 255)
     val role = varchar("role", 20).default("RESIDENT")
     val fullName = varchar("full_name", 200).nullable()
-    val phone = varchar("phone", 20).nullable()
     val district = varchar("district", 100).nullable()
     val emailVerified = bool("email_verified").default(false)
     val isActive = bool("is_active").default(true)
@@ -22,6 +21,8 @@ object Users : Table("users") {
     val createdAt = timestampWithTimeZone("created_at")
     val lastLoginAt = timestampWithTimeZone("last_login_at").nullable()
     val lastLoginIp = varchar("last_login_ip", 45).nullable()
+    val acceptedTermsAt = timestampWithTimeZone("accepted_terms_at").nullable()
+    val acceptedTermsVersion = varchar("accepted_terms_version", 10).nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

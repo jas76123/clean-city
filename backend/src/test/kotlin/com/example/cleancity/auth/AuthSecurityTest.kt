@@ -69,13 +69,14 @@ class AuthSecurityTest {
             email = email,
             jwt = jwt,
             baseUrl = "http://localhost:8080",
+            termsVersion = "test-v1",
             totp = totp,
             audit = DbAuditLogger()
         )
     }
 
     private fun registerAndVerifyResident(emailAddr: String, password: String = "password123"): Long {
-        runBlocking { service.register(RegisterInput(emailAddr, password, null)) }
+        runBlocking { service.register(RegisterInput(emailAddr, password, null, acceptedTerms = true)) }
         val token = email.lastTokenLink()
         val auth = service.verifyEmail(token, ip = null, userAgent = null)
         return auth.user.id

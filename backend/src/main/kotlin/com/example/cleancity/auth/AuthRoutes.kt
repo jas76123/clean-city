@@ -41,12 +41,16 @@ fun Route.authRoutes(
         post("/register") {
             val req = call.receive<RegisterRequest>()
             try {
-                val user = service.register(RegisterInput(req.email, req.password, req.fullName))
+                val user = service.register(
+                    RegisterInput(req.email, req.password, req.fullName, req.acceptedTerms)
+                )
                 call.respond(HttpStatusCode.Created, user)
             } catch (e: InvalidEmailException) {
                 call.respond(HttpStatusCode.BadRequest, MessageResponse(e.message ?: "Invalid email"))
             } catch (e: WeakPasswordException) {
                 call.respond(HttpStatusCode.BadRequest, MessageResponse(e.message ?: "Weak password"))
+            } catch (_: TermsNotAcceptedException) {
+                call.respond(HttpStatusCode.BadRequest, MessageResponse("Acceptance of terms is required"))
             } catch (_: EmailAlreadyRegisteredException) {
                 call.respond(HttpStatusCode.Conflict, MessageResponse("Email already registered"))
             }

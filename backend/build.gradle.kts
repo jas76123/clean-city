@@ -39,6 +39,10 @@ dependencies {
     implementation(libs.flyway.postgresql)
     implementation(libs.logback.classic)
 
+    implementation(libs.imgscalr)
+    implementation(libs.metadata.extractor)
+    implementation(libs.aws.sdk.s3)
+
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.h2.database)

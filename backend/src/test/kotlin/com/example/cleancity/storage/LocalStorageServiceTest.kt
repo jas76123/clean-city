@@ -1,59 +1,71 @@
 package com.example.cleancity.storage
 
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import java.io.File
 
 class LocalStorageServiceTest {
 
-    private fun createTempStorage(): LocalStorageService {
-        val tempDir = File(System.getProperty("java.io.tmpdir"), "cleancity-test-${System.currentTimeMillis()}")
+    private fun createTempStorage(): Pair<LocalStorageService, File> {
+        val tempDir = File(System.getProperty("java.io.tmpdir"), "cleancity-test-${System.nanoTime()}")
         tempDir.mkdirs()
-        return LocalStorageService(tempDir.absolutePath, "http://localhost:8080")
+        return LocalStorageService(tempDir.absolutePath, "http://localhost:8080") to tempDir
     }
 
     @Test
-    fun `save stores file and returns path`() {
-        val storage = createTempStorage()
-        val bytes = "fake-image-data".toByteArray()
+    fun `save writes file and returns public URL`() {
+        val (storage, _) = createTempStorage()
+        val bytes = "fake-image".toByteArray()
 
-        val path = storage.save("test.jpg", bytes)
+        val url = storage.save("photos/2026/05/abc.jpg", bytes, "image/jpeg")
 
-        assertTrue(path.endsWith(".jpg"))
-        val stored = storage.get(path)
+        assertEquals("http://localhost:8080/photos/photos/2026/05/abc.jpg", url)
+        val stored = storage.read("photos/2026/05/abc.jpg")
         assertNotNull(stored)
-        assertEquals("fake-image-data", String(stored))
+        assertEquals("fake-image", String(stored))
     }
 
     @Test
-    fun `get returns null for missing file`() {
-        val storage = createTempStorage()
-
-        val result = storage.get("nonexistent.jpg")
-
-        assertNull(result)
+    fun `read returns null for missing key`() {
+        val (storage, _) = createTempStorage()
+        assertNull(storage.read("photos/2026/05/missing.jpg"))
     }
 
     @Test
-    fun `getUrl returns full URL`() {
-        val storage = createTempStorage()
-
-        val url = storage.getUrl("abc123.jpg")
-
-        assertEquals("http://localhost:8080/api/photos/abc123.jpg", url)
+    fun `read rejects path traversal`() {
+        val (storage, _) = createTempStorage()
+        assertNull(storage.read("../etc/passwd"))
+        assertNull(storage.read("/absolute/path"))
     }
 
     @Test
-    fun `save generates unique filenames`() {
-        val storage = createTempStorage()
-        val bytes = "data".toByteArray()
+    fun `delete removes file and is idempotent`() {
+        val (storage, _) = createTempStorage()
+        storage.save("photos/2026/05/x.jpg", "abc".toByteArray(), "image/jpeg")
+        assertNotNull(storage.read("photos/2026/05/x.jpg"))
 
-        val path1 = storage.save("photo.jpg", bytes)
-        val path2 = storage.save("photo.jpg", bytes)
+        storage.delete("photos/2026/05/x.jpg")
+        assertNull(storage.read("photos/2026/05/x.jpg"))
 
-        assertTrue(path1 != path2)
+        // повторный delete не падает
+        storage.delete("photos/2026/05/x.jpg")
+    }
+
+    @Test
+    fun `urlFor returns predictable URL`() {
+        val (storage, _) = createTempStorage()
+        assertEquals("http://localhost:8080/photos/photos/2026/05/abc.jpg", storage.urlFor("photos/2026/05/abc.jpg"))
+    }
+
+    @Test
+    fun `save creates nested directories`() {
+        val (storage, root) = createTempStorage()
+        storage.save("photos/2026/05/deep.jpg", "x".toByteArray(), "image/jpeg")
+        assertTrue(File(root, "photos/2026/05/deep.jpg").exists())
+        assertFalse(File(root, "photos/2026/06").exists())
     }
 }

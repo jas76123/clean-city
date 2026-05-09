@@ -1,7 +1,12 @@
 package com.example.cleancity.storage
 
 interface StorageService {
-    fun save(fileName: String, bytes: ByteArray): String
-    fun get(fileName: String): ByteArray?
-    fun getUrl(fileName: String): String
+    /** Сохраняет байты под `key` и возвращает публичный URL. */
+    fun save(key: String, bytes: ByteArray, contentType: String): String
+
+    /** Удаляет объект по ключу (тихо игнорирует отсутствие). */
+    fun delete(key: String)
+
+    /** Публичный URL для уже сохранённого объекта. */
+    fun urlFor(key: String): String
 }

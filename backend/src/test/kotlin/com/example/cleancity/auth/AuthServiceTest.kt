@@ -61,7 +61,13 @@ class AuthServiceTest {
         )
         totp = TotpService()
         audit = DbAuditLogger()
-        service = AuthService(users, tokens, email, jwt, baseUrl = "http://localhost:8080", totp = totp, audit = audit)
+        service = AuthService(
+            users, tokens, email, jwt,
+            baseUrl = "http://localhost:8080",
+            termsVersion = "test-v1",
+            totp = totp,
+            audit = audit
+        )
     }
 
     @Test
@@ -87,6 +93,17 @@ class AuthServiceTest {
     fun `register rejects malformed email`() {
         assertFailsWith<InvalidEmailException> {
             runBlocking { service.register(RegisterInput("not-an-email", "password123", null)) }
+        }
+    }
+
+    @Test
+    fun `register rejects when terms not accepted`() {
+        assertFailsWith<TermsNotAcceptedException> {
+            runBlocking {
+                service.register(
+                    RegisterInput("noterms@example.com", "password123", null, acceptedTerms = false)
+                )
+            }
         }
     }
 

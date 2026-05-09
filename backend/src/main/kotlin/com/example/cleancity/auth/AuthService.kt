@@ -49,12 +49,15 @@ data class TwoFactorSetupResponse(
     val otpAuthUri: String
 )
 
+class TermsNotAcceptedException(msg: String = "Acceptance of terms is required") : IllegalArgumentException(msg)
+
 class AuthService(
     private val users: UserRepository,
     private val tokens: TokenRepository,
     private val email: EmailService,
     private val jwt: JwtConfig,
     private val baseUrl: String,
+    private val termsVersion: String,
     private val totp: TotpService = TotpService(),
     private val audit: AuditLogger = NoopAuditLogger
 ) {
@@ -66,6 +69,7 @@ class AuthService(
     suspend fun register(req: RegisterInput): UserResponse {
         validateEmail(req.email)
         validatePassword(req.password, role = UserRole.RESIDENT)
+        if (!req.acceptedTerms) throw TermsNotAcceptedException()
 
         val existing = users.findByEmail(req.email)
         if (existing != null) throw EmailAlreadyRegisteredException()
@@ -74,7 +78,8 @@ class AuthService(
             email = req.email,
             passwordHash = PasswordHasher.hash(req.password),
             role = UserRole.RESIDENT,
-            fullName = req.fullName
+            fullName = req.fullName,
+            acceptedTermsVersion = termsVersion
         )
 
         val token = tokens.createEmailToken(user.id, EmailTokenPurpose.VERIFY_EMAIL, VERIFY_TOKEN_TTL_SECONDS)
@@ -383,10 +388,17 @@ class AuthService(
     )
 }
 
+/**
+ * Внутренний DTO регистрации. `acceptedTerms` помечается true по умолчанию для
+ * удобства тестов; продакшн-вход через [authRoutes] всегда явно проксирует
+ * значение из [com.example.cleancity.shared.requests.auth.RegisterRequest],
+ * где default = false (152-ФЗ требует явного согласия).
+ */
 data class RegisterInput(
     val email: String,
     val password: String,
-    val fullName: String?
+    val fullName: String?,
+    val acceptedTerms: Boolean = true
 )
 
 data class LoginInput(

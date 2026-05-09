@@ -43,7 +43,8 @@ class UserRepository {
         fullName: String? = null,
         isActive: Boolean = true,
         emailVerified: Boolean = false,
-        mustChangePassword: Boolean = false
+        mustChangePassword: Boolean = false,
+        acceptedTermsVersion: String? = null
     ): UserRow = transaction {
         val now = OffsetDateTime.now(ZoneOffset.UTC)
         val id = Users.insert {
@@ -56,6 +57,10 @@ class UserRepository {
             it[Users.mustChangePassword] = mustChangePassword
             it[Users.passwordChangedAt] = now
             it[Users.createdAt] = now
+            if (acceptedTermsVersion != null) {
+                it[Users.acceptedTermsAt] = now
+                it[Users.acceptedTermsVersion] = acceptedTermsVersion
+            }
         }[Users.id]
 
         UserRow(

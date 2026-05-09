@@ -84,12 +84,14 @@ fun Application.module() {
     val storage = buildStorage(baseUrl)
 
     val emailService = buildEmailService()
+    val termsVersion = environment.config.propertyOrNull("app.terms_version")?.getString() ?: "v1"
     val authService = AuthService(
         users = UserRepository(),
         tokens = TokenRepository(),
         email = emailService,
         jwt = jwtConfig,
         baseUrl = baseUrl,
+        termsVersion = termsVersion,
         totp = TotpService(),
         audit = DbAuditLogger()
     )

@@ -18,6 +18,9 @@ jakarta-mail = "2.1.3"
 angus-mail = "2.0.3"
 totp = "2.4.1"
 commons-codec = "1.17.1"
+imgscalr = "4.2"
+metadata-extractor = "2.19.0"
+aws-sdk = "2.29.10"
 
 [libraries]
 voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.ref = "voyager" }
@@ -51,6 +54,9 @@ flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql", versio
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 h2-database = { module = "com.h2database:h2", version.ref = "h2" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+imgscalr = { module = "org.imgscalr:imgscalr-lib", version.ref = "imgscalr" }
+metadata-extractor = { module = "com.drewnoakes:metadata-extractor", version.ref = "metadata-extractor" }
+aws-sdk-s3 = { module = "software.amazon.awssdk:s3", version.ref = "aws-sdk" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

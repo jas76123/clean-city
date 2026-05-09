@@ -9,14 +9,17 @@ import com.example.cleancity.auth.TokenRepository
 import com.example.cleancity.auth.TotpService
 import com.example.cleancity.auth.UserRepository
 import com.example.cleancity.auth.authRoutes
+import com.example.cleancity.complaints.ComplaintRepository
+import com.example.cleancity.complaints.ComplaintService
+import com.example.cleancity.complaints.complaintRoutes
 import com.example.cleancity.config.configureDatabase
 import com.example.cleancity.email.EmailService
 import com.example.cleancity.email.LoggingEmailService
 import com.example.cleancity.email.SmtpEmailService
-import com.example.cleancity.markers.MarkerRepository
-import com.example.cleancity.markers.MarkerService
-import com.example.cleancity.markers.markerRoutes
 import com.example.cleancity.storage.LocalStorageService
+import com.example.cleancity.storage.S3StorageService
+import com.example.cleancity.storage.StorageService
+import com.example.cleancity.storage.photoRoutes
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -75,14 +78,10 @@ fun Application.module() {
         }
     }
 
-    val storagePath = environment.config.propertyOrNull("storage.path")?.getString()
-        ?: System.getenv("STORAGE_PATH")
-        ?: "./uploads"
     val port = environment.config.propertyOrNull("ktor.deployment.port")?.getString() ?: "8080"
     val baseUrl = environment.config.propertyOrNull("app.base_url")?.getString() ?: "http://localhost:$port"
 
-    val storage = LocalStorageService(storagePath, baseUrl)
-    val markerService = MarkerService(MarkerRepository(), storage)
+    val storage = buildStorage(baseUrl)
 
     val emailService = buildEmailService()
     val authService = AuthService(
@@ -96,13 +95,42 @@ fun Application.module() {
     )
     val rateLimiter = RateLimiter()
 
+    val complaintService = ComplaintService(ComplaintRepository(), storage)
+
     routing {
         get("/health") {
             call.respond(mapOf("status" to "ok"))
         }
         authRoutes(authService, rateLimiter)
-        markerRoutes(markerService, storage)
+        complaintRoutes(complaintService)
+        if (storage is LocalStorageService) {
+            photoRoutes(storage)
+        }
     }
+}
+
+private fun Application.buildStorage(baseUrl: String): StorageService {
+    val stage = environment.config.propertyOrNull("app.stage")?.getString()?.uppercase() ?: "DEV"
+    if (stage == "PROD") {
+        val bucket = environment.config.propertyOrNull("storage.s3.bucket")?.getString().orEmpty()
+        val accessKey = environment.config.propertyOrNull("storage.s3.access_key")?.getString().orEmpty()
+        val secretKey = environment.config.propertyOrNull("storage.s3.secret_key")?.getString().orEmpty()
+        if (bucket.isNotBlank() && accessKey.isNotBlank() && secretKey.isNotBlank()) {
+            val region = environment.config.propertyOrNull("storage.s3.region")?.getString() ?: "ru-central1"
+            val endpoint = environment.config.propertyOrNull("storage.s3.endpoint")?.getString()
+                ?: "https://storage.yandexcloud.net"
+            val publicUrlBase = environment.config.propertyOrNull("storage.s3.public_url_base")?.getString()
+                ?: "https://$bucket.storage.yandexcloud.net"
+            environment.log.info("Storage: S3 (bucket=$bucket, endpoint=$endpoint)")
+            return S3StorageService(bucket, region, endpoint, accessKey, secretKey, publicUrlBase)
+        }
+        environment.log.warn("Stage=PROD but S3 config incomplete — falling back to LocalStorageService")
+    }
+    val storagePath = environment.config.propertyOrNull("storage.path")?.getString()
+        ?: System.getenv("STORAGE_PATH")
+        ?: "./uploads"
+    environment.log.info("Storage: Local (path=$storagePath)")
+    return LocalStorageService(storagePath, baseUrl)
 }
 
 private fun Application.buildEmailService(): EmailService {

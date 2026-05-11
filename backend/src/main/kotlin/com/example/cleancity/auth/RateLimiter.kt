@@ -70,9 +70,9 @@ suspend fun RoutingContext.rateLimitOr429(
     return false
 }
 
-internal fun ApplicationCall.clientIp(): String? =
+fun ApplicationCall.clientIp(): String? =
     request.header("X-Forwarded-For")?.split(",")?.firstOrNull()?.trim()
         ?: request.origin.remoteAddress.takeIf { it.isNotBlank() }
 
-internal fun ApplicationCall.userAgentSafe(): String? =
+fun ApplicationCall.userAgentSafe(): String? =
     request.header(HttpHeaders.UserAgent)?.take(500)

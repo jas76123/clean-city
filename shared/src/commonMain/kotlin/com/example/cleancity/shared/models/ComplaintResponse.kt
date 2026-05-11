@@ -3,8 +3,8 @@ package com.example.cleancity.shared.models
 import kotlinx.serialization.Serializable
 
 /**
- * Жалоба для списка и деталей. В Day 4 голоса и история статусов отсутствуют —
- * `votesCount=0`, `statusHistory=[]`. Day 5 заполнит их.
+ * Жалоба для списка и деталей. `statusHistory` приходит только в детальном ответе
+ * (`GET /complaints/{id}`), в списках — всегда пустой. `userVoted` для гостей всегда false.
  */
 @Serializable
 data class ComplaintResponse(
@@ -21,6 +21,7 @@ data class ComplaintResponse(
     val status: ComplaintStatus,
     val photos: List<ComplaintPhotoResponse> = emptyList(),
     val votesCount: Int = 0,
+    val userVoted: Boolean = false,
     val duplicateOfId: Long? = null,
     val createdAt: String,
     val updatedAt: String,
@@ -32,7 +33,7 @@ data class ComplaintResponse(
 data class StatusChangeResponse(
     val fromStatus: ComplaintStatus? = null,
     val toStatus: ComplaintStatus,
-    val comment: String? = null,
+    val comment: String,
     val changedByName: String? = null,
     val createdAt: String
 )

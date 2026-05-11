@@ -16,10 +16,14 @@ import com.example.cleancity.config.configureDatabase
 import com.example.cleancity.email.EmailService
 import com.example.cleancity.email.LoggingEmailService
 import com.example.cleancity.email.SmtpEmailService
+import com.example.cleancity.notifications.NoopNotificationService
 import com.example.cleancity.storage.LocalStorageService
 import com.example.cleancity.storage.S3StorageService
 import com.example.cleancity.storage.StorageService
 import com.example.cleancity.storage.photoRoutes
+import com.example.cleancity.votes.VoteRepository
+import com.example.cleancity.votes.VoteService
+import com.example.cleancity.votes.voteRoutes
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -55,6 +59,15 @@ fun Application.module() {
     install(StatusPages) {
         exception<IllegalArgumentException> { call, cause ->
             call.respond(HttpStatusCode.BadRequest, mapOf("message" to (cause.message ?: "Bad request")))
+        }
+        exception<NotFoundException> { call, cause ->
+            call.respond(HttpStatusCode.NotFound, mapOf("message" to (cause.message ?: "Not found")))
+        }
+        exception<ConflictException> { call, cause ->
+            call.respond(HttpStatusCode.Conflict, mapOf("message" to (cause.message ?: "Conflict")))
+        }
+        exception<ForbiddenException> { call, cause ->
+            call.respond(HttpStatusCode.Forbidden, mapOf("message" to (cause.message ?: "Forbidden")))
         }
         exception<Exception> { call, cause ->
             call.application.environment.log.error("Unhandled exception", cause)
@@ -97,7 +110,18 @@ fun Application.module() {
     )
     val rateLimiter = RateLimiter()
 
-    val complaintService = ComplaintService(ComplaintRepository(), storage)
+    val complaintRepository = ComplaintRepository()
+    val voteRepository = VoteRepository()
+    val notificationService = NoopNotificationService()
+    val complaintAudit = DbAuditLogger()
+    val complaintService = ComplaintService(
+        repo = complaintRepository,
+        storage = storage,
+        voteRepo = voteRepository,
+        notifications = notificationService,
+        audit = complaintAudit
+    )
+    val voteService = VoteService(voteRepository, complaintRepository)
 
     routing {
         get("/health") {
@@ -105,6 +129,7 @@ fun Application.module() {
         }
         authRoutes(authService, rateLimiter)
         complaintRoutes(complaintService)
+        voteRoutes(voteService)
         if (storage is LocalStorageService) {
             photoRoutes(storage)
         }

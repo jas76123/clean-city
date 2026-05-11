@@ -35,7 +35,7 @@
 
 ## 2. Контекст и фиксированные решения
 
-1. **Канал доставки:** polling backend API из mobile, **не FCM**. На защите push не должен зависеть от Google Play Services / VPN. Backend на Yandex Cloud (`agababyan.sarkis@yandex.ru`) полностью контролируем.
+1. **Канал доставки:** polling backend API из mobile, **не FCM**. На защите push не должен зависеть от Google Play Services / VPN. Backend на Yandex Cloud полностью контролируем.
 2. **Точка расширения для FCM:** интерфейс `NotificationService` — будущая `FcmNotificationService` подключается feature-флагом / профилем; бизнес-логика не меняется.
 3. **Авторизация:** все 4 endpoint'а требуют JWT (RESIDENT или Admin). Все запросы фильтруются по `currentUserId` из JWT. Юзер не может читать или менять чужие уведомления.
 4. **Утечка существования ID:** PATCH `/notifications/{id}/read` для чужого `{id}` возвращает **404, не 403** — чтобы атакующий не мог enumerate чужие notification IDs.

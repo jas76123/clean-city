@@ -562,7 +562,7 @@ Mobile                        Backend                       Storage
 - При ошибке `UNREGISTERED` — удаляем токен.
 - Для рассылки голосовавшим — собираем получателей одним SQL-запросом: `SELECT user_id FROM votes WHERE complaint_id=? AND value=1 UNION SELECT author_id FROM complaints WHERE id=?`.
 
-**Email (SMTP):** для verify-email, password reset, admin invite. Используем Yandex Mail SMTP (`smtp.yandex.ru:465`, SSL) с почтой проекта (например, `noreply@cleancity.ru`). Можно стартовать с обычной почты `agababanz07@gmail.com` через Gmail SMTP.
+**Email (SMTP):** для verify-email, password reset, admin invite. Используем Yandex Mail SMTP (`smtp.yandex.ru:465`, SSL) с почтой проекта (например, `noreply@cleancity.ru`). На dev — можно стартовать с любого личного SMTP-ящика (значение берётся из `.env`).
 
 ---
 

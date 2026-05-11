@@ -1,8 +1,11 @@
 package com.example.cleancity.complaints
 
+import com.example.cleancity.auth.clientIp
+import com.example.cleancity.auth.userAgentSafe
 import com.example.cleancity.shared.models.MessageResponse
 import com.example.cleancity.shared.models.ProblemCategory
 import com.example.cleancity.shared.models.UserRole
+import com.example.cleancity.shared.requests.ChangeStatusRequest
 import com.example.cleancity.shared.requests.CreateComplaintRequest
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.PartData
@@ -13,10 +16,12 @@ import io.ktor.server.application.call
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
+import io.ktor.server.request.receive
 import io.ktor.server.request.receiveMultipart
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import kotlinx.serialization.json.Json
@@ -28,8 +33,8 @@ fun Route.complaintRoutes(service: ComplaintService) {
 
     route("/complaints") {
 
-        // Карта и список доступны и гостям, и резидентам, и админам — но видимость
-        // регулируется внутри service по принципалу JWT (для гостей principal == null).
+        // Карта, список и /duplicates доступны и гостям, и резидентам, и админам —
+        // видимость регулируется внутри service по принципалу JWT (для гостей principal == null).
         authenticate("auth-jwt", optional = true) {
 
             get {
@@ -49,6 +54,21 @@ fun Route.complaintRoutes(service: ComplaintService) {
                 }
                 val category = call.queryEnum<ProblemCategory>("category") ?: return@get
                 call.respond(service.listMarkers(viewer, swLat, swLon, neLat, neLon, category.value))
+            }
+
+            get("/duplicates") {
+                val lat = call.queryDouble("lat") ?: return@get call.badRequest("lat is required")
+                val lon = call.queryDouble("lon") ?: return@get call.badRequest("lon is required")
+                val rawCategory = call.request.queryParameters["category"]
+                    ?: return@get call.badRequest("category is required")
+                val category = runCatching { ProblemCategory.valueOf(rawCategory.uppercase()) }.getOrNull()
+                    ?: return@get call.badRequest("Invalid 'category' value: $rawCategory")
+                val radius = call.queryInt("radius")
+                try {
+                    call.respond(service.findDuplicates(lat, lon, category, radius))
+                } catch (e: IllegalArgumentException) {
+                    call.badRequest(e.message ?: "Invalid request")
+                }
             }
 
             get("/{id}") {
@@ -112,6 +132,32 @@ fun Route.complaintRoutes(service: ComplaintService) {
                 val size = (call.queryInt("size") ?: 20).coerceAtMost(MAX_PAGE_SIZE)
                 call.respond(service.listMine(userId, page, size))
             }
+
+            get("/voted") {
+                val userId = call.requireUserId() ?: return@get
+                val page = (call.queryInt("page") ?: 0).coerceAtLeast(0)
+                val size = (call.queryInt("size") ?: 20).coerceIn(1, MAX_PAGE_SIZE)
+                call.respond(service.listVoted(userId, page, size))
+            }
+
+            patch("/{id}/status") {
+                val actor = call.authenticated() ?: return@patch
+                val id = call.parameters["id"]?.toLongOrNull()
+                    ?: return@patch call.badRequest("Invalid id")
+                val req = try {
+                    call.receive<ChangeStatusRequest>()
+                } catch (e: Exception) {
+                    return@patch call.badRequest("Invalid JSON: ${e.message}")
+                }
+                val updated = service.changeStatus(
+                    complaintId = id,
+                    actor = actor,
+                    req = req,
+                    ip = call.clientIp(),
+                    userAgent = call.userAgentSafe()
+                )
+                call.respond(updated)
+            }
         }
     }
 }
@@ -124,6 +170,15 @@ private fun ApplicationCall.viewer(): Viewer {
     val role = runCatching { UserRole.valueOf(principal.payload.getClaim("role").asString()) }
         .getOrDefault(UserRole.RESIDENT)
     return Viewer.Authenticated(userId, role)
+}
+
+private suspend fun ApplicationCall.authenticated(): Viewer.Authenticated? {
+    val v = viewer()
+    if (v !is Viewer.Authenticated) {
+        respond(HttpStatusCode.Unauthorized, MessageResponse("Not authenticated"))
+        return null
+    }
+    return v
 }
 
 private suspend fun ApplicationCall.requireUserId(): Long? {

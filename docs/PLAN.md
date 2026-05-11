@@ -87,7 +87,7 @@ Web admin может быть проще (показываем основной 
   - [x] Resize при upload: original + thumb 640px (через `imgscalr`)
   - [x] EXIF-стрипинг (через re-encode JPEG в `ImageProcessor`; metadata-extractor — для чтения Orientation)
 - [x] `POST /complaints` — multipart, валидация фото (magic bytes, размер ≤10MB), 1–5 файлов
-- [ ] **Авто-генерация title** в `ComplaintService.create()`: `title = "${ProblemCategory.localizedLabel(category)} · ${address.split(',')[0].trim()}"` (например, `«Мусор · ул. Транспортная»`). Клиент title не передаёт.
+- [x] **Авто-генерация title** в `ComplaintService.create()`: `title = "${ProblemCategory.localizedLabel(category)} · ${address.split(',')[0].trim()}"` (например, `«Мусор · ул. Транспортная»`). Клиент title не передаёт. (Сделано в `d22da19` до Day 5; задним числом закрываем галку.)
 - [x] `GET /complaints` — фильтры по status/category/district + пагинация + role-based фильтр (RESIDENT не видит REJECTED/DUPLICATE)
 - [x] `GET /complaints/{id}` — детали + фото (голоса/история статусов — заглушка для Day 5)
 - [x] `GET /complaints/map?swLat=&swLon=&neLat=&neLon=` — облегчённые маркеры (lat/lon between; PostGIS ST_Within — оптимизация на Day 5+, если понадобится)
@@ -99,16 +99,17 @@ Web admin может быть проще (показываем основной 
 
 ### День 5 (12.05) — Голоса + смена статусов + дубликаты
 
-- [ ] Миграция: `votes`, `status_changes` (название: `V5__create_votes_and_status_changes.sql`, т.к. V3 — audit-лог, V4 — выравнивание `users` под решения 2026-05-07/08)
-- [ ] `POST /complaints/{id}/votes` (идемпотентно) и `DELETE` (отозвать)
-- [ ] **Блокировка голосов на терминальные статусы:** для `REJECTED` и `DUPLICATE` оба endpoint возвращают 409 Conflict с `{message: "Голосование закрыто: жалоба <статус>"}`.
-- [ ] `GET /complaints/voted` (мои голоса, включая закрытые)
-- [ ] `PATCH /complaints/{id}/status` — валидация перехода, обязательный `comment`, запись в `status_changes`, audit
-- [ ] При статусе `DUPLICATE` — слияние голосов с оригиналом (`INSERT ... ON CONFLICT DO NOTHING`)
-- [ ] `GET /complaints/duplicates` — поиск в радиусе через `ST_DWithin` (метров)
-- [ ] Расчёт `priority_score` в SQL (как в SPEC § 3.5) + сортировка `?sort=priority`
+- [x] Миграция: `votes`, `status_changes` (`V5__create_votes_and_status_changes.sql`, с бэкфиллом автоголосов для жалоб Day 4)
+- [x] `POST /complaints/{id}/votes` (идемпотентно) и `DELETE` (отозвать). Автор не может отозвать свой голос → 409.
+- [x] **Блокировка голосов на терминальные статусы:** для `REJECTED` и `DUPLICATE` оба endpoint возвращают 409 Conflict с `{message: "Голосование закрыто: жалоба <статус>"}`.
+- [x] `GET /complaints/voted` (мои голоса, включая закрытые; свои жалобы исключены, для них `/mine`)
+- [x] `PATCH /complaints/{id}/status` — валидация перехода, обязательный `comment`, запись в `status_changes`, audit (`COMPLAINT_STATUS_CHANGE`)
+- [x] При статусе `DUPLICATE` — слияние голосов с оригиналом (`INSERT ... ON CONFLICT DO NOTHING`); валидация: оригинал обязателен, не сам себе, оригинал в активном статусе
+- [x] `GET /complaints/duplicates` — поиск в радиусе через `ST_DWithin` (метров), радиус по умолчанию 100м, максимум 1000м
+- [x] Расчёт `priority_score` в SQL (как в SPEC § 3.5) + сортировка `?sort=priority`. `age_hours` считается буквально только пока статус = NEW.
+- [x] **Дополнительно (закрыто на Day 5):** автоголос автора при создании жалобы (одна транзакция с INSERT complaints); видимость REJECTED/DUPLICATE проголосовавшим (закрыт TODO Day 4); `NotificationService` interface + `NoopNotificationService` — точки вызова в `changeStatus` готовы, реальная реализация на Day 6; расширение `ComplaintResponse` (`votesCount`, `userVoted`, `statusHistory`).
 
-**Checkpoint:** проголосовать → счётчик растёт. Сменить статус → запись в `status_changes`, для REJECTED — комментарий обязателен (ошибка 400 если пустой).
+**Checkpoint:** ✓ проголосовал за чужую жалобу → счётчик 1→2. ✓ Сменил статус NEW→IN_PROGRESS→RESOLVED — `statusHistory` пополняется, `resolvedAt` ставится. ✓ Пустой комментарий → 400. ✓ POST/DELETE голос на REJECTED → 409. ✓ DUPLICATE с активным оригиналом → 200, голоса перенесены через ON CONFLICT. ✓ Гость и наблюдатель видят REJECTED/DUPLICATE как 404, голосовавший — со `statusHistory.comment` админа.
 
 ---
 

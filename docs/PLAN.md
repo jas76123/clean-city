@@ -172,7 +172,7 @@ Web admin может быть проще (показываем основной 
 - [x] **Бэкап-скрипт** — `ops/backup.sh` + `ops/backup.env.example`. pg_dump → gpg AES256 → s3://cleancity-backups. Retention — S3 lifecycle policy.
 - [x] **Telegram-алерты:** `backend/.../logging/TelegramAppender.kt` (ERROR-уровень, rate-limit) + `ops/alert.sh` для cron + `TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID` в `.env.example`.
 - [x] **Health-check cron:** `ops/healthcheck.sh` + `ops/cleancity.cron`. Cooldown через state-файл, recovery-сообщение.
-- [ ] Yandex Cloud account активация подтверждена с дня 1 (если ещё нет — пинг)
+- [x] Yandex Cloud account активация подтверждена (Жасмин проверила 2026-05-13). Bonus: `docker build .` локально прошёл успешно; deploy-playbook для cron-инфры — `ops/README.md` + `ops/install-cron.sh`.
 
 **Checkpoint конца недели 1:** Backend функциональный. Все API работают локально через `docker compose up`. Тесты зелёные. Telegram-бот получает тестовое сообщение из dev-окружения. Готов к интеграции с mobile.
 

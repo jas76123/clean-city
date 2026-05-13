@@ -9,6 +9,9 @@ import com.example.cleancity.auth.TokenRepository
 import com.example.cleancity.auth.TotpService
 import com.example.cleancity.auth.UserRepository
 import com.example.cleancity.auth.authRoutes
+import com.example.cleancity.announcements.AnnouncementRepository
+import com.example.cleancity.announcements.AnnouncementService
+import com.example.cleancity.announcements.announcementRoutes
 import com.example.cleancity.complaints.ComplaintRepository
 import com.example.cleancity.complaints.ComplaintService
 import com.example.cleancity.complaints.complaintRoutes
@@ -126,6 +129,9 @@ fun Application.module() {
     )
     val voteService = VoteService(voteRepository, complaintRepository)
 
+    val announcementRepository = AnnouncementRepository()
+    val announcementService = AnnouncementService(announcementRepository, notificationService)
+
     routing {
         get("/health") {
             call.respond(mapOf("status" to "ok"))
@@ -134,6 +140,7 @@ fun Application.module() {
         complaintRoutes(complaintService)
         voteRoutes(voteService)
         notificationRoutes(notificationRepository)
+        announcementRoutes(announcementService)
         if (storage is LocalStorageService) {
             photoRoutes(storage)
         }

@@ -35,6 +35,9 @@ class ConflictException(message: String, code: String = ErrorCodes.CONFLICT) :
 class RateLimitedException(message: String = "Too many requests, slow down") :
     ApiException(message, ErrorCodes.RATE_LIMITED, HttpStatusCode.TooManyRequests)
 
+class LockedException(message: String) :
+    ApiException(message, ErrorCodes.AUTH_ACCOUNT_LOCKED, HttpStatusCode(423, "Locked"))
+
 /**
  * Каноничные коды ошибок. Любой новый код добавляется сюда и документируется в SPEC § 8.
  */

@@ -1,7 +1,9 @@
 package com.example.cleancity.announcements
 
+import com.example.cleancity.BadRequestException
+import com.example.cleancity.ErrorCodes
+import com.example.cleancity.UnauthorizedException
 import com.example.cleancity.complaints.Viewer
-import com.example.cleancity.shared.models.MessageResponse
 import com.example.cleancity.shared.models.UserRole
 import com.example.cleancity.shared.requests.CreateAnnouncementRequest
 import com.example.cleancity.shared.requests.UpdateAnnouncementRequest
@@ -34,23 +36,23 @@ fun Route.announcementRoutes(service: AnnouncementService) {
 
         authenticate("auth-jwt") {
             post {
-                val actor = call.authenticated() ?: return@post
+                val actor = call.authenticated()
                 val req = call.receive<CreateAnnouncementRequest>()
                 call.respond(HttpStatusCode.Created, service.create(actor, req))
             }
 
             patch("/{id}") {
-                val actor = call.authenticated() ?: return@patch
+                val actor = call.authenticated()
                 val id = call.parameters["id"]?.toLongOrNull()
-                    ?: return@patch call.respond(HttpStatusCode.BadRequest, MessageResponse("Invalid id"))
+                    ?: throw BadRequestException("Invalid id", ErrorCodes.VALIDATION_BAD_FIELD)
                 val req = call.receive<UpdateAnnouncementRequest>()
                 call.respond(service.update(actor, id, req))
             }
 
             delete("/{id}") {
-                val actor = call.authenticated() ?: return@delete
+                val actor = call.authenticated()
                 val id = call.parameters["id"]?.toLongOrNull()
-                    ?: return@delete call.respond(HttpStatusCode.BadRequest, MessageResponse("Invalid id"))
+                    ?: throw BadRequestException("Invalid id", ErrorCodes.VALIDATION_BAD_FIELD)
                 service.expire(actor, id)
                 call.respond(HttpStatusCode.NoContent)
             }
@@ -66,11 +68,8 @@ private fun ApplicationCall.viewer(): Viewer {
     return Viewer.Authenticated(userId, role)
 }
 
-private suspend fun ApplicationCall.authenticated(): Viewer.Authenticated? {
+private fun ApplicationCall.authenticated(): Viewer.Authenticated {
     val v = viewer()
-    if (v !is Viewer.Authenticated) {
-        respond(HttpStatusCode.Unauthorized, MessageResponse("Not authenticated"))
-        return null
-    }
+    if (v !is Viewer.Authenticated) throw UnauthorizedException("Not authenticated")
     return v
 }

@@ -1,7 +1,10 @@
 package com.example.cleancity.notifications
 
+import com.example.cleancity.BadRequestException
+import com.example.cleancity.ErrorCodes
+import com.example.cleancity.NotFoundException
+import com.example.cleancity.UnauthorizedException
 import com.example.cleancity.shared.models.MarkAllReadResponse
-import com.example.cleancity.shared.models.MessageResponse
 import com.example.cleancity.shared.models.NotificationListResponse
 import com.example.cleancity.shared.models.NotificationResponse
 import com.example.cleancity.shared.models.UnreadCountResponse
@@ -17,7 +20,7 @@ fun Route.notificationRoutes(repo: NotificationRepository) {
         route("/notifications") {
 
             get {
-                val userId = call.userId() ?: return@get
+                val userId = call.userId()
                 val limit = (call.request.queryParameters["limit"]?.toIntOrNull() ?: 50).coerceIn(1, 100)
                 val offset = (call.request.queryParameters["offset"]?.toIntOrNull() ?: 0).coerceAtLeast(0)
 
@@ -45,39 +48,29 @@ fun Route.notificationRoutes(repo: NotificationRepository) {
             }
 
             get("/unread-count") {
-                val userId = call.userId() ?: return@get
+                val userId = call.userId()
                 call.respond(UnreadCountResponse(count = repo.countUnreadForUser(userId)))
             }
 
             patch("/read-all") {
-                val userId = call.userId() ?: return@patch
+                val userId = call.userId()
                 val count = repo.markAllRead(userId)
                 call.respond(MarkAllReadResponse(markedCount = count))
             }
 
             patch("/{id}/read") {
-                val userId = call.userId() ?: return@patch
+                val userId = call.userId()
                 val id = call.parameters["id"]?.toLongOrNull()
-                if (id == null) {
-                    call.respond(HttpStatusCode.BadRequest, MessageResponse("Invalid id"))
-                    return@patch
-                }
+                    ?: throw BadRequestException("Invalid id", ErrorCodes.VALIDATION_BAD_FIELD)
                 val ok = repo.markRead(notificationId = id, userId = userId)
-                if (!ok) {
-                    call.respond(HttpStatusCode.NotFound, MessageResponse("Notification not found"))
-                    return@patch
-                }
+                if (!ok) throw NotFoundException("Notification not found")
                 call.respond(HttpStatusCode.NoContent)
             }
         }
     }
 }
 
-private suspend fun ApplicationCall.userId(): Long? {
-    val sub = principal<JWTPrincipal>()?.payload?.subject?.toLongOrNull()
-    if (sub == null) {
-        respond(HttpStatusCode.Unauthorized, MessageResponse("Not authenticated"))
-        return null
-    }
-    return sub
+private fun ApplicationCall.userId(): Long {
+    return principal<JWTPrincipal>()?.payload?.subject?.toLongOrNull()
+        ?: throw UnauthorizedException("Not authenticated")
 }

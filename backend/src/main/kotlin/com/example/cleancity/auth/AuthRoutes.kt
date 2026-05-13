@@ -1,5 +1,12 @@
 package com.example.cleancity.auth
 
+import com.example.cleancity.BadRequestException
+import com.example.cleancity.ConflictException
+import com.example.cleancity.ErrorCodes
+import com.example.cleancity.ForbiddenException
+import com.example.cleancity.LockedException
+import com.example.cleancity.NotFoundException
+import com.example.cleancity.UnauthorizedException
 import com.example.cleancity.shared.models.LoginResponse
 import com.example.cleancity.shared.models.MessageResponse
 import com.example.cleancity.shared.models.SessionDto
@@ -30,8 +37,6 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 
-private val LOCKED_STATUS = HttpStatusCode(423, "Locked")
-
 fun Route.authRoutes(
     service: AuthService,
     limiter: RateLimiter = RateLimiter()
@@ -46,13 +51,13 @@ fun Route.authRoutes(
                 )
                 call.respond(HttpStatusCode.Created, user)
             } catch (e: InvalidEmailException) {
-                call.respond(HttpStatusCode.BadRequest, MessageResponse(e.message ?: "Invalid email"))
+                throw BadRequestException(e.message ?: "Invalid email", ErrorCodes.VALIDATION_INVALID_EMAIL)
             } catch (e: WeakPasswordException) {
-                call.respond(HttpStatusCode.BadRequest, MessageResponse(e.message ?: "Weak password"))
+                throw BadRequestException(e.message ?: "Weak password", ErrorCodes.VALIDATION_WEAK_PASSWORD)
             } catch (_: TermsNotAcceptedException) {
-                call.respond(HttpStatusCode.BadRequest, MessageResponse("Acceptance of terms is required"))
+                throw BadRequestException("Acceptance of terms is required", ErrorCodes.VALIDATION_TERMS_REQUIRED)
             } catch (_: EmailAlreadyRegisteredException) {
-                call.respond(HttpStatusCode.Conflict, MessageResponse("Email already registered"))
+                throw ConflictException("Email already registered", ErrorCodes.EMAIL_ALREADY_REGISTERED)
             }
         }
 
@@ -62,7 +67,7 @@ fun Route.authRoutes(
                 val auth = service.verifyEmail(req.token, call.clientIp(), call.userAgentSafe())
                 call.respond(HttpStatusCode.OK, auth)
             } catch (_: TokenInvalidException) {
-                call.respond(HttpStatusCode.BadRequest, MessageResponse("Invalid or expired token"))
+                throw BadRequestException("Invalid or expired token", ErrorCodes.AUTH_INVALID_TOKEN)
             }
         }
 
@@ -93,11 +98,11 @@ fun Route.authRoutes(
                     }
                 }
             } catch (e: AccountLockedException) {
-                call.respond(LOCKED_STATUS, MessageResponse("Account locked. Try again after ${e.lockedUntil}"))
+                throw LockedException("Account locked. Try again after ${e.lockedUntil}")
             } catch (_: EmailNotVerifiedException) {
-                call.respond(HttpStatusCode.Forbidden, MessageResponse("Please verify your email first"))
+                throw ForbiddenException("Please verify your email first", ErrorCodes.AUTH_EMAIL_UNVERIFIED)
             } catch (_: InvalidCredentialsException) {
-                call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid email or password"))
+                throw UnauthorizedException("Invalid email or password", ErrorCodes.AUTH_INVALID_CREDENTIALS)
             }
         }
 
@@ -109,9 +114,9 @@ fun Route.authRoutes(
                 val auth = service.loginWithTwoFactor(req.challengeToken, req.code, call.clientIp(), call.userAgentSafe())
                 call.respond(HttpStatusCode.OK, auth)
             } catch (_: TokenInvalidException) {
-                call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid or expired challenge"))
+                throw UnauthorizedException("Invalid or expired challenge", ErrorCodes.AUTH_INVALID_TOKEN)
             } catch (_: InvalidTotpCodeException) {
-                call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid 2FA code"))
+                throw UnauthorizedException("Invalid 2FA code", ErrorCodes.AUTH_2FA_INVALID)
             }
         }
 
@@ -121,7 +126,7 @@ fun Route.authRoutes(
                 val auth = service.refresh(req.refreshToken, call.clientIp(), call.userAgentSafe())
                 call.respond(HttpStatusCode.OK, auth)
             } catch (_: TokenInvalidException) {
-                call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid or expired refresh token"))
+                throw UnauthorizedException("Invalid or expired refresh token", ErrorCodes.AUTH_INVALID_TOKEN)
             }
         }
 
@@ -144,9 +149,9 @@ fun Route.authRoutes(
                 service.resetPassword(req.token, req.newPassword, call.clientIp(), call.userAgentSafe())
                 call.respond(HttpStatusCode.OK, MessageResponse("Password updated. Please log in again."))
             } catch (_: TokenInvalidException) {
-                call.respond(HttpStatusCode.BadRequest, MessageResponse("Invalid or expired token"))
+                throw BadRequestException("Invalid or expired token", ErrorCodes.AUTH_INVALID_TOKEN)
             } catch (e: WeakPasswordException) {
-                call.respond(HttpStatusCode.BadRequest, MessageResponse(e.message ?: "Weak password"))
+                throw BadRequestException(e.message ?: "Weak password", ErrorCodes.VALIDATION_WEAK_PASSWORD)
             }
         }
 
@@ -156,9 +161,9 @@ fun Route.authRoutes(
                 val auth = service.acceptInvite(req.token, req.password, call.clientIp(), call.userAgentSafe())
                 call.respond(HttpStatusCode.OK, auth)
             } catch (_: TokenInvalidException) {
-                call.respond(HttpStatusCode.BadRequest, MessageResponse("Invalid or expired token"))
+                throw BadRequestException("Invalid or expired token", ErrorCodes.AUTH_INVALID_TOKEN)
             } catch (e: WeakPasswordException) {
-                call.respond(HttpStatusCode.BadRequest, MessageResponse(e.message ?: "Weak password"))
+                throw BadRequestException(e.message ?: "Weak password", ErrorCodes.VALIDATION_WEAK_PASSWORD)
             }
         }
 
@@ -167,35 +172,35 @@ fun Route.authRoutes(
 
             post("/2fa/setup") {
                 if (rateLimitOr429(limiter, "2fa-setup", RateLimits.TWOFA_LIMIT, RateLimits.TWOFA_WINDOW_SECONDS)) return@post
-                val userId = call.requireUserId() ?: return@post
+                val userId = call.requireUserId()
                 try {
                     val resp = service.setupTwoFactor(userId, call.clientIp(), call.userAgentSafe())
                     call.respond(HttpStatusCode.OK, TwoFactorSetupResponse(resp.secretBase32, resp.otpAuthUri))
                 } catch (_: TwoFactorRoleException) {
-                    call.respond(HttpStatusCode.Forbidden, MessageResponse("2FA available only for admin/operator/inspector"))
+                    throw ForbiddenException("2FA available only for admin/operator/inspector", ErrorCodes.AUTH_2FA_NOT_AVAILABLE)
                 } catch (_: TwoFactorAlreadyEnabledException) {
-                    call.respond(HttpStatusCode.Conflict, MessageResponse("2FA already enabled"))
+                    throw ConflictException("2FA already enabled", ErrorCodes.AUTH_2FA_ALREADY_ENABLED)
                 }
             }
 
             post("/2fa/verify") {
                 if (rateLimitOr429(limiter, "2fa-verify", RateLimits.TWOFA_LIMIT, RateLimits.TWOFA_WINDOW_SECONDS)) return@post
-                val userId = call.requireUserId() ?: return@post
+                val userId = call.requireUserId()
                 val req = call.receive<TwoFactorVerifyRequest>()
                 try {
                     service.enableTwoFactor(userId, req.code, call.clientIp(), call.userAgentSafe())
                     call.respond(HttpStatusCode.OK, MessageResponse("2FA enabled"))
                 } catch (_: TwoFactorNotConfiguredException) {
-                    call.respond(HttpStatusCode.BadRequest, MessageResponse("Call /auth/2fa/setup first"))
+                    throw BadRequestException("Call /auth/2fa/setup first", ErrorCodes.AUTH_2FA_SETUP_REQUIRED)
                 } catch (_: TwoFactorAlreadyEnabledException) {
-                    call.respond(HttpStatusCode.Conflict, MessageResponse("2FA already enabled"))
+                    throw ConflictException("2FA already enabled", ErrorCodes.AUTH_2FA_ALREADY_ENABLED)
                 } catch (_: InvalidTotpCodeException) {
-                    call.respond(HttpStatusCode.Unauthorized, MessageResponse("Invalid 2FA code"))
+                    throw UnauthorizedException("Invalid 2FA code", ErrorCodes.AUTH_2FA_INVALID)
                 }
             }
 
             get("/sessions") {
-                val userId = call.requireUserId() ?: return@get
+                val userId = call.requireUserId()
                 val list = service.listSessions(userId).map {
                     SessionDto(
                         id = it.id,
@@ -209,52 +214,45 @@ fun Route.authRoutes(
             }
 
             delete("/sessions/{id}") {
-                val userId = call.requireUserId() ?: return@delete
+                val userId = call.requireUserId()
                 val sessionId = call.parameters["id"]?.toLongOrNull()
-                if (sessionId == null) {
-                    call.respond(HttpStatusCode.BadRequest, MessageResponse("Invalid session id"))
-                    return@delete
-                }
+                    ?: throw BadRequestException("Invalid session id", ErrorCodes.VALIDATION_BAD_FIELD)
                 val ok = service.revokeSession(userId, sessionId, call.clientIp(), call.userAgentSafe())
                 if (ok) call.respond(HttpStatusCode.OK, MessageResponse("Session revoked"))
-                else call.respond(HttpStatusCode.NotFound, MessageResponse("Session not found"))
+                else throw NotFoundException("Session not found", ErrorCodes.SESSION_NOT_FOUND)
             }
 
             post("/admin/invite") {
-                val actorId = call.requireUserId() ?: return@post
-                val role = call.requireRole() ?: return@post
+                val actorId = call.requireUserId()
+                val role = call.requireRole()
                 if (role !in setOf(UserRole.ADMIN, UserRole.OPERATOR, UserRole.INSPECTOR)) {
-                    call.respond(HttpStatusCode.Forbidden, MessageResponse("Admins only"))
-                    return@post
+                    throw ForbiddenException("Admins only")
                 }
                 val req = call.receive<AdminInviteRequest>()
                 val targetRole = runCatching { UserRole.valueOf(req.role) }.getOrNull()
                 if (targetRole == null || targetRole == UserRole.RESIDENT) {
-                    call.respond(HttpStatusCode.BadRequest, MessageResponse("Invalid invite role"))
-                    return@post
+                    throw BadRequestException("Invalid invite role", ErrorCodes.VALIDATION_BAD_FIELD)
                 }
                 try {
                     val invited = service.inviteAdmin(actorId, req.email, targetRole, call.clientIp(), call.userAgentSafe())
                     call.respond(HttpStatusCode.Created, invited)
                 } catch (e: InvalidEmailException) {
-                    call.respond(HttpStatusCode.BadRequest, MessageResponse(e.message ?: "Invalid email"))
+                    throw BadRequestException(e.message ?: "Invalid email", ErrorCodes.VALIDATION_INVALID_EMAIL)
                 } catch (_: EmailAlreadyRegisteredException) {
-                    call.respond(HttpStatusCode.Conflict, MessageResponse("Email already registered"))
+                    throw ConflictException("Email already registered", ErrorCodes.EMAIL_ALREADY_REGISTERED)
                 }
             }
         }
     }
 }
 
-private suspend fun io.ktor.server.application.ApplicationCall.requireUserId(): Long? {
-    val id = principal<JWTPrincipal>()?.payload?.subject?.toLongOrNull()
-    if (id == null) respond(HttpStatusCode.Unauthorized, MessageResponse("Not authenticated"))
-    return id
+private fun io.ktor.server.application.ApplicationCall.requireUserId(): Long {
+    return principal<JWTPrincipal>()?.payload?.subject?.toLongOrNull()
+        ?: throw UnauthorizedException("Not authenticated")
 }
 
-private suspend fun io.ktor.server.application.ApplicationCall.requireRole(): UserRole? {
+private fun io.ktor.server.application.ApplicationCall.requireRole(): UserRole {
     val raw = principal<JWTPrincipal>()?.payload?.getClaim("role")?.asString()
-    val role = runCatching { raw?.let { UserRole.valueOf(it) } }.getOrNull()
-    if (role == null) respond(HttpStatusCode.Unauthorized, MessageResponse("Not authenticated"))
-    return role
+    return runCatching { raw?.let { UserRole.valueOf(it) } }.getOrNull()
+        ?: throw UnauthorizedException("Not authenticated")
 }

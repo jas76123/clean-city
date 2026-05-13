@@ -5,6 +5,7 @@ import com.example.cleancity.database.tables.Complaints
 import com.example.cleancity.database.tables.Users
 import com.example.cleancity.database.tables.Votes
 import com.example.cleancity.shared.models.UserRole
+import com.example.cleancity.testutils.installApiErrorHandling
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -79,14 +80,7 @@ class AnalyticsRoutesTest {
                     }
                 }
             }
-            install(StatusPages) {
-                exception<com.example.cleancity.ForbiddenException> { call, cause ->
-                    call.respond(HttpStatusCode.Forbidden, mapOf("message" to (cause.message ?: "Forbidden")))
-                }
-                exception<IllegalArgumentException> { call, cause ->
-                    call.respond(HttpStatusCode.BadRequest, mapOf("message" to (cause.message ?: "Bad request")))
-                }
-            }
+            installApiErrorHandling()
             routing { analyticsRoutes(AnalyticsService(AnalyticsRepository())) }
         }
     }

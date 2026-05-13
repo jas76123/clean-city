@@ -1,7 +1,8 @@
 package com.example.cleancity.votes
 
-import com.example.cleancity.shared.models.MessageResponse
-import io.ktor.http.HttpStatusCode
+import com.example.cleancity.BadRequestException
+import com.example.cleancity.ErrorCodes
+import com.example.cleancity.UnauthorizedException
 import io.ktor.server.application.call
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
@@ -22,28 +23,26 @@ fun Route.voteRoutes(service: VoteService) {
         authenticate("auth-jwt") {
 
             post {
-                val userId = call.requireUserId() ?: return@post
-                val complaintId = call.complaintId() ?: return@post
+                val userId = call.requireUserId()
+                val complaintId = call.complaintId()
                 call.respond(service.addVote(complaintId, userId))
             }
 
             delete {
-                val userId = call.requireUserId() ?: return@delete
-                val complaintId = call.complaintId() ?: return@delete
+                val userId = call.requireUserId()
+                val complaintId = call.complaintId()
                 call.respond(service.removeVote(complaintId, userId))
             }
         }
     }
 }
 
-private suspend fun io.ktor.server.application.ApplicationCall.requireUserId(): Long? {
-    val id = principal<JWTPrincipal>()?.payload?.subject?.toLongOrNull()
-    if (id == null) respond(HttpStatusCode.Unauthorized, MessageResponse("Not authenticated"))
-    return id
+private fun io.ktor.server.application.ApplicationCall.requireUserId(): Long {
+    return principal<JWTPrincipal>()?.payload?.subject?.toLongOrNull()
+        ?: throw UnauthorizedException("Not authenticated")
 }
 
-private suspend fun io.ktor.server.application.ApplicationCall.complaintId(): Long? {
-    val id = parameters["id"]?.toLongOrNull()
-    if (id == null) respond(HttpStatusCode.BadRequest, MessageResponse("Invalid complaint id"))
-    return id
+private fun io.ktor.server.application.ApplicationCall.complaintId(): Long {
+    return parameters["id"]?.toLongOrNull()
+        ?: throw BadRequestException("Invalid complaint id", ErrorCodes.VALIDATION_BAD_FIELD)
 }

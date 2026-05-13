@@ -10,6 +10,7 @@ import com.example.cleancity.shared.models.AnnouncementResponse
 import com.example.cleancity.shared.models.AnnouncementsListResponse
 import com.example.cleancity.shared.models.IconStyle
 import com.example.cleancity.shared.models.UserRole
+import com.example.cleancity.testutils.installApiErrorHandling
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -88,17 +89,7 @@ class AnnouncementRoutesTest {
                     }
                 }
             }
-            install(StatusPages) {
-                exception<com.example.cleancity.ForbiddenException> { call, cause ->
-                    call.respond(HttpStatusCode.Forbidden, mapOf("message" to (cause.message ?: "Forbidden")))
-                }
-                exception<com.example.cleancity.NotFoundException> { call, cause ->
-                    call.respond(HttpStatusCode.NotFound, mapOf("message" to (cause.message ?: "Not found")))
-                }
-                exception<IllegalArgumentException> { call, cause ->
-                    call.respond(HttpStatusCode.BadRequest, mapOf("message" to (cause.message ?: "Bad request")))
-                }
-            }
+            installApiErrorHandling()
             routing { announcementRoutes(service) }
         }
     }

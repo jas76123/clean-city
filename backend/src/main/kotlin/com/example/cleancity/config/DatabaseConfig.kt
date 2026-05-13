@@ -23,8 +23,18 @@ fun Application.configureDatabase() {
         error("Insecure DB_PASSWORD detected for stage=$stage. Use a strong password.")
     }
 
+    // В DEV дополнительно подключаем db/seed-dev (V99__seed_dev.sql и пр.),
+    // в проде классpath не содержит эти миграции, поэтому даже добавление
+    // locations безопасно — но для явности привязываем условно.
+    val locations = if (stage == "DEV") {
+        arrayOf("classpath:db/migration", "classpath:db/seed-dev")
+    } else {
+        arrayOf("classpath:db/migration")
+    }
+
     Flyway.configure()
         .dataSource(dbUrl, dbUser, dbPassword)
+        .locations(*locations)
         .load()
         .migrate()
 

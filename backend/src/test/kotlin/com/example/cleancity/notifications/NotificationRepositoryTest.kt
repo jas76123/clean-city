@@ -252,6 +252,36 @@ class NotificationRepositoryTest {
     }
 
     @Test
+    fun `deleteOlderThan removes only rows older than cutoff and returns count`() {
+        val a = seedUser("a@x.ru")
+        val cid = seedComplaint(a)
+        val now = OffsetDateTime.now(ZoneOffset.UTC)
+        transaction {
+            // 2 свежие, 3 старше 90 дней
+            repeat(2) {
+                Notifications.insert {
+                    it[userId] = a; it[kind] = "COMPLAINT_STATUS"
+                    it[title] = "fresh"; it[body] = "x"
+                    it[complaintId] = cid; it[createdAt] = now
+                }
+            }
+            repeat(3) {
+                Notifications.insert {
+                    it[userId] = a; it[kind] = "COMPLAINT_STATUS"
+                    it[title] = "old"; it[body] = "x"
+                    it[complaintId] = cid; it[createdAt] = now.minusDays(91)
+                }
+            }
+        }
+
+        val deleted = repo.deleteOlderThan(90L)
+        assertEquals(3, deleted)
+
+        val remaining = transaction { Notifications.selectAll().count() }
+        assertEquals(2L, remaining)
+    }
+
+    @Test
     fun `markAllRead updates only own unread and returns count`() {
         val a = seedUser("a@x.ru")
         val b = seedUser("b@x.ru")

@@ -5,7 +5,9 @@ import com.example.cleancity.shared.models.NotificationKind
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.batchInsert
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
@@ -94,6 +96,15 @@ class NotificationRepository {
         }) {
             it[Notifications.readAt] = OffsetDateTime.now(ZoneOffset.UTC)
         }
+    }
+
+    /**
+     * Чистка истории старше N дней. Возвращает число удалённых строк.
+     * Вызывается фоновой задачей в Application.installNotificationCleanup.
+     */
+    fun deleteOlderThan(days: Long): Int = transaction {
+        val cutoff = OffsetDateTime.now(ZoneOffset.UTC).minusDays(days)
+        Notifications.deleteWhere { Op.build { Notifications.createdAt lessEq cutoff } }
     }
 
     private fun ResultRow.toRow() = NotificationRow(

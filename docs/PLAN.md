@@ -30,14 +30,14 @@ Web admin может быть проще (показываем основной 
 
 ### День 1 (08.05) — Setup проекта + домен/email (критический путь)
 
-- [ ] Очистить старый код в `cleancity-kmp/backend/` (`Subbotniks`, `MapMarker` со старой моделью)
-- [ ] Обновить `shared/models/ProblemCategory.kt` на 18 категорий (как в SPEC § 3.1)
-- [ ] Обновить `shared/models/ComplaintStatus.kt` — 5 статусов (NEW, IN_PROGRESS, RESOLVED, REJECTED, DUPLICATE)
-- [ ] Создать `UserRole.kt`
-- [ ] Настроить Flyway-миграции (`backend/src/main/resources/db/migration/V1__create_users.sql`)
-- [ ] `docker-compose.yml` для dev: postgres + backend
-- [ ] Healthcheck endpoint `GET /health`
-- [ ] Структура папок backend (`auth/`, `complaints/`, `votes/`, `announcements/`, `analytics/`, `storage/`, `notifications/`, `database/`)
+- [x] Очистить старый код в `cleancity-kmp/backend/` (`Subbotniks`, `MapMarker` со старой моделью)
+- [x] Обновить `shared/models/ProblemCategory.kt` на 18 категорий (как в SPEC § 3.1)
+- [x] Обновить `shared/models/ComplaintStatus.kt` — 5 статусов (NEW, IN_PROGRESS, RESOLVED, REJECTED, DUPLICATE)
+- [x] Создать `UserRole.kt`
+- [x] Настроить Flyway-миграции (`backend/src/main/resources/db/migration/V1__create_users.sql`)
+- [x] `docker-compose.yml` для dev: postgres + backend
+- [x] Healthcheck endpoint `GET /health`
+- [x] Структура папок backend (`auth/`, `complaints/`, `votes/`, `storage/`, `notifications/`, `database/`, `email/`, `config/`). Папки `announcements/`, `analytics/` появятся в Spec 2/3 — соответствующие фичи отложены.
 - [ ] **Параллельно (важно — сразу!):** регистрация домена `cleancity.ru` через reg.ru (~200 ₽/год). Ждать активации (до 24ч).
 - [ ] Активация Yandex Cloud (с грантом 4000 ₽) — заявка может ехать 1–2 дня, лучше подать сегодня.
 - [ ] Регистрация Yandex Mail 360 для домена (бесплатно для до 3 пользователей, далее 200 ₽/мес/польз). Создать `noreply@cleancity.ru`.
@@ -50,14 +50,14 @@ Web admin может быть проще (показываем основной 
 
 ### День 2 (09.05) — Auth: регистрация и вход (без 2FA)
 
-- [ ] Миграция V1: таблицы `users`, `email_tokens`, `refresh_tokens`
-- [ ] Email-сервис: интеграция с Yandex Mail SMTP (jakarta.mail). Шаблоны verify + reset.
-- [ ] `POST /auth/register` — создание RESIDENT, отправка verify-письма
-- [ ] `POST /auth/verify-email` — активация по токену
-- [ ] `POST /auth/login` — bcrypt-проверка, возврат JWT (access 15 мин для админа / 1 час для резидента, refresh 8ч / 30 дней)
-- [ ] `POST /auth/refresh` — обновление токена через хэш в `refresh_tokens`
-- [ ] `POST /auth/forgot-password` + `POST /auth/reset-password`
-- [ ] JWT middleware (Ktor Authentication plugin)
+- [x] Миграция V1: таблицы `users`, `email_tokens`, `refresh_tokens`
+- [x] Email-сервис: `SmtpEmailService` (jakarta.mail) + `LoggingEmailService` для DEV. Шаблоны verify + reset.
+- [x] `POST /auth/register` — создание RESIDENT, отправка verify-письма
+- [x] `POST /auth/verify-email` — активация по токену
+- [x] `POST /auth/login` — bcrypt-проверка, возврат JWT (access 15 мин для админа / 1 час для резидента, refresh 8ч / 30 дней)
+- [x] `POST /auth/refresh` — обновление токена через хэш в `refresh_tokens`
+- [x] `POST /auth/forgot-password` + `POST /auth/reset-password`
+- [x] JWT middleware (Ktor Authentication plugin)
 
 **Checkpoint:** Postman сценарий: register → проверка письма (можно из логов в dev) → verify → login → запрос с Bearer-токеном → 200.
 
@@ -115,21 +115,31 @@ Web admin может быть проще (показываем основной 
 
 ### День 6 (13.05) — Объявления + аналитика + push (заглушка FCM)
 
-- [ ] Миграция V5: `announcements`, V6: `push_tokens`, V7: `notifications` (in-app история)
+> **Состояние на 2026-05-13:** разбит на три spec'а:
+> - **Spec 1 (закрыт 2026-05-13)** — in-app notifications infra: миграция V6, `NotificationService`/`DbNotificationService`, триггер при смене статуса, 4 REST-эндпоинта. Источник: `docs/superpowers/specs/2026-05-11-notifications-infrastructure-design.md` + plan `2026-05-11-notifications-infrastructure.md`. FCM отложен — основной канал push'ей решено реализовать через polling (см. [[project_cleancity_notifications]]).
+> - **Spec 2 (в плане)** — объявления: V7 миграция `announcements` + ALTER `notifications ADD FK announcement_id`, CRUD `/announcements`, триггер уведомлений жителям района.
+> - **Spec 3 (в плане)** — аналитика: `/analytics/*`, `/categories`, `/districts`, cron 90-day cleanup notifications.
+
+**Spec 1 — выполнено:**
+
+- [x] Миграция V6: `notifications` (in-app история, с CHECK `(kind, target)` и индексами по `(user_id, created_at)` / `WHERE read_at IS NULL`).
+- [x] `NotificationService` интерфейс + `DbNotificationService` (INSERT в `notifications`).
+- [x] Триггер при смене статуса (SPEC § 5.2): `IN_PROGRESS/RESOLVED` → автору; `REJECTED/DUPLICATE` → автор + все `+1`-голосовавшие. Вызов `notify()` находится внутри той же транзакции, что и `UPDATE complaints` — сбой откатывает всё (покрыто e2e-тестом).
+- [x] **In-app уведомления endpoints** (SPEC § 4.6):
+  - [x] `GET /notifications?limit=50&offset=0` — пагинация, новые сверху, окно 90 дней
+  - [x] `GET /notifications/unread-count` — для бейджа на иконке
+  - [x] `PATCH /notifications/{id}/read` — идемпотентно, чужой id → 404
+  - [x] `PATCH /notifications/read-all`
+
+**Spec 2 — отложено:**
+
+- [ ] Миграция V7: `announcements` + `ALTER TABLE notifications ADD CONSTRAINT … FOREIGN KEY (announcement_id) REFERENCES announcements(id)` (колонка `announcement_id` уже создана в V6 без FK).
 - [ ] `GET/POST/PATCH/DELETE /announcements`
-- [ ] `POST /users/me/push-token`
-- [ ] `NotificationService` интерфейс + `FcmNotificationService` (Firebase Admin SDK)
-  - [ ] В dev — `LoggingNotificationService` (логирует в stdout вместо реальных пушей)
-  - [ ] **Каждый push одновременно создаёт строку в `notifications`** (одна функция `notify(user_id, kind, title, body, …)` делает и FCM, и `INSERT`).
-  - [ ] Триггер при смене статуса (см. SPEC § 5.2): `IN_PROGRESS/RESOLVED` → автору; `REJECTED/DUPLICATE` → автор + все `+1`-голосовавшие
-  - [ ] Триггер при создании жалобы → админам района
-  - [ ] Триггер при объявлении → жителям района (или всем)
-- [ ] **In-app уведомления endpoints** (SPEC § 4.6):
-  - [ ] `GET /notifications?limit=50&offset=0` — пагинация, новые сверху
-  - [ ] `GET /notifications/unread-count` — для бейджа на иконке
-  - [ ] `PATCH /notifications/{id}/read` — отметить прочитанным
-  - [ ] `PATCH /notifications/read-all`
-  - [ ] Cron `0 4 * * *` — удаление уведомлений старше 90 дней
+- [ ] Триггер при объявлении → жителям района (или всем)
+- [ ] Триггер при создании жалобы → админам района
+
+**Spec 3 — отложено:**
+
 - [ ] Аналитика-эндпоинты (SQL-запросы с GROUP BY, материализованные view не нужны для пилота):
   - [ ] `/analytics/overview` — counts по статусу + total + неделя + `sla_breach_count` (для алерт-баннера в дашборде)
   - [ ] `/analytics/by-category` — counts по 18 категориям
@@ -137,8 +147,12 @@ Web admin может быть проще (показываем основной 
   - [ ] `/analytics/sla` — среднее `resolved_at - created_at` по категории, % нарушений норматива
   - [ ] `/analytics/votes-impact` — корреляция `votes_count` vs `resolution_hours`
 - [ ] `/categories` и `/districts` — справочники
+- [ ] Cron `0 4 * * *` — удаление уведомлений старше 90 дней (фильтр на чтение уже работает; нужна физическая очистка)
 
-**Checkpoint:** аналитика возвращает корректные числа на 10 ручных жалобах. При смене статуса в БД появляется строка `notifications`, при `LoggingNotificationService` — фейковый push залогирован в stdout, `GET /notifications` показывает её.
+**Out-of-scope для MVP (по решению 2026-05-11):**
+- FCM / Firebase Admin SDK / `push_tokens` / `POST /users/me/push-token` — основной канал push'ей реализуется через polling backend API. Возврат к FCM возможен после пилота как декоратор `FcmNotificationService` поверх `DbNotificationService`.
+
+**Checkpoint Spec 1 (пройден 2026-05-13):** docker compose e2e — A создаёт жалобу, B голосует, админ → REJECTED, оба получают уведомление с комментарием админа; `unread-count`, `mark-as-read` (idempotent), чужой id → 404, `read-all` — всё работает. 23 unit/integration теста зелёные.
 
 ---
 

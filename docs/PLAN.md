@@ -163,15 +163,15 @@ Web admin может быть проще (показываем основной 
 
 ### День 7 (14.05) — Backend polish + первый деплой
 
-- [ ] Security headers middleware (CSP, HSTS, X-Frame-Options и пр.)
-- [ ] Error handling: глобальный exception handler, стандартизованные коды ошибок, **никаких stacktrace в JSON наружу**
-- [ ] OpenAPI-схема через `io.bkbn:kompendium` или `ru.cleancity.openapi` (опц., если успеваем)
-- [ ] Юнит-тесты на критическое: auth (lockout, 2FA), смена статусов с пушем, видимость по ролям, блокировка голосов на REJECTED/DUPLICATE
-- [ ] Seed-скрипт для dev: `V99__seed_dev.sql` — 1 админ, 5 резидентов, 50 жалоб по Сочи
-- [ ] Dockerfile для backend (multi-stage build), оптимизация под слой gradle-кэша
-- [ ] **Бэкап-скрипт `/opt/cleancity/backup.sh`** (SPEC § 9.4): pg_dump → gpg → upload в Yandex Object Storage `cleancity-backups`. Cron `0 3 * * *`. На локальной dev пока не запускаем — пишем и тестируем в день 18.
-- [ ] **Telegram-алерты:** регистрация бота через @BotFather, добавление токена в `.env`, конфиг `LogbackTelegramAppender` для ERROR-логов. Skрипт `/opt/cleancity/alert.sh` для healthcheck-cron.
-- [ ] **Health-check cron:** `*/5 * * * *  curl -fsS http://localhost:8080/health || /opt/cleancity/alert.sh "API DOWN"` — добавляем при деплое (день 18), но скрипт пишем сейчас.
+- [x] Security headers middleware (CSP, HSTS, X-Frame-Options и пр.) — `plugins/SecurityHeaders.kt` + тесты
+- [x] Error handling: глобальный exception handler, стандартизованные коды ошибок, **никаких stacktrace в JSON наружу** — `ApiException` sealed + `ApiError(code, message)` + `ErrorCodes`; все route'ы мигрированы
+- [x] OpenAPI-схема — вручную написан `docs/api/openapi.yaml` (38 endpoints, 22 schemas)
+- [x] Юнит-тесты на критическое: auth (lockout, 2FA) — `AuthSecurityTest`; смена статусов с пушем — `ComplaintStatusNotificationTest`; видимость по ролям — `ComplaintVisibilityTest`; блокировка голосов на REJECTED/DUPLICATE — `VoteServiceTest`
+- [x] Seed-скрипт для dev: `db/seed-dev/V99__seed_dev.sql` (отдельный Flyway location, активируется при STAGE=DEV) — 1 админ, 5 резидентов, 50 жалоб по Сочи
+- [x] Dockerfile для backend (multi-stage build) — в корне `Dockerfile`; non-root user, HEALTHCHECK, deps-кэш слой
+- [x] **Бэкап-скрипт** — `ops/backup.sh` + `ops/backup.env.example`. pg_dump → gpg AES256 → s3://cleancity-backups. Retention — S3 lifecycle policy.
+- [x] **Telegram-алерты:** `backend/.../logging/TelegramAppender.kt` (ERROR-уровень, rate-limit) + `ops/alert.sh` для cron + `TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID` в `.env.example`.
+- [x] **Health-check cron:** `ops/healthcheck.sh` + `ops/cleancity.cron`. Cooldown через state-файл, recovery-сообщение.
 - [ ] Yandex Cloud account активация подтверждена с дня 1 (если ещё нет — пинг)
 
 **Checkpoint конца недели 1:** Backend функциональный. Все API работают локально через `docker compose up`. Тесты зелёные. Telegram-бот получает тестовое сообщение из dev-окружения. Готов к интеграции с mobile.

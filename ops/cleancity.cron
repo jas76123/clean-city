@@ -1,0 +1,16 @@
+# /etc/cron.d/cleancity — расписание cron-скриптов CleanCity.
+# Деплой (Day 18):
+#   sudo install -m 0644 ops/cleancity.cron /etc/cron.d/cleancity
+#
+# SHELL/PATH объявлены явно, потому что cron-окружение минимальное.
+
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=
+
+# Healthcheck — каждые 5 минут. Алерт на первом fail и на recovery,
+# подряд алертить запрещено state-файлом /tmp/cleancity-healthcheck-failing.
+*/5 * * * *   root   /opt/cleancity/healthcheck.sh >> /var/log/cleancity-healthcheck.log 2>&1
+
+# Бэкап Postgres — раз в сутки в 03:00 UTC (06:00 МСК).
+0 3 * * *     root   /opt/cleancity/backup.sh >> /var/log/cleancity-backup.log 2>&1

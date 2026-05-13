@@ -451,6 +451,7 @@ priority_score = (yes_votes - no_votes) * 1.0
 |-------|------|----------|
 | `GET` | `/categories` | Список 18 категорий с локализацией и иконкой (для динамического UI). |
 | `GET` | `/districts` | Список районов Сочи (Центральный, Адлерский, Хостинский, Лазаревский). |
+| `GET` | `/users/me` | Резидент+ | Текущий пользователь по JWT. 200: UserResponse. 401 если токен невалиден/истёк. |
 | `POST` | `/users/me/push-token` | Регистрация FCM-токена устройства. Body: `{fcm_token, device_info}`. |
 | `GET` | `/photos/{key}` | Прокси к Object Storage (опц., для приватных фото). В MVP — публичный bucket, прямые URL. |
 | `GET` | `/legal/privacy` | Текущий текст политики обработки ПДн (markdown→html). Используется в WebView mobile. |

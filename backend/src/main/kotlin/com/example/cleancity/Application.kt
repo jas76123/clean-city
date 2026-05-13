@@ -16,7 +16,9 @@ import com.example.cleancity.config.configureDatabase
 import com.example.cleancity.email.EmailService
 import com.example.cleancity.email.LoggingEmailService
 import com.example.cleancity.email.SmtpEmailService
-import com.example.cleancity.notifications.NoopNotificationService
+import com.example.cleancity.notifications.DbNotificationService
+import com.example.cleancity.notifications.NotificationRepository
+import com.example.cleancity.notifications.notificationRoutes
 import com.example.cleancity.storage.LocalStorageService
 import com.example.cleancity.storage.S3StorageService
 import com.example.cleancity.storage.StorageService
@@ -112,7 +114,8 @@ fun Application.module() {
 
     val complaintRepository = ComplaintRepository()
     val voteRepository = VoteRepository()
-    val notificationService = NoopNotificationService()
+    val notificationRepository = NotificationRepository()
+    val notificationService = DbNotificationService(notificationRepository)
     val complaintAudit = DbAuditLogger()
     val complaintService = ComplaintService(
         repo = complaintRepository,
@@ -130,6 +133,7 @@ fun Application.module() {
         authRoutes(authService, rateLimiter)
         complaintRoutes(complaintService)
         voteRoutes(voteService)
+        notificationRoutes(notificationRepository)
         if (storage is LocalStorageService) {
             photoRoutes(storage)
         }

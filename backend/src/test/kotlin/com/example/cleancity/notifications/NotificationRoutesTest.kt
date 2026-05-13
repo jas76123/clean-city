@@ -4,6 +4,7 @@ import com.example.cleancity.auth.JwtConfig
 import com.example.cleancity.database.tables.Complaints
 import com.example.cleancity.database.tables.Notifications
 import com.example.cleancity.database.tables.Users
+import com.example.cleancity.testutils.installApiErrorHandling
 import com.example.cleancity.shared.models.MarkAllReadResponse
 import com.example.cleancity.shared.models.NotificationListResponse
 import com.example.cleancity.shared.models.UnreadCountResponse
@@ -94,6 +95,7 @@ class NotificationRoutesTest {
     private fun ApplicationTestBuilder.appWith(repo: NotificationRepository) {
         application {
             install(ContentNegotiation) { json() }
+            installApiErrorHandling()
             install(Authentication) {
                 jwt("auth-jwt") {
                     verifier(jwtConfig.verifier)

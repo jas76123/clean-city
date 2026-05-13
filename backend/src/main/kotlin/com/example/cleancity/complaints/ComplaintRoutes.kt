@@ -1,8 +1,11 @@
 package com.example.cleancity.complaints
 
+import com.example.cleancity.BadRequestException
+import com.example.cleancity.ErrorCodes
+import com.example.cleancity.NotFoundException
+import com.example.cleancity.UnauthorizedException
 import com.example.cleancity.auth.clientIp
 import com.example.cleancity.auth.userAgentSafe
-import com.example.cleancity.shared.models.MessageResponse
 import com.example.cleancity.shared.models.ProblemCategory
 import com.example.cleancity.shared.models.UserRole
 import com.example.cleancity.shared.requests.ChangeStatusRequest
@@ -39,48 +42,39 @@ fun Route.complaintRoutes(service: ComplaintService) {
 
             get {
                 val viewer = call.viewer()
-                val filter = call.parsePublicFilter() ?: return@get
+                val filter = call.parsePublicFilter()
                 call.respond(service.list(viewer, filter))
             }
 
             get("/map") {
                 val viewer = call.viewer()
-                val swLat = call.queryDouble("swLat") ?: return@get call.badRequest("swLat is required")
-                val swLon = call.queryDouble("swLon") ?: return@get call.badRequest("swLon is required")
-                val neLat = call.queryDouble("neLat") ?: return@get call.badRequest("neLat is required")
-                val neLon = call.queryDouble("neLon") ?: return@get call.badRequest("neLon is required")
-                if (swLat >= neLat || swLon >= neLon) {
-                    return@get call.badRequest("Invalid bbox")
-                }
-                val category = call.queryEnum<ProblemCategory>("category") ?: return@get
-                call.respond(service.listMarkers(viewer, swLat, swLon, neLat, neLon, category.value))
+                val swLat = call.queryDouble("swLat") ?: throw badField("swLat is required")
+                val swLon = call.queryDouble("swLon") ?: throw badField("swLon is required")
+                val neLat = call.queryDouble("neLat") ?: throw badField("neLat is required")
+                val neLon = call.queryDouble("neLon") ?: throw badField("neLon is required")
+                if (swLat >= neLat || swLon >= neLon) throw badField("Invalid bbox")
+                val category = call.queryEnum<ProblemCategory>("category")
+                call.respond(service.listMarkers(viewer, swLat, swLon, neLat, neLon, category))
             }
 
             get("/duplicates") {
-                val lat = call.queryDouble("lat") ?: return@get call.badRequest("lat is required")
-                val lon = call.queryDouble("lon") ?: return@get call.badRequest("lon is required")
+                val lat = call.queryDouble("lat") ?: throw badField("lat is required")
+                val lon = call.queryDouble("lon") ?: throw badField("lon is required")
                 val rawCategory = call.request.queryParameters["category"]
-                    ?: return@get call.badRequest("category is required")
+                    ?: throw badField("category is required")
                 val category = runCatching { ProblemCategory.valueOf(rawCategory.uppercase()) }.getOrNull()
-                    ?: return@get call.badRequest("Invalid 'category' value: $rawCategory")
+                    ?: throw badField("Invalid 'category' value: $rawCategory")
                 val radius = call.queryInt("radius")
-                try {
-                    call.respond(service.findDuplicates(lat, lon, category, radius))
-                } catch (e: IllegalArgumentException) {
-                    call.badRequest(e.message ?: "Invalid request")
-                }
+                call.respond(service.findDuplicates(lat, lon, category, radius))
             }
 
             get("/{id}") {
                 val viewer = call.viewer()
                 val id = call.parameters["id"]?.toLongOrNull()
-                    ?: return@get call.badRequest("Invalid id")
+                    ?: throw badField("Invalid id")
                 val complaint = service.getById(id, viewer)
-                if (complaint == null) {
-                    call.respond(HttpStatusCode.NotFound, MessageResponse("Complaint not found"))
-                } else {
-                    call.respond(complaint)
-                }
+                    ?: throw NotFoundException("Complaint not found")
+                call.respond(complaint)
             }
         }
 
@@ -88,7 +82,7 @@ fun Route.complaintRoutes(service: ComplaintService) {
         authenticate("auth-jwt") {
 
             post {
-                val userId = call.requireUserId() ?: return@post
+                val userId = call.requireUserId()
 
                 var requestJson: String? = null
                 val photos = mutableListOf<PhotoUpload>()
@@ -105,49 +99,41 @@ fun Route.complaintRoutes(service: ComplaintService) {
                     part.dispose()
                 }
 
-                if (requestJson == null) {
-                    return@post call.badRequest("Missing 'data' part with JSON request")
-                }
-                if (photos.isEmpty()) {
-                    return@post call.badRequest("At least one 'photo' file is required")
-                }
+                if (requestJson == null) throw badField("Missing 'data' part with JSON request")
+                if (photos.isEmpty()) throw badField("At least one 'photo' file is required")
 
                 val req = try {
                     json.decodeFromString<CreateComplaintRequest>(requestJson!!)
                 } catch (e: Exception) {
-                    return@post call.badRequest("Invalid 'data' JSON: ${e.message}")
+                    throw badField("Invalid 'data' JSON: ${e.message}")
                 }
 
-                try {
-                    val response = service.create(userId, req, photos)
-                    call.respond(HttpStatusCode.Created, response)
-                } catch (e: IllegalArgumentException) {
-                    call.badRequest(e.message ?: "Invalid request")
-                }
+                val response = service.create(userId, req, photos)
+                call.respond(HttpStatusCode.Created, response)
             }
 
             get("/mine") {
-                val userId = call.requireUserId() ?: return@get
+                val userId = call.requireUserId()
                 val page = call.queryInt("page") ?: 0
                 val size = (call.queryInt("size") ?: 20).coerceAtMost(MAX_PAGE_SIZE)
                 call.respond(service.listMine(userId, page, size))
             }
 
             get("/voted") {
-                val userId = call.requireUserId() ?: return@get
+                val userId = call.requireUserId()
                 val page = (call.queryInt("page") ?: 0).coerceAtLeast(0)
                 val size = (call.queryInt("size") ?: 20).coerceIn(1, MAX_PAGE_SIZE)
                 call.respond(service.listVoted(userId, page, size))
             }
 
             patch("/{id}/status") {
-                val actor = call.authenticated() ?: return@patch
+                val actor = call.authenticated()
                 val id = call.parameters["id"]?.toLongOrNull()
-                    ?: return@patch call.badRequest("Invalid id")
+                    ?: throw badField("Invalid id")
                 val req = try {
                     call.receive<ChangeStatusRequest>()
                 } catch (e: Exception) {
-                    return@patch call.badRequest("Invalid JSON: ${e.message}")
+                    throw badField("Invalid JSON: ${e.message}")
                 }
                 val updated = service.changeStatus(
                     complaintId = id,
@@ -164,6 +150,9 @@ fun Route.complaintRoutes(service: ComplaintService) {
 
 // --- helpers ---
 
+private fun badField(message: String): BadRequestException =
+    BadRequestException(message, ErrorCodes.VALIDATION_BAD_FIELD)
+
 private fun ApplicationCall.viewer(): Viewer {
     val principal = principal<JWTPrincipal>() ?: return Viewer.Guest
     val userId = principal.payload.subject?.toLongOrNull() ?: return Viewer.Guest
@@ -172,19 +161,15 @@ private fun ApplicationCall.viewer(): Viewer {
     return Viewer.Authenticated(userId, role)
 }
 
-private suspend fun ApplicationCall.authenticated(): Viewer.Authenticated? {
+private fun ApplicationCall.authenticated(): Viewer.Authenticated {
     val v = viewer()
-    if (v !is Viewer.Authenticated) {
-        respond(HttpStatusCode.Unauthorized, MessageResponse("Not authenticated"))
-        return null
-    }
+    if (v !is Viewer.Authenticated) throw UnauthorizedException("Not authenticated")
     return v
 }
 
-private suspend fun ApplicationCall.requireUserId(): Long? {
-    val id = principal<JWTPrincipal>()?.payload?.subject?.toLongOrNull()
-    if (id == null) respond(HttpStatusCode.Unauthorized, MessageResponse("Not authenticated"))
-    return id
+private fun ApplicationCall.requireUserId(): Long {
+    return principal<JWTPrincipal>()?.payload?.subject?.toLongOrNull()
+        ?: throw UnauthorizedException("Not authenticated")
 }
 
 private fun ApplicationCall.queryDouble(name: String): Double? =
@@ -194,34 +179,22 @@ private fun ApplicationCall.queryInt(name: String): Int? =
     request.queryParameters[name]?.toIntOrNull()
 
 /**
- * Возвращает обёртку с распарсенным enum (или дефолт null, если параметр не передан).
- * Если параметр передан, но недопустим — отвечает 400 и возвращает null,
- * чтобы caller сделал `?: return@get`.
+ * Возвращает enum из query или null, если параметр не передан.
+ * Если параметр передан, но недопустим — бросает BadRequestException.
  */
-private suspend inline fun <reified T : Enum<T>> ApplicationCall.queryEnum(name: String): EnumResult<T>? {
-    val raw = request.queryParameters[name] ?: return EnumResult(null)
-    val value = runCatching { enumValueOf<T>(raw.uppercase()) }.getOrNull()
-    if (value == null) {
-        respond(HttpStatusCode.BadRequest, MessageResponse("Invalid '$name' value: $raw"))
-        return null
-    }
-    return EnumResult(value)
+private inline fun <reified T : Enum<T>> ApplicationCall.queryEnum(name: String): T? {
+    val raw = request.queryParameters[name] ?: return null
+    return runCatching { enumValueOf<T>(raw.uppercase()) }.getOrNull()
+        ?: throw badField("Invalid '$name' value: $raw")
 }
 
-@JvmInline
-value class EnumResult<T>(val value: T?)
-
-private suspend fun ApplicationCall.parsePublicFilter(): PublicListFilter? {
-    val category = queryEnum<ProblemCategory>("category") ?: return null
+private fun ApplicationCall.parsePublicFilter(): PublicListFilter {
+    val category = queryEnum<ProblemCategory>("category")
     val sort = (request.queryParameters["sort"]?.uppercase()?.let {
         runCatching { ComplaintSort.valueOf(it) }.getOrNull()
     }) ?: ComplaintSort.DATE
     val district = request.queryParameters["district"]?.takeIf { it.isNotBlank() }
     val page = (queryInt("page") ?: 0).coerceAtLeast(0)
     val size = (queryInt("size") ?: 20).coerceIn(1, MAX_PAGE_SIZE)
-    return PublicListFilter(category.value, district, sort, page, size)
-}
-
-private suspend fun ApplicationCall.badRequest(message: String) {
-    respond(HttpStatusCode.BadRequest, MessageResponse(message))
+    return PublicListFilter(category, district, sort, page, size)
 }

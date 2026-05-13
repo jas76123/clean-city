@@ -1,10 +1,9 @@
 package com.example.cleancity.analytics
 
 import com.example.cleancity.ForbiddenException
+import com.example.cleancity.UnauthorizedException
 import com.example.cleancity.shared.models.AnalyticsPeriod
-import com.example.cleancity.shared.models.MessageResponse
 import com.example.cleancity.shared.models.UserRole
-import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
 import io.ktor.server.auth.authenticate
@@ -21,23 +20,23 @@ fun Route.analyticsRoutes(service: AnalyticsService) {
     authenticate("auth-jwt") {
         route("/analytics") {
             get("/overview") {
-                if (!call.requireAdmin()) return@get
+                call.requireAdmin()
                 call.respond(service.overview())
             }
             get("/by-category") {
-                if (!call.requireAdmin()) return@get
+                call.requireAdmin()
                 call.respond(service.byCategory(call.period()))
             }
             get("/by-district") {
-                if (!call.requireAdmin()) return@get
+                call.requireAdmin()
                 call.respond(service.byDistrict(call.period()))
             }
             get("/sla") {
-                if (!call.requireAdmin()) return@get
+                call.requireAdmin()
                 call.respond(service.sla(call.period()))
             }
             get("/votes-impact") {
-                if (!call.requireAdmin()) return@get
+                call.requireAdmin()
                 call.respond(service.votesImpact(call.period()))
             }
         }
@@ -50,13 +49,11 @@ private fun ApplicationCall.period(): AnalyticsPeriod {
         .getOrElse { throw IllegalArgumentException("Invalid period '$raw' (allowed: WEEK, MONTH, ALL)") }
 }
 
-private suspend fun ApplicationCall.requireAdmin(): Boolean {
+private fun ApplicationCall.requireAdmin() {
     val principal = principal<JWTPrincipal>()
-    val role = runCatching { UserRole.valueOf(principal!!.payload.getClaim("role").asString()) }.getOrNull()
     if (principal?.payload?.subject?.toLongOrNull() == null) {
-        respond(HttpStatusCode.Unauthorized, MessageResponse("Not authenticated"))
-        return false
+        throw UnauthorizedException("Not authenticated")
     }
+    val role = runCatching { UserRole.valueOf(principal.payload.getClaim("role").asString()) }.getOrNull()
     if (role !in ADMIN_ROLES) throw ForbiddenException("Только админ имеет доступ к аналитике")
-    return true
 }

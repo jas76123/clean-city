@@ -501,7 +501,7 @@ Padding: `60dp / 32dp / 48dp`.
 `AuthScaffold(onBack=null)` — back-кнопка скрыта.
 - `AuthTag("Подтверждение")`
 - `AuthTitle("Проверьте почту")`
-- `AuthSub("Мы отправили письмо на $email. Откройте письмо и нажмите кнопку.")`
+- `AuthSub("Мы отправили письмо на $email. Откройте письмо и нажмите кнопку подтверждения.\n\nЕсли письма нет, проверьте папку «Спам».")`
 - Зона состояния:
   - `Waiting`: иконка-letter + текст «Откройте письмо на почте»
   - `Verifying`: `CircularProgressIndicator` + «Проверяем токен...»
@@ -511,19 +511,20 @@ Padding: `60dp / 32dp / 48dp`.
   - `cooldownSec == 0` → «Отправить повторно», enabled → `vm.resend()` → cooldown 300с
 - `TextButton("Изменить email", color=Gray500)` → `authRepo.logout()` + `nav.popAll()` + `nav.push(SplashScreen)`
 
-`VerifyEmailScreenModel` слушает `DeepLinkBus.events`:
+`VerifyEmailScreenModel` слушает `DeepLinkBus.pending`:
 ```kotlin
 init {
   screenModelScope.launch {
-    DeepLinkBus.events.collect { link ->
-      if (link is DeepLink.Verify) {
+    DeepLinkBus.pending
+      .filterIsInstance<DeepLink.Verify>()
+      .collect { link ->
         state.update { it.copy(status = Verifying) }
         authRepo.verifyEmail(link.token).fold(
           onSuccess = { /* App.kt → MainPlaceholderScreen */ },
           onFailure = { e -> state.update { it.copy(status = Error(mapErrorMessage(e))) } }
         )
+        DeepLinkBus.consume(link)   // не обрабатываем повторно
       }
-    }
   }
 }
 ```
@@ -543,7 +544,7 @@ init {
 - `PrimaryButton("Вернуться к входу")` → `nav.popUntil(LoginScreen::class)`
 
 ### 6.6 ResetPasswordScreen(token)
-Открывается только через `DeepLinkBus.events` (`DeepLink.Reset`). `App.kt` обрабатывает: если на любом экране пришёл Reset — `navigator.replaceAll(ResetPasswordScreen(token))`.
+Открывается только через `DeepLinkBus.pending` (`DeepLink.Reset`). `App.kt` подписан на `DeepLinkBus.pending` и при `DeepLink.Reset` на любом экране делает `navigator.replaceAll(ResetPasswordScreen(token))`, затем `DeepLinkBus.consume(link)`.
 
 `AuthScaffold(onBack=null)`:
 - `AuthTag("Новый пароль")`
@@ -701,8 +702,8 @@ private fun handleIntent(intent: Intent) {
 }
 ```
 
-`App.kt` (root) тоже слушает `DeepLinkBus.events`:
-- Любой `Reset(token)` на любом экране → `navigator.replaceAll(ResetPasswordScreen(token))`
+`App.kt` (root) тоже слушает `DeepLinkBus.pending`:
+- Любой `Reset(token)` на любом экране → `navigator.replaceAll(ResetPasswordScreen(token))` → `DeepLinkBus.consume(link)`
 - `Verify(token)` обрабатывается только в `VerifyEmailScreenModel` (если приложение не на этом экране — игнорируется, пользователь должен быть в правильном flow)
 
 ### 8.3 Тестирование deep-link

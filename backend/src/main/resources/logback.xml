@@ -1,10 +1,27 @@
 <configuration>
+
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
+
+    <!-- Telegram: ERROR-уведомления (см. com.example.cleancity.logging.TelegramAppender).
+         Активируется только если в окружении есть TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID,
+         иначе append() становится no-op. -->
+    <appender name="TELEGRAM" class="com.example.cleancity.logging.TelegramAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>ERROR</level>
+        </filter>
+    </appender>
+
+    <!-- Шум от HTTP-клиентов и Exposed под INFO глушим. -->
+    <logger name="Exposed" level="WARN"/>
+    <logger name="org.flywaydb" level="WARN"/>
+    <logger name="io.netty" level="WARN"/>
+
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
+        <appender-ref ref="TELEGRAM"/>
     </root>
 </configuration>

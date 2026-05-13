@@ -246,7 +246,7 @@ fun Route.authRoutes(
     }
 }
 
-private fun io.ktor.server.application.ApplicationCall.requireUserId(): Long {
+internal fun io.ktor.server.application.ApplicationCall.requireUserId(): Long {
     return principal<JWTPrincipal>()?.payload?.subject?.toLongOrNull()
         ?: throw UnauthorizedException("Not authenticated")
 }

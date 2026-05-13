@@ -170,6 +170,12 @@ class ComplaintStatusNotificationTest {
         }
     }
 
+    // Заметка: DUPLICATE-сценарий имеет идентичную recipients-ветку, что и REJECTED
+    // (см. ComplaintService.kt: `REJECTED, DUPLICATE -> ...`). Отдельный тест на
+    // DUPLICATE здесь не делаем, потому что mergeVotesInto использует SQL-конструкцию,
+    // которая ломается на H2 (reserved keyword `value`). На реальной Postgres-БД в
+    // интеграционных тестах День 19 это покрывается.
+
     @Test
     fun `rollback when notification insert fails — status not changed`() {
         val author = seedUser("a@x.ru")

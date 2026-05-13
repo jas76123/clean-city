@@ -1,0 +1,1145 @@
+openapi: 3.1.0
+info:
+  title: CleanCity API
+  description: |
+    REST API системы приёма экологических жалоб «Чистый Город» (Сочи).
+
+    **Формат ошибок:** все ошибочные ответы (4xx/5xx) имеют тело [`ApiError`](#/components/schemas/ApiError).
+    Клиенты разбирают ошибку по `code` (строка-константа), `message` показывают пользователю.
+
+    **Авторизация:** JWT в заголовке `Authorization: Bearer <accessToken>`. Refresh-токен
+    в `POST /auth/refresh`. Длительность access-токена ≈ 1 час, refresh ≈ 30 дней.
+  version: "0.1.0"
+  contact:
+    name: CleanCity team
+    url: https://cleancity.ru
+
+servers:
+  - url: https://api.cleancity.ru
+    description: Production
+  - url: http://localhost:8080
+    description: Local dev
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: meta
+    description: Метаинформация (категории, районы, health-check)
+  - name: auth
+    description: Регистрация, вход, восстановление пароля, 2FA, сессии
+  - name: complaints
+    description: Создание, просмотр и смена статуса жалоб
+  - name: votes
+    description: Голосование за жалобы
+  - name: announcements
+    description: Объявления администрации
+  - name: notifications
+    description: In-app уведомления для пользователя
+  - name: analytics
+    description: Аналитика (только админ/operator/inspector)
+
+paths:
+
+  /health:
+    get:
+      tags: [meta]
+      summary: Health-check
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+
+  /categories:
+    get:
+      tags: [meta]
+      summary: Список категорий жалоб
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CategoryMeta' }
+
+  /districts:
+    get:
+      tags: [meta]
+      summary: Список районов Сочи
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DistrictMeta' }
+
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Регистрация резидента
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserResponse' }
+        "400":
+          description: VALIDATION_* / VALIDATION_TERMS_REQUIRED
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        "409":
+          description: EMAIL_ALREADY_REGISTERED
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /auth/verify-email:
+    post:
+      tags: [auth]
+      summary: Подтверждение email по токену из письма
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        "200":
+          description: OK — возвращает AuthResponse (auto-login)
+          content: { application/json: { schema: { $ref: '#/components/schemas/AuthResponse' } } }
+        "400":
+          description: AUTH_INVALID_TOKEN
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /auth/resend-verification:
+    post:
+      tags: [auth]
+      summary: Повторная отправка письма с подтверждением
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: Всегда 200 (не раскрываем существование аккаунта)
+          content: { application/json: { schema: { $ref: '#/components/schemas/MessageResponse' } } }
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Вход (email + пароль)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        "200":
+          description: |
+            Успех. Если `requires2fa = true` — клиент должен запросить
+            `POST /auth/login-2fa` с `challengeToken` и кодом из приложения.
+          content: { application/json: { schema: { $ref: '#/components/schemas/LoginResponse' } } }
+        "401":
+          description: AUTH_INVALID_CREDENTIALS
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        "403":
+          description: AUTH_EMAIL_UNVERIFIED
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        "423":
+          description: AUTH_ACCOUNT_LOCKED — после 5 неудачных попыток
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        "429":
+          description: RATE_LIMITED
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /auth/login-2fa:
+    post:
+      tags: [auth]
+      summary: Завершение входа после 2FA (для админ-ролей)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [challengeToken, code]
+              properties:
+                challengeToken: { type: string }
+                code: { type: string, description: "6-значный TOTP-код" }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/AuthResponse' } } }
+        "401":
+          description: AUTH_INVALID_TOKEN или AUTH_2FA_INVALID
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Обновление access-токена по refresh
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/AuthResponse' } } }
+        "401":
+          description: AUTH_INVALID_TOKEN
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Отзыв refresh-токена
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken: { type: string }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/MessageResponse' } } }
+
+  /auth/forgot-password:
+    post:
+      tags: [auth]
+      summary: Запрос письма для сброса пароля
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: Всегда 200 (не раскрываем существование аккаунта)
+          content: { application/json: { schema: { $ref: '#/components/schemas/MessageResponse' } } }
+        "429":
+          description: RATE_LIMITED
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /auth/reset-password:
+    post:
+      tags: [auth]
+      summary: Установка нового пароля по токену из письма
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token: { type: string }
+                newPassword: { type: string, format: password }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/MessageResponse' } } }
+        "400":
+          description: AUTH_INVALID_TOKEN / VALIDATION_WEAK_PASSWORD
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /auth/2fa/setup:
+    post:
+      tags: [auth]
+      summary: Начало настройки 2FA (TOTP). Только админ/operator/inspector.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  secretBase32: { type: string }
+                  otpAuthUri: { type: string, description: "URI для qr-кода" }
+        "403":
+          description: AUTH_2FA_NOT_AVAILABLE
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        "409":
+          description: AUTH_2FA_ALREADY_ENABLED
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /auth/2fa/verify:
+    post:
+      tags: [auth]
+      summary: Подтверждение и активация 2FA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, description: "6-значный TOTP-код" }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/MessageResponse' } } }
+        "400":
+          description: AUTH_2FA_SETUP_REQUIRED
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        "401":
+          description: AUTH_2FA_INVALID
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        "409":
+          description: AUTH_2FA_ALREADY_ENABLED
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /auth/sessions:
+    get:
+      tags: [auth]
+      summary: Список активных сессий пользователя
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items: { $ref: '#/components/schemas/SessionDto' }
+
+  /auth/sessions/{id}:
+    delete:
+      tags: [auth]
+      summary: Отзыв конкретной сессии
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/MessageResponse' } } }
+        "404":
+          description: SESSION_NOT_FOUND
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /auth/admin/invite:
+    post:
+      tags: [auth]
+      summary: Приглашение нового админа/operator'а/inspector'а (только админ)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role]
+              properties:
+                email: { type: string, format: email }
+                role:
+                  type: string
+                  enum: [ADMIN, OPERATOR, INSPECTOR]
+      responses:
+        "201":
+          description: Created — отправлено письмо с invite-токеном
+          content: { application/json: { schema: { $ref: '#/components/schemas/UserResponse' } } }
+        "403":
+          description: FORBIDDEN — только админ может приглашать
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        "409":
+          description: EMAIL_ALREADY_REGISTERED
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /auth/admin/accept-invite:
+    post:
+      tags: [auth]
+      summary: Активация админ-инвайта (установка пароля по токену)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, format: password }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/AuthResponse' } } }
+        "400":
+          description: AUTH_INVALID_TOKEN / VALIDATION_WEAK_PASSWORD
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /complaints:
+    get:
+      tags: [complaints]
+      summary: Список жалоб (с фильтрами)
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - in: query
+          name: category
+          schema: { $ref: '#/components/schemas/ProblemCategory' }
+        - in: query
+          name: district
+          schema: { type: string }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [DATE, VOTES] }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 0, default: 0 }
+        - in: query
+          name: size
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        "200":
+          description: OK. Резиденту/гостю не возвращаются REJECTED/DUPLICATE.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ComplaintResponse' }
+    post:
+      tags: [complaints]
+      summary: Создать жалобу (multipart с фото)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [data, photo]
+              properties:
+                data:
+                  type: string
+                  description: |
+                    JSON `CreateComplaintRequest` сериализованный как multipart-form item.
+                    Поля: category, description, latitude, longitude, address, district.
+                photo:
+                  type: array
+                  items: { type: string, format: binary }
+                  description: 1..5 файлов; EXIF стрипуется, изображения ресайзятся до 2048px.
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: '#/components/schemas/ComplaintResponse' } } }
+        "400":
+          description: VALIDATION_BAD_FIELD
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        "401":
+          description: UNAUTHORIZED
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /complaints/map:
+    get:
+      tags: [complaints]
+      summary: Маркеры жалоб по bbox для карты
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - in: query
+          name: swLat
+          required: true
+          schema: { type: number, format: double }
+        - in: query
+          name: swLon
+          required: true
+          schema: { type: number, format: double }
+        - in: query
+          name: neLat
+          required: true
+          schema: { type: number, format: double }
+        - in: query
+          name: neLon
+          required: true
+          schema: { type: number, format: double }
+        - in: query
+          name: category
+          schema: { $ref: '#/components/schemas/ProblemCategory' }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MapMarkersResponse' }
+
+  /complaints/duplicates:
+    get:
+      tags: [complaints]
+      summary: Поиск возможных дубликатов рядом
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - { in: query, name: lat, required: true, schema: { type: number, format: double } }
+        - { in: query, name: lon, required: true, schema: { type: number, format: double } }
+        - { in: query, name: category, required: true, schema: { $ref: '#/components/schemas/ProblemCategory' } }
+        - { in: query, name: radius, schema: { type: integer, description: "Радиус в метрах, default 100" } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/DuplicateCandidateResponse' }
+
+  /complaints/{id}:
+    get:
+      tags: [complaints]
+      summary: Получить жалобу по id
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/ComplaintResponse' } } }
+        "404":
+          description: NOT_FOUND
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /complaints/mine:
+    get:
+      tags: [complaints]
+      summary: Жалобы текущего пользователя
+      parameters:
+        - { in: query, name: page, schema: { type: integer, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, default: 20, maximum: 100 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ComplaintResponse' }
+
+  /complaints/voted:
+    get:
+      tags: [complaints]
+      summary: Жалобы, за которые проголосовал пользователь
+      parameters:
+        - { in: query, name: page, schema: { type: integer, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, default: 20, maximum: 100 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ComplaintResponse' }
+
+  /complaints/{id}/status:
+    patch:
+      tags: [complaints]
+      summary: Смена статуса (только админ/operator/inspector)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/ComplaintStatus' }
+                comment:
+                  type: string
+                  description: |
+                    Обязателен для REJECTED и DUPLICATE — будет отправлен автору
+                    и всем проголосовавшим в push/in-app уведомлении.
+                duplicateOfId:
+                  type: integer
+                  format: int64
+                  description: Обязателен для DUPLICATE
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/ComplaintResponse' } } }
+        "403":
+          description: FORBIDDEN
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+        "404":
+          description: NOT_FOUND
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /complaints/{id}/votes:
+    post:
+      tags: [votes]
+      summary: Поставить голос за жалобу (идемпотентно)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/VoteResponse' } } }
+        "409":
+          description: CONFLICT — попытка голоса за REJECTED/DUPLICATE
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+    delete:
+      tags: [votes]
+      summary: Отозвать голос (идемпотентно)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/VoteResponse' } } }
+        "409":
+          description: CONFLICT — попытка отозвать голос на REJECTED/DUPLICATE
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /announcements:
+    get:
+      tags: [announcements]
+      summary: Список активных объявлений (с фильтрами)
+      security:
+        - bearerAuth: []
+        - {}
+      parameters:
+        - { in: query, name: district, schema: { type: string } }
+        - { in: query, name: limit, schema: { type: integer, default: 10, minimum: 1, maximum: 100 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AnnouncementResponse' }
+    post:
+      tags: [announcements]
+      summary: Создать объявление (admin/operator)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body]
+              properties:
+                title: { type: string }
+                body: { type: string }
+                district: { type: string }
+                expiresAt: { type: string, format: date-time }
+      responses:
+        "201":
+          description: Created
+          content: { application/json: { schema: { $ref: '#/components/schemas/AnnouncementResponse' } } }
+        "403":
+          description: FORBIDDEN
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /announcements/{id}:
+    patch:
+      tags: [announcements]
+      summary: Обновить объявление (admin/operator)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                body: { type: string }
+                district: { type: string }
+                expiresAt: { type: string, format: date-time }
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/AnnouncementResponse' } } }
+    delete:
+      tags: [announcements]
+      summary: Archive (expire) — снимает объявление с публикации
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "204":
+          description: No Content
+
+  /notifications:
+    get:
+      tags: [notifications]
+      summary: Список in-app уведомлений пользователя
+      parameters:
+        - { in: query, name: limit, schema: { type: integer, default: 50, minimum: 1, maximum: 100 } }
+        - { in: query, name: offset, schema: { type: integer, default: 0, minimum: 0 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/NotificationResponse' }
+                  total: { type: integer }
+                  hasMore: { type: boolean }
+
+  /notifications/unread-count:
+    get:
+      tags: [notifications]
+      summary: Счётчик непрочитанных
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count: { type: integer, format: int64 }
+
+  /notifications/read-all:
+    patch:
+      tags: [notifications]
+      summary: Отметить все непрочитанные как прочитанные
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  markedCount: { type: integer }
+
+  /notifications/{id}/read:
+    patch:
+      tags: [notifications]
+      summary: Отметить одно уведомление как прочитанное
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "204": { description: No Content }
+        "404":
+          description: NOT_FOUND
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /analytics/overview:
+    get:
+      tags: [analytics]
+      summary: Сводка для дашборда
+      responses:
+        "200":
+          description: OK
+          content: { application/json: { schema: { $ref: '#/components/schemas/AnalyticsOverview' } } }
+        "403":
+          description: FORBIDDEN
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+  /analytics/by-category:
+    get:
+      tags: [analytics]
+      summary: Распределение жалоб по категориям
+      parameters:
+        - { in: query, name: period, schema: { type: string, enum: [WEEK, MONTH, ALL], default: ALL } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CategoryStat' }
+
+  /analytics/by-district:
+    get:
+      tags: [analytics]
+      summary: Распределение жалоб по районам
+      parameters:
+        - { in: query, name: period, schema: { type: string, enum: [WEEK, MONTH, ALL], default: ALL } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    district: { type: string }
+                    count: { type: integer }
+
+  /analytics/sla:
+    get:
+      tags: [analytics]
+      summary: SLA по категориям (среднее время решения и % просрочки)
+      parameters:
+        - { in: query, name: period, schema: { type: string, enum: [WEEK, MONTH, ALL], default: ALL } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SlaStat' }
+
+  /analytics/votes-impact:
+    get:
+      tags: [analytics]
+      summary: Влияние голосов на скорость решения
+      parameters:
+        - { in: query, name: period, schema: { type: string, enum: [WEEK, MONTH, ALL], default: ALL } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  withVotesAvgHours: { type: number }
+                  withoutVotesAvgHours: { type: number }
+
+  /photos/{path}:
+    get:
+      tags: [meta]
+      summary: Раздача фото из local storage (только dev)
+      security: []
+      parameters:
+        - in: path
+          name: path
+          required: true
+          schema: { type: string }
+          description: "Storage-ключ photos/<year>/<month>/<uuid>.jpg"
+      responses:
+        "200":
+          description: OK
+          content:
+            image/jpeg: {}
+            image/png: {}
+        "404":
+          description: NOT_FOUND
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: |
+            Машинно-читаемый код ошибки. Возможные значения см. в
+            `com.example.cleancity.ErrorCodes` (BAD_REQUEST, UNAUTHORIZED,
+            FORBIDDEN, NOT_FOUND, CONFLICT, RATE_LIMITED, INTERNAL,
+            AUTH_INVALID_CREDENTIALS, AUTH_INVALID_TOKEN,
+            AUTH_EMAIL_UNVERIFIED, AUTH_ACCOUNT_LOCKED, AUTH_2FA_INVALID,
+            AUTH_2FA_ALREADY_ENABLED, AUTH_2FA_NOT_AVAILABLE,
+            AUTH_2FA_SETUP_REQUIRED, VALIDATION_INVALID_EMAIL,
+            VALIDATION_WEAK_PASSWORD, VALIDATION_TERMS_REQUIRED,
+            VALIDATION_BAD_FIELD, EMAIL_ALREADY_REGISTERED,
+            SESSION_NOT_FOUND).
+        message:
+          type: string
+          description: Человекочитаемое сообщение для UI. Безопасно показывать пользователю.
+
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+
+    RegisterRequest:
+      type: object
+      required: [email, password, acceptedTerms]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password, minLength: 8 }
+        fullName: { type: string }
+        acceptedTerms: { type: boolean, description: "Согласие на ПДн (152-ФЗ)" }
+
+    AuthResponse:
+      type: object
+      required: [accessToken, refreshToken, accessExpiresIn, refreshExpiresIn, user]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        accessExpiresIn: { type: integer, format: int64, description: "Секунды" }
+        refreshExpiresIn: { type: integer, format: int64 }
+        user: { $ref: '#/components/schemas/UserResponse' }
+
+    LoginResponse:
+      type: object
+      properties:
+        auth: { $ref: '#/components/schemas/AuthResponse' }
+        requires2fa: { type: boolean }
+        challengeToken: { type: string }
+        challengeExpiresIn: { type: integer, format: int64 }
+
+    UserResponse:
+      type: object
+      required: [id, email, role]
+      properties:
+        id: { type: integer, format: int64 }
+        email: { type: string, format: email }
+        fullName: { type: string }
+        role: { $ref: '#/components/schemas/UserRole' }
+        twoFactorEnabled: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    UserRole:
+      type: string
+      enum: [RESIDENT, ADMIN, OPERATOR, INSPECTOR]
+
+    SessionDto:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        issuedIp: { type: string }
+        userAgent: { type: string }
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+
+    ProblemCategory:
+      type: string
+      enum:
+        - GARBAGE
+        - ROADS
+        - SIDEWALKS
+        - LIGHTING
+        - GREENERY
+        - LANDSCAPING
+        - PLAYGROUNDS
+        - PARKS
+        - BEACHES
+        - SAFETY
+        - VANDALISM
+        - WATER_SUPPLY
+        - SEWERAGE
+        - ELECTRICITY
+        - POLLUTION
+        - ACCESSIBILITY
+        - ILLEGAL_TRADE
+        - OTHER
+
+    ComplaintStatus:
+      type: string
+      enum: [NEW, IN_PROGRESS, RESOLVED, REJECTED, DUPLICATE]
+
+    ComplaintResponse:
+      type: object
+      required: [id, category, title, status, latitude, longitude, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        category: { $ref: '#/components/schemas/ProblemCategory' }
+        title: { type: string, description: "Автогенерируется на бэке: «Категория · улица»" }
+        description: { type: string }
+        status: { $ref: '#/components/schemas/ComplaintStatus' }
+        latitude: { type: number, format: double }
+        longitude: { type: number, format: double }
+        address: { type: string }
+        district: { type: string }
+        photos:
+          type: array
+          items: { $ref: '#/components/schemas/ComplaintPhotoResponse' }
+        votesCount: { type: integer }
+        votedByMe: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        resolvedAt: { type: string, format: date-time }
+        rejectionComment: { type: string }
+
+    ComplaintPhotoResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        url: { type: string }
+        order: { type: integer }
+
+    DuplicateCandidateResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        title: { type: string }
+        status: { $ref: '#/components/schemas/ComplaintStatus' }
+        distanceMeters: { type: number }
+
+    MapMarkersResponse:
+      type: object
+      properties:
+        markers:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer, format: int64 }
+              latitude: { type: number, format: double }
+              longitude: { type: number, format: double }
+              status: { $ref: '#/components/schemas/ComplaintStatus' }
+              category: { $ref: '#/components/schemas/ProblemCategory' }
+
+    VoteResponse:
+      type: object
+      properties:
+        complaintId: { type: integer, format: int64 }
+        votesCount: { type: integer }
+        votedByMe: { type: boolean }
+
+    AnnouncementResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        title: { type: string }
+        body: { type: string }
+        district: { type: string }
+        authorRole: { $ref: '#/components/schemas/UserRole' }
+        createdAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+
+    NotificationResponse:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        kind:
+          type: string
+          enum: [COMPLAINT_STATUS, ANNOUNCEMENT]
+        title: { type: string }
+        body: { type: string }
+        iconStyle:
+          type: string
+          enum: [INFO, SUCCESS, WARNING, ERROR]
+        complaintId: { type: integer, format: int64 }
+        announcementId: { type: integer, format: int64 }
+        readAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+
+    CategoryMeta:
+      type: object
+      properties:
+        code: { $ref: '#/components/schemas/ProblemCategory' }
+        label: { type: string }
+        slaHours: { type: integer, description: "SLA для категории, часы" }
+
+    DistrictMeta:
+      type: object
+      properties:
+        code: { type: string }
+        label: { type: string }
+
+    AnalyticsOverview:
+      type: object
+      properties:
+        totalComplaints: { type: integer }
+        newCount: { type: integer }
+        inProgressCount: { type: integer }
+        resolvedCount: { type: integer }
+        rejectedCount: { type: integer }
+        duplicateCount: { type: integer }
+        avgResolveHours: { type: number }
+        slaBreachPercent: { type: number }
+
+    CategoryStat:
+      type: object
+      properties:
+        category: { $ref: '#/components/schemas/ProblemCategory' }
+        count: { type: integer }
+        resolvedPercent: { type: number }
+
+    SlaStat:
+      type: object
+      properties:
+        category: { $ref: '#/components/schemas/ProblemCategory' }
+        slaHours: { type: integer }
+        avgResolveHours: { type: number }
+        breachPercent: { type: number }

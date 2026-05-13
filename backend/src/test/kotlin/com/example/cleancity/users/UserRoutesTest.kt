@@ -15,6 +15,7 @@ import com.example.cleancity.database.tables.RefreshTokens
 import com.example.cleancity.database.tables.Users
 import com.example.cleancity.email.EmailService
 import com.example.cleancity.shared.models.UserResponse
+import com.example.cleancity.shared.models.UserRole
 import com.example.cleancity.testutils.installApiErrorHandling
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -36,7 +37,6 @@ import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 // ---------------------------------------------------------------------------
@@ -166,7 +166,7 @@ class UserRoutesTest {
             assertEquals(HttpStatusCode.OK, resp.status)
             val user = testJson.decodeFromString(UserResponse.serializer(), resp.bodyAsText())
             assertEquals("u1@cleancity.local", user.email)
-            assertNotNull(user.role)
+            assertEquals(UserRole.RESIDENT, user.role)
             assertTrue(user.emailVerified)
         }
     }

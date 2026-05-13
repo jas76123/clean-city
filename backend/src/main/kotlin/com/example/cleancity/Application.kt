@@ -25,6 +25,7 @@ import com.example.cleancity.email.SmtpEmailService
 import com.example.cleancity.notifications.DbNotificationService
 import com.example.cleancity.notifications.NotificationRepository
 import com.example.cleancity.notifications.notificationRoutes
+import com.example.cleancity.plugins.SecurityHeaders
 import com.example.cleancity.shared.models.CategoryMeta
 import com.example.cleancity.shared.models.CategorySla
 import com.example.cleancity.shared.models.District
@@ -58,6 +59,8 @@ fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 fun Application.module() {
     configureDatabase()
 
+    install(SecurityHeaders)
+
     install(ContentNegotiation) { json() }
 
     install(CORS) {
@@ -69,10 +72,6 @@ fun Application.module() {
         allowHeader(HttpHeaders.ContentType)
         allowHeader(HttpHeaders.Authorization)
     }
-
-    // Базовые security-заголовки добавляются на reverse-proxy (Caddy/Cloudflare).
-    // Если нужно делать на уровне Ktor — добавить ktor-server-default-headers и
-    // настроить здесь (см. SPEC § 8.2).
 
     install(StatusPages) {
         exception<IllegalArgumentException> { call, cause ->

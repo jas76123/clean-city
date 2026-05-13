@@ -64,7 +64,13 @@ suspend fun RoutingContext.rateLimitOr429(
 ): Boolean {
     val ip = call.clientIp() ?: "unknown"
     if (!limiter.tryAcquire(bucket, ip, limit, windowSeconds)) {
-        call.respond(HttpStatusCode.TooManyRequests, mapOf("message" to "Too many requests, slow down"))
+        call.respond(
+            HttpStatusCode.TooManyRequests,
+            com.example.cleancity.shared.models.ApiError(
+                com.example.cleancity.ErrorCodes.RATE_LIMITED,
+                "Too many requests, slow down"
+            )
+        )
         return true
     }
     return false

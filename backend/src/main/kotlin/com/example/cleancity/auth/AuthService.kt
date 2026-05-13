@@ -378,6 +378,9 @@ class AuthService(
         }
     }
 
+    fun getUserById(userId: Long): UserResponse? =
+        users.findById(userId)?.toResponse()
+
     private fun UserRow.toResponse() = UserResponse(
         id = id,
         email = email,

@@ -9,6 +9,9 @@ import com.example.cleancity.auth.TokenRepository
 import com.example.cleancity.auth.TotpService
 import com.example.cleancity.auth.UserRepository
 import com.example.cleancity.auth.authRoutes
+import com.example.cleancity.analytics.AnalyticsRepository
+import com.example.cleancity.analytics.AnalyticsService
+import com.example.cleancity.analytics.analyticsRoutes
 import com.example.cleancity.announcements.AnnouncementRepository
 import com.example.cleancity.announcements.AnnouncementService
 import com.example.cleancity.announcements.announcementRoutes
@@ -22,6 +25,11 @@ import com.example.cleancity.email.SmtpEmailService
 import com.example.cleancity.notifications.DbNotificationService
 import com.example.cleancity.notifications.NotificationRepository
 import com.example.cleancity.notifications.notificationRoutes
+import com.example.cleancity.shared.models.CategoryMeta
+import com.example.cleancity.shared.models.CategorySla
+import com.example.cleancity.shared.models.District
+import com.example.cleancity.shared.models.DistrictMeta
+import com.example.cleancity.shared.models.ProblemCategory
 import com.example.cleancity.storage.LocalStorageService
 import com.example.cleancity.storage.S3StorageService
 import com.example.cleancity.storage.StorageService
@@ -39,6 +47,11 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.toJavaDuration
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
@@ -132,17 +145,51 @@ fun Application.module() {
     val announcementRepository = AnnouncementRepository()
     val announcementService = AnnouncementService(announcementRepository, notificationService)
 
+    val analyticsRepository = AnalyticsRepository()
+    val analyticsService = AnalyticsService(analyticsRepository)
+
+    installNotificationCleanup(notificationRepository)
+
     routing {
         get("/health") {
             call.respond(mapOf("status" to "ok"))
+        }
+        get("/categories") {
+            val items = ProblemCategory.entries.map {
+                CategoryMeta(code = it, label = it.localizedLabel, slaHours = CategorySla.hoursFor(it))
+            }
+            call.respond(items)
+        }
+        get("/districts") {
+            val items = District.entries.map { DistrictMeta(code = it, label = it.localizedLabel) }
+            call.respond(items)
         }
         authRoutes(authService, rateLimiter)
         complaintRoutes(complaintService)
         voteRoutes(voteService)
         notificationRoutes(notificationRepository)
         announcementRoutes(announcementService)
+        analyticsRoutes(analyticsService)
         if (storage is LocalStorageService) {
             photoRoutes(storage)
+        }
+    }
+}
+
+/**
+ * Фоновая задача: чистит in-app notifications старше 90 дней.
+ * Раз в 24ч, первый запуск через 1 мин после старта (чтобы не блокировать health-check).
+ */
+private fun Application.installNotificationCleanup(repo: NotificationRepository) {
+    launch(Dispatchers.IO) {
+        kotlinx.coroutines.delay(60_000L)
+        while (isActive) {
+            runCatching { repo.deleteOlderThan(90L) }
+                .onSuccess { deleted ->
+                    if (deleted > 0) environment.log.info("notifications cleanup: deleted $deleted rows older than 90d")
+                }
+                .onFailure { environment.log.error("notifications cleanup failed", it) }
+            kotlinx.coroutines.delay(24.hours.toJavaDuration().toMillis())
         }
     }
 }

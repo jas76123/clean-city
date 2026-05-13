@@ -115,10 +115,10 @@ Web admin может быть проще (показываем основной 
 
 ### День 6 (13.05) — Объявления + аналитика + push (заглушка FCM)
 
-> **Состояние на 2026-05-13:** разбит на три spec'а:
+> **Состояние на 2026-05-13:** разбит на три spec'а, все три закрыты в main:
 > - **Spec 1 (закрыт 2026-05-13)** — in-app notifications infra: миграция V6, `NotificationService`/`DbNotificationService`, триггер при смене статуса, 4 REST-эндпоинта. Источник: `docs/superpowers/specs/2026-05-11-notifications-infrastructure-design.md` + plan `2026-05-11-notifications-infrastructure.md`. FCM отложен — основной канал push'ей решено реализовать через polling (см. [[project_cleancity_notifications]]).
-> - **Spec 2 (в плане)** — объявления: V7 миграция `announcements` + ALTER `notifications ADD FK announcement_id`, CRUD `/announcements`, триггер уведомлений жителям района.
-> - **Spec 3 (в плане)** — аналитика: `/analytics/*`, `/categories`, `/districts`, cron 90-day cleanup notifications.
+> - **Spec 2 (закрыт 2026-05-13)** — объявления: V7 миграция `announcements`, CRUD `/announcements`, триггер уведомлений жителям района.
+> - **Spec 3 (закрыт 2026-05-13)** — аналитика + справочники + cleanup: `/analytics/*` (5 эндпоинтов с `?period=week|month|all`), `/categories`, `/districts`, фоновый шедулер чистки notifications старше 90 дней.
 
 **Spec 1 — выполнено:**
 
@@ -131,28 +131,33 @@ Web admin может быть проще (показываем основной 
   - [x] `PATCH /notifications/{id}/read` — идемпотентно, чужой id → 404
   - [x] `PATCH /notifications/read-all`
 
-**Spec 2 — отложено:**
+**Spec 2 — выполнено:**
 
-- [ ] Миграция V7: `announcements` + `ALTER TABLE notifications ADD CONSTRAINT … FOREIGN KEY (announcement_id) REFERENCES announcements(id)` (колонка `announcement_id` уже создана в V6 без FK).
-- [ ] `GET/POST/PATCH/DELETE /announcements`
-- [ ] Триггер при объявлении → жителям района (или всем)
-- [ ] Триггер при создании жалобы → админам района
+- [x] Миграция V7: `announcements` (колонка `announcement_id` в `notifications` уже создана в V6 — FK добавляется отложенно после V7).
+- [x] `GET/POST/PATCH/DELETE /announcements`
+- [x] Триггер при объявлении → жителям района (или всем)
+- [x] (Триггер при создании жалобы → админам района — отложен, не критично для MVP)
 
-**Spec 3 — отложено:**
+**Spec 3 — выполнено:**
 
-- [ ] Аналитика-эндпоинты (SQL-запросы с GROUP BY, материализованные view не нужны для пилота):
-  - [ ] `/analytics/overview` — counts по статусу + total + неделя + `sla_breach_count` (для алерт-баннера в дашборде)
-  - [ ] `/analytics/by-category` — counts по 18 категориям
-  - [ ] `/analytics/by-district`
-  - [ ] `/analytics/sla` — среднее `resolved_at - created_at` по категории, % нарушений норматива
-  - [ ] `/analytics/votes-impact` — корреляция `votes_count` vs `resolution_hours`
-- [ ] `/categories` и `/districts` — справочники
-- [ ] Cron `0 4 * * *` — удаление уведомлений старше 90 дней (фильтр на чтение уже работает; нужна физическая очистка)
+- [x] Аналитика-эндпоинты (обычные SQL+агрегация в Kotlin; materialized views — Phase 2):
+  - [x] `/analytics/overview` — counts по статусу + total + today/week + `slaBreachCount` (**только активные NEW/IN_PROGRESS с истёкшим нормативом**).
+  - [x] `/analytics/by-category?period=week|month|all` — counts по 18 категориям + sharePct + avg resolution hours.
+  - [x] `/analytics/by-district?period=...` — counts/new/resolved по 4 районам Сочи.
+  - [x] `/analytics/sla?period=...` — slaHours, avgResolutionHours, breachPct (по resolved-жалобам), resolvedCount.
+  - [x] `/analytics/votes-impact?period=...` — buckets `0 / 1-9 / 10-49 / 50+` с count и avgResolutionHours.
+- [x] `/categories` — справочник 18 категорий (code+label+slaHours) из enum `ProblemCategory` + `CategorySla`.
+- [x] `/districts` — справочник 4 районов Сочи из enum `District`.
+- [x] Фоновая чистка notifications старше 90 дней: kotlinx.coroutines внутри Ktor (`Application.installNotificationCleanup`), запуск каждые 24ч.
 
-**Out-of-scope для MVP (по решению 2026-05-11):**
+**Out-of-scope для MVP (по решению 2026-05-11 и Spec 3 от 2026-05-13):**
 - FCM / Firebase Admin SDK / `push_tokens` / `POST /users/me/push-token` — основной канал push'ей реализуется через polling backend API. Возврат к FCM возможен после пилота как декоратор `FcmNotificationService` поверх `DbNotificationService`.
+- `/analytics/active-users` (DAU/WAU/MAU) — Phase 2.
+- `/analytics/export?format=xlsx` — Phase 2 (PDF «Сводный за месяц» остаётся в Day 17).
 
-**Checkpoint Spec 1 (пройден 2026-05-13):** docker compose e2e — A создаёт жалобу, B голосует, админ → REJECTED, оба получают уведомление с комментарием админа; `unread-count`, `mark-as-read` (idempotent), чужой id → 404, `read-all` — всё работает. 23 unit/integration теста зелёные.
+**Checkpoint Spec 3 (пройден 2026-05-13):** 95 backend-тестов зелёные. Юнит-тесты `AnalyticsServiceTest` покрывают SLA breach (active-only), фильтр `period=week`, buckets голосов, агрегацию по районам. Routes-тесты: 401 для гостя, 403 для резидента, 200 для админа на всех 5 эндпоинтах, 400 на невалидном `period`. Cleanup-тест: `deleteOlderThan(90)` удаляет старое, оставляет свежее.
+
+**Checkpoint Spec 1 (пройден 2026-05-13):** docker compose e2e — A создаёт жалобу, B голосует, админ → REJECTED, оба получают уведомление с комментарием админа; `unread-count`, `mark-as-read` (idempotent), чужой id → 404, `read-all` — всё работает.
 
 ---
 

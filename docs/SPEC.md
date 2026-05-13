@@ -417,15 +417,20 @@ priority_score = (yes_votes - no_votes) * 1.0
 
 ### 4.5 Аналитика (только админ)
 
+Все 4 эндпоинта с фильтром по периоду принимают `?period=week|month|all` (дефолт `all`).
+Поле `slaBreachCount` в `/overview` считается **только по активным жалобам** (NEW/IN_PROGRESS) с истёкшим нормативом — это «горит сейчас», рабочая метрика для дашборда. Просрочки на момент закрытия попадают в `/sla` как `breachPct`.
+
 | Метод | Путь | Описание |
 |-------|------|----------|
-| `GET` | `/analytics/overview` | Сводка: total / new / in_progress / resolved / today / week. |
-| `GET` | `/analytics/by-category` | Группировка по 18 категориям с долей % и временем решения. |
-| `GET` | `/analytics/by-district` | Топ районов по жалобам. |
-| `GET` | `/analytics/sla` | Среднее время решения и % нарушений по категории + норматив. |
-| `GET` | `/analytics/votes-impact` | Корреляция голосов и времени решения. |
-| `GET` | `/analytics/active-users?period=week` | DAU/WAU/MAU. |
-| `GET` | `/analytics/export?format=xlsx&filter=...` | Экспорт списка жалоб (Excel/PDF). |
+| `GET` | `/analytics/overview` | Сводка: total / new / in_progress / resolved / rejected / duplicate / today / week / `slaBreachCount`. |
+| `GET` | `/analytics/by-category?period=...` | Группировка по 18 категориям: count, sharePct, avgResolutionHours. |
+| `GET` | `/analytics/by-district?period=...` | По 4 районам Сочи: count, newCount, resolvedCount. |
+| `GET` | `/analytics/sla?period=...` | Per-category: slaHours (из норматива), avgResolutionHours, breachPct (по resolved), resolvedCount. |
+| `GET` | `/analytics/votes-impact?period=...` | Buckets голосов `0 / 1-9 / 10-49 / 50+` с count и avgResolutionHours. |
+
+**Phase 2 (не входит в MVP):**
+- `/analytics/active-users` (DAU/WAU/MAU) — требует `last_login_at` history, отложено.
+- `/analytics/export?format=xlsx` — для пилота достаточно PDF «Сводный за месяц» из Settings (Day 17).
 
 ### 4.6 Уведомления (in-app история)
 
@@ -519,8 +524,8 @@ Mobile                        Backend                       Storage
 ### 5.5 Аналитика
 
 - Дашборд (`screen-overview`) запрашивает `/analytics/overview` + `/analytics/by-category` + `/analytics/by-district` + `/analytics/sla` параллельно при загрузке.
-- Все запросы кэшируются в Postgres (materialized views) с обновлением каждые 5 минут — для MVP. После пилота — переход на ClickHouse при росте объёма.
-- Экспорт в Excel/PDF — генерируется на бэкенде через Apache POI / kotlinpoet.
+- Реализация MVP: обычные SQL-запросы через Exposed, агрегация в Kotlin (см. `backend/analytics/AnalyticsRepository.kt` + `AnalyticsService.kt`). Materialized views и переход на ClickHouse — Phase 2 при росте объёма данных.
+- PDF «Сводный за месяц» — отдельный путь `/analytics/export/monthly-report.pdf` (день 17, через OpenPDF).
 
 ---
 
@@ -870,6 +875,7 @@ cleancity-kmp/
 12. ✅ **Бэкапы** — ежедневный pg_dump → Yandex Object Storage (bucket `cleancity-backups`), retention 30 дней + ежемесячный restore drill.
 13. ✅ **Алерты** — Telegram-бот для ERROR-логов и API-down. Healthcheck cron на самой ВМ.
 14. ✅ **Согласие на ПДн (152-ФЗ)** — обязательный чекбокс при регистрации, фиксация `accepted_terms_at` + `accepted_terms_version`. Документы — в репозитории.
+15. ✅ **Аналитика (Spec 3, 2026-05-13)** — обычные SQL+агрегация в Kotlin (без materialized views); `slaBreachCount` в overview = только активные просрочки (NEW/IN_PROGRESS); пресет `?period=week|month|all`; справочники `/categories` и `/districts` отдаются из enum, без миграций; cleanup notifications старше 90 дней — kotlinx.coroutines внутри Ktor (без внешнего cron).
 
 **К решению по ходу разработки:**
 - OpenAPI генерация типов для React (плагин `ktor-openapi`) — рекомендую, ускорит фронт.

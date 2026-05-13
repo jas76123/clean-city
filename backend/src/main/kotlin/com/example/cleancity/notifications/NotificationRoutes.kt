@@ -1,6 +1,7 @@
 package com.example.cleancity.notifications
 
 import com.example.cleancity.shared.models.MarkAllReadResponse
+import com.example.cleancity.shared.models.MessageResponse
 import com.example.cleancity.shared.models.NotificationListResponse
 import com.example.cleancity.shared.models.NotificationResponse
 import com.example.cleancity.shared.models.UnreadCountResponse
@@ -58,12 +59,12 @@ fun Route.notificationRoutes(repo: NotificationRepository) {
                 val userId = call.userId() ?: return@patch
                 val id = call.parameters["id"]?.toLongOrNull()
                 if (id == null) {
-                    call.respond(HttpStatusCode.BadRequest, mapOf("message" to "Invalid id"))
+                    call.respond(HttpStatusCode.BadRequest, MessageResponse("Invalid id"))
                     return@patch
                 }
                 val ok = repo.markRead(notificationId = id, userId = userId)
                 if (!ok) {
-                    call.respond(HttpStatusCode.NotFound, mapOf("message" to "Notification not found"))
+                    call.respond(HttpStatusCode.NotFound, MessageResponse("Notification not found"))
                     return@patch
                 }
                 call.respond(HttpStatusCode.NoContent)
@@ -75,7 +76,7 @@ fun Route.notificationRoutes(repo: NotificationRepository) {
 private suspend fun ApplicationCall.userId(): Long? {
     val sub = principal<JWTPrincipal>()?.payload?.subject?.toLongOrNull()
     if (sub == null) {
-        respond(HttpStatusCode.Unauthorized, mapOf("message" to "Not authenticated"))
+        respond(HttpStatusCode.Unauthorized, MessageResponse("Not authenticated"))
         return null
     }
     return sub

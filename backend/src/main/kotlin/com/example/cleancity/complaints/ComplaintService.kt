@@ -6,6 +6,8 @@ import com.example.cleancity.NotFoundException
 import com.example.cleancity.auth.AuditLogger
 import com.example.cleancity.database.tables.AuditAction
 import com.example.cleancity.notifications.NotificationService
+import com.example.cleancity.notifications.NotificationTexts
+import com.example.cleancity.shared.models.NotificationKind
 import com.example.cleancity.shared.models.ComplaintListResponse
 import com.example.cleancity.shared.models.ComplaintPhotoResponse
 import com.example.cleancity.shared.models.ComplaintResponse
@@ -249,7 +251,9 @@ class ComplaintService(
 
         val setResolvedNow = req.toStatus == ComplaintStatus.RESOLVED
 
-        // Транзакция: UPDATE complaints + INSERT status_changes + (опц.) merge голосов.
+        // Транзакция: UPDATE complaints + INSERT status_changes + (опц.) merge голосов
+        // + INSERT в notifications. Если что-то падает — всё откатывается атомарно
+        // (SPEC §5.2): статус не должен меняться без уведомления.
         transaction {
             repo.updateStatus(
                 complaintId = complaintId,
@@ -267,6 +271,30 @@ class ComplaintService(
             if (req.toStatus == ComplaintStatus.DUPLICATE && duplicateOfId != null) {
                 voteRepo.mergeVotesInto(originalId = duplicateOfId, duplicateId = complaintId)
             }
+
+            val recipients = when (req.toStatus) {
+                ComplaintStatus.IN_PROGRESS, ComplaintStatus.RESOLVED -> listOf(current.authorId)
+                ComplaintStatus.REJECTED, ComplaintStatus.DUPLICATE -> {
+                    val supporters = voteRepo.listSupporterIds(complaintId)
+                    (supporters + current.authorId).distinct()
+                }
+                ComplaintStatus.NEW -> emptyList()
+            }
+            if (recipients.isNotEmpty()) {
+                val text = NotificationTexts.statusChange(
+                    complaintTitle = current.title,
+                    toStatus = req.toStatus,
+                    adminComment = comment
+                )
+                notifications.notify(
+                    recipientUserIds = recipients,
+                    kind = NotificationKind.COMPLAINT_STATUS,
+                    title = text.title,
+                    body = text.body,
+                    iconStyle = text.iconStyle,
+                    complaintId = complaintId
+                )
+            }
         }
 
         audit.log(
@@ -279,27 +307,6 @@ class ComplaintService(
             metadata = """{"from":"${current.status}","to":"${req.toStatus}"""" +
                 (duplicateOfId?.let { ""","duplicate_of_id":$it""" } ?: "") + "}"
         )
-
-        // Push (Day 5 — no-op заглушка):
-        //  IN_PROGRESS/RESOLVED — только автору;
-        //  REJECTED/DUPLICATE   — автору + всем «+1»-голосовавшим (см. SPEC §5.2).
-        val recipients = when (req.toStatus) {
-            ComplaintStatus.IN_PROGRESS, ComplaintStatus.RESOLVED -> listOf(current.authorId)
-            ComplaintStatus.REJECTED, ComplaintStatus.DUPLICATE -> {
-                val supporters = voteRepo.listSupporterIds(complaintId)
-                (supporters + current.authorId).distinct()
-            }
-            ComplaintStatus.NEW -> emptyList()
-        }
-        if (recipients.isNotEmpty()) {
-            notifications.notifyStatusChange(
-                complaintId = complaintId,
-                complaintTitle = current.title,
-                toStatus = req.toStatus,
-                comment = comment,
-                recipientUserIds = recipients
-            )
-        }
 
         return getById(complaintId, actor)
             ?: error("Complaint just updated but not visible, id=$complaintId")

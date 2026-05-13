@@ -26,6 +26,7 @@ import com.example.cleancity.notifications.DbNotificationService
 import com.example.cleancity.notifications.NotificationRepository
 import com.example.cleancity.notifications.notificationRoutes
 import com.example.cleancity.plugins.SecurityHeaders
+import com.example.cleancity.shared.models.ApiError
 import com.example.cleancity.shared.models.CategoryMeta
 import com.example.cleancity.shared.models.CategorySla
 import com.example.cleancity.shared.models.District
@@ -74,21 +75,21 @@ fun Application.module() {
     }
 
     install(StatusPages) {
+        exception<ApiException> { call, cause ->
+            call.respond(cause.status, ApiError(cause.code, cause.message ?: cause.code))
+        }
         exception<IllegalArgumentException> { call, cause ->
-            call.respond(HttpStatusCode.BadRequest, mapOf("message" to (cause.message ?: "Bad request")))
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ApiError(ErrorCodes.BAD_REQUEST, cause.message ?: "Bad request")
+            )
         }
-        exception<NotFoundException> { call, cause ->
-            call.respond(HttpStatusCode.NotFound, mapOf("message" to (cause.message ?: "Not found")))
-        }
-        exception<ConflictException> { call, cause ->
-            call.respond(HttpStatusCode.Conflict, mapOf("message" to (cause.message ?: "Conflict")))
-        }
-        exception<ForbiddenException> { call, cause ->
-            call.respond(HttpStatusCode.Forbidden, mapOf("message" to (cause.message ?: "Forbidden")))
-        }
-        exception<Exception> { call, cause ->
+        exception<Throwable> { call, cause ->
             call.application.environment.log.error("Unhandled exception", cause)
-            call.respond(HttpStatusCode.InternalServerError, mapOf("message" to "Internal server error"))
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                ApiError(ErrorCodes.INTERNAL, "Internal server error")
+            )
         }
     }
 
@@ -103,7 +104,10 @@ fun Application.module() {
                 } else null
             }
             challenge { _, _ ->
-                call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Token is not valid or has expired"))
+                call.respond(
+                    HttpStatusCode.Unauthorized,
+                    ApiError(ErrorCodes.AUTH_INVALID_TOKEN, "Token is not valid or has expired")
+                )
             }
         }
     }

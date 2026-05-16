@@ -9,6 +9,7 @@
         android:allowBackup="true"
         android:label="CleanCity"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
 
         <meta-data

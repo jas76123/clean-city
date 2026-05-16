@@ -1,5 +1,7 @@
 package com.example.cleancity.data.repository
 
+import com.example.cleancity.data.network.ApiError
+import com.example.cleancity.data.network.ApiException
 import com.example.cleancity.data.network.AuthApiContract
 import com.example.cleancity.data.network.UserApiContract
 import com.example.cleancity.data.storage.TokenStorage
@@ -60,8 +62,12 @@ class AuthRepository(
 
     suspend fun login(email: String, password: String): Result<Unit> = runCatching {
         val resp = authApi.login(LoginRequest(email.trim(), password))
-        storage.write(resp.accessToken, resp.refreshToken)
-        _state.value = AuthState.Authenticated(resp.user)
+        val auth = resp.auth ?: throw ApiException(
+            ApiError("AUTH_2FA_REQUIRED", "2FA не поддерживается в этой версии приложения"),
+            403,
+        )
+        storage.write(auth.accessToken, auth.refreshToken)
+        _state.value = AuthState.Authenticated(auth.user)
     }
 
     suspend fun forgotPassword(email: String): Result<Unit> = runCatching {

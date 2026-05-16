@@ -6,6 +6,7 @@ import com.example.cleancity.data.storage.FakeTokenStorage
 import com.example.cleancity.data.storage.Tokens
 import com.example.cleancity.domain.AuthState
 import com.example.cleancity.shared.models.AuthResponse
+import com.example.cleancity.shared.models.LoginResponse
 import com.example.cleancity.shared.models.UserResponse
 import com.example.cleancity.shared.models.UserRole
 import kotlinx.coroutines.test.runTest
@@ -67,7 +68,10 @@ class AuthRepositoryTest {
     @Test fun `login success writes tokens`() = runTest {
         val storage = FakeTokenStorage()
         val authApi = FakeAuthApi(loginResult = Result.success(
-            AuthResponse(accessToken = "a", refreshToken = "r", accessExpiresIn = 0L, refreshExpiresIn = 0L, user = sampleUser)
+            LoginResponse(
+                requires2fa = false,
+                auth = AuthResponse(accessToken = "a", refreshToken = "r", accessExpiresIn = 0L, refreshExpiresIn = 0L, user = sampleUser),
+            )
         ))
         val repo = AuthRepository(authApi.asAuthApi(), FakeUserApi().asUserApi(), storage)
         val r = repo.login("u@x.com", "Password1")

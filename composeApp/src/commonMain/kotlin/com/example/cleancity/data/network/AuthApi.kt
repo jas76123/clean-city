@@ -1,6 +1,7 @@
 package com.example.cleancity.data.network
 
 import com.example.cleancity.shared.models.AuthResponse
+import com.example.cleancity.shared.models.LoginResponse
 import com.example.cleancity.shared.models.UserResponse
 import com.example.cleancity.shared.requests.auth.ForgotPasswordRequest
 import com.example.cleancity.shared.requests.auth.LoginRequest
@@ -18,7 +19,7 @@ interface AuthApiContract {
     suspend fun register(req: RegisterRequest): UserResponse
     suspend fun verifyEmail(req: VerifyEmailRequest): AuthResponse
     suspend fun resendVerification(req: ResendVerificationRequest)
-    suspend fun login(req: LoginRequest): AuthResponse
+    suspend fun login(req: LoginRequest): LoginResponse
     suspend fun refresh(req: RefreshTokenRequest): AuthResponse
     suspend fun logout()
     suspend fun forgotPassword(req: ForgotPasswordRequest)
@@ -37,7 +38,7 @@ class AuthApi(private val client: HttpClient) : AuthApiContract {
         client.post("/auth/resend-verification") { setBody(req) }
     }
 
-    override suspend fun login(req: LoginRequest): AuthResponse =
+    override suspend fun login(req: LoginRequest): LoginResponse =
         client.post("/auth/login") { setBody(req) }.body()
 
     override suspend fun refresh(req: RefreshTokenRequest): AuthResponse =

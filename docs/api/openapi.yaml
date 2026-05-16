@@ -422,6 +422,18 @@ paths:
           description: AUTH_INVALID_TOKEN / VALIDATION_WEAK_PASSWORD
           content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
 
+  /users/me:
+    get:
+      tags: [auth]
+      summary: Текущий пользователь по JWT
+      responses:
+        "200":
+          description: OK — данные аутентифицированного пользователя
+          content: { application/json: { schema: { $ref: '#/components/schemas/UserResponse' } } }
+        "401":
+          description: UNAUTHORIZED — токен невалиден или истёк
+          content: { application/json: { schema: { $ref: '#/components/schemas/ApiError' } } }
+
   /complaints:
     get:
       tags: [complaints]

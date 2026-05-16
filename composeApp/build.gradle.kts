@@ -15,17 +15,15 @@ val yandexMapsApiKey: String =
     secrets.getProperty("YANDEX_MAPS_API_KEY")
         ?: System.getenv("YANDEX_MAPS_API_KEY")
         ?: ""
+val apiBaseUrl: String =
+    secrets.getProperty("API_BASE_URL")
+        ?: System.getenv("API_BASE_URL")
+        ?: "http://10.0.2.2:8080"
 
 kotlin {
     androidTarget {
         compilations.all {
             kotlinOptions { jvmTarget = "17" }
-        }
-    }
-    listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "ComposeApp"
-            isStatic = true
         }
     }
 
@@ -40,13 +38,29 @@ kotlin {
             implementation(libs.voyager.tab.navigator)
             implementation(libs.voyager.transitions)
             implementation(libs.voyager.screenmodel)
+            implementation(libs.voyager.koin)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
             implementation(project(":shared"))
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.client.auth)
+            implementation(libs.ktor.client.logging)
+            implementation(libs.ktor.serialization.kotlinx.json)
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose)
         }
         androidMain.dependencies {
             implementation(libs.mapkit.android)
             implementation("androidx.activity:activity-compose:1.10.1")
+            implementation(libs.ktor.client.okhttp)
+            implementation(libs.koin.android)
+            implementation(libs.androidx.security.crypto)
+        }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.ktor.client.mock)
         }
     }
 }
@@ -63,6 +77,16 @@ android {
 
         buildConfigField("String", "YANDEX_MAPS_API_KEY", "\"$yandexMapsApiKey\"")
         manifestPlaceholders["YANDEX_MAPS_API_KEY"] = yandexMapsApiKey
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+    }
+    buildTypes {
+        debug {
+            buildConfigField("boolean", "IS_DEBUG", "true")
+        }
+        release {
+            buildConfigField("boolean", "IS_DEBUG", "false")
+            isMinifyEnabled = false  // Day 13 включит proguard
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

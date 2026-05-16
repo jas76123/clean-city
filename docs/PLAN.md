@@ -186,21 +186,35 @@ Web admin может быть проще (показываем основной 
 
 ### День 8 (15.05) — Mobile setup + auth-экраны
 
-- [ ] Очистить `composeApp/` от старого кода (старая 4-категорная модель)
-- [ ] Обновить `composeApp/build.gradle.kts`: ktor-client, kotlinx-serialization, kotlinx-coroutines, koin (DI), yandex-maps SDK, firebase-messaging, encrypted-shared-preferences
-- [ ] Структура: `data/` (api, repos), `domain/`, `ui/screens/`, `ui/theme/`
-- [ ] `ApiClient` (Ktor Client с logging + bearer-auth + auto-refresh interceptor)
-- [ ] `TokenStorage` через EncryptedSharedPreferences (Android)
-- [ ] Theme: цвета и шрифты из мокапа (зелёный 0d2b1a/5DDE8A, Golos Text, Unbounded)
-- [ ] Splash + welcome screen с тремя кнопками: «Войти», «Регистрация», **«Зайти как гость»** (без auth, видит только публичный контент — карта + лента + объявления, при попытке голосовать/создавать → диалог логина)
-- [ ] `LoginScreen` (email + password)
-- [ ] `RegisterScreen` (email + password + полное имя + **обязательный чекбокс согласия** с двумя кликабельными ссылками — открывают `LegalScreen`)
-- [ ] `LegalScreen` — WebView рендерит markdown с `/legal/privacy` или `/legal/terms` (или статика по `cleancity.ru/privacy`). Кнопка «Принимаю» возвращает на регистрацию с активной галочкой.
-- [ ] При успешной регистрации backend сохраняет `accepted_terms_at = NOW()`, `accepted_terms_version` (берётся из конфига).
-- [ ] `VerifyEmailScreen` (приходит deep-link)
-- [ ] Навигация (Compose Navigation)
+- [x] Очистить `composeApp/` от старого кода (старая 4-категорная модель) — Yandex map-actuals перенесены в `legacy/`
+- [x] Обновить `composeApp/build.gradle.kts`: ktor-client, kotlinx-serialization, kotlinx-coroutines, koin (DI), encrypted-shared-preferences (firebase-messaging отложен до Day 12; yandex-maps SDK остался для Day 9)
+- [x] Структура: `data/` (api, repos, storage), `domain/`, `ui/components/`, `ui/feature/`, `ui/theme/`, `di/`
+- [x] `ApiClient` (Ktor Client с logging + bearer-auth + auto-refresh interceptor)
+- [x] `TokenStorage` через EncryptedSharedPreferences (Android)
+- [x] Theme: цвета и шрифты из мокапа (зелёный 0d2b1a/5DDE8A, Golos Text, Unbounded)
+- [x] Splash + welcome screen с тремя кнопками: «Войти», «Регистрация», **«Зайти как гость»**
+- [x] `LoginScreen` (email + password)
+- [x] `RegisterScreen` (email + password + полное имя + **обязательный чекбокс согласия** с двумя кликабельными ссылками — открывают `LegalScreen`)
+- [x] `LegalScreen` — WebView с host-allowlist (`/legal/privacy`, `/legal/terms` через BuildConfig.API_BASE_URL)
+- [x] При успешной регистрации backend сохраняет `accepted_terms_at = NOW()`, `accepted_terms_version` (бэкенд из Week 1)
+- [x] `VerifyEmailScreen` (приходит deep-link cleancity://verify?token=...) + ForgotPassword + ResetPassword flow
+- [x] Навигация (Voyager Navigator) — реактивная маршрутизация на AuthState
+- [x] Реализованы 12 фаз плана `docs/superpowers/plans/2026-05-13-week2-day8-mobile-auth.md`; 24/24 unit-тестов зелёные; assembleDebug → APK 143 MB
+- [x] **Checkpoint (manual smoke-tests на эмуляторе)** — все 4 сценария зелёные на Medium_Phone AVD против docker-compose backend:
+  - Сценарий 1 (happy path): register → cleancity://verify deep-link → Authenticated → MainPlaceholder ✅
+  - Сценарий 2 (guest): «Зайти как гость» → MainPlaceholder(isGuest=true) с «Войти / Регистрация» ✅
+  - Сценарий 3 (forgot/reset): email submit → cleancity://reset deep-link → новый пароль → snackbar «Пароль обновлён» → автоматически на LoginScreen → логин с новым паролем → Authenticated ✅
+  - Сценарий 4 (edge): кнопка submit disabled пока чекбокс согласия не отмечен ✅
+  - **Bug найден и исправлен (commit c6a7f0f):** `AuthApi.login()` парсил response как `AuthResponse`, но backend возвращает `LoginResponse {requires2fa, auth: AuthResponse}` — без unwrap'а ловился JSON parse error, login всегда падал генерик-снэкбаром. Тесты с FakeAuthApi не ловили — fake возвращал тот же тип, который запрашивался; реальный бэкенд раскрыл расхождение.
+  - **Cleartext fix (commit 668afca):** `android:usesCleartextTraffic="true"` для эмулятор-локалхоста — без него Android 9+ блокирует HTTP к 10.0.2.2:8081.
 
 **Checkpoint:** На Android-симуляторе: register → email-link открывает приложение → verify → login → main screen. Без галочки согласия кнопка «Зарегистрироваться» disabled. Гостевой режим: «Зайти как гость» → MapScreen без crashes; тап «Подтверждаю» на жалобе → диалог «Войдите чтобы поддержать».
+
+**Известные ограничения (флаг для Day 9 polish):**
+- `LoginScreenModel.resendVerification` молча игнорирует ошибку сети (нет snackbar)
+- `VerifyEmailScreenModel.resend()` стартует 5-мин cooldown даже при network failure
+- Все UI-строки hard-coded (i18n debt)
+- `ClickableText` в `ConsentRow` — deprecated, заменить на `BasicText + LinkAnnotation` когда Compose обновится
 
 ---
 

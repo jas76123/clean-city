@@ -9,6 +9,11 @@ import com.example.cleancity.data.network.createHttpClient
 import com.example.cleancity.data.repository.AuthRepository
 import com.example.cleancity.data.storage.TokenStorage
 import com.example.cleancity.data.storage.TokenStorageFactory
+import com.example.cleancity.ui.feature.auth.ForgotPasswordScreenModel
+import com.example.cleancity.ui.feature.auth.LoginScreenModel
+import com.example.cleancity.ui.feature.auth.RegisterScreenModel
+import com.example.cleancity.ui.feature.auth.ResetPasswordScreenModel
+import com.example.cleancity.ui.feature.auth.VerifyEmailScreenModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import org.koin.core.module.Module
@@ -42,4 +47,10 @@ fun appModule(): Module = module {
     single<UserApiContract> { UserApi(get<HttpClient>()) }
 
     single { AuthRepository(get(), get(), get()) }
+
+    factory { LoginScreenModel(get()) }
+    factory { RegisterScreenModel(get()) }
+    factory { (email: String) -> VerifyEmailScreenModel(email, get()) }
+    factory { ForgotPasswordScreenModel(get()) }
+    factory { (token: String) -> ResetPasswordScreenModel(token, get()) }
 }

@@ -1,6 +1,7 @@
 package com.example.cleancity.data.network
 
 import com.example.cleancity.shared.models.AuthResponse
+import com.example.cleancity.shared.models.LoginResponse
 import com.example.cleancity.shared.models.UserResponse
 import com.example.cleancity.shared.requests.auth.ForgotPasswordRequest
 import com.example.cleancity.shared.requests.auth.LoginRequest
@@ -13,7 +14,7 @@ import com.example.cleancity.shared.requests.auth.VerifyEmailRequest
 class FakeAuthApi(
     var registerResult: Result<UserResponse>? = null,
     var verifyResult: Result<AuthResponse>? = null,
-    var loginResult: Result<AuthResponse>? = null,
+    var loginResult: Result<LoginResponse>? = null,
     var refreshResult: Result<AuthResponse>? = null,
 ) {
     val logoutCalls = mutableListOf<Unit>()
@@ -29,7 +30,7 @@ class FakeAuthApi(
         override suspend fun resendVerification(req: ResendVerificationRequest) {
             resendCalls += req.email
         }
-        override suspend fun login(req: LoginRequest): AuthResponse =
+        override suspend fun login(req: LoginRequest): LoginResponse =
             requireNotNull(loginResult).getOrThrow()
         override suspend fun refresh(req: RefreshTokenRequest): AuthResponse =
             requireNotNull(refreshResult).getOrThrow()

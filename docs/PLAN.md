@@ -200,7 +200,13 @@ Web admin может быть проще (показываем основной 
 - [x] `VerifyEmailScreen` (приходит deep-link cleancity://verify?token=...) + ForgotPassword + ResetPassword flow
 - [x] Навигация (Voyager Navigator) — реактивная маршрутизация на AuthState
 - [x] Реализованы 12 фаз плана `docs/superpowers/plans/2026-05-13-week2-day8-mobile-auth.md`; 24/24 unit-тестов зелёные; assembleDebug → APK 143 MB
-- [ ] **Checkpoint (manual smoke-tests на эмуляторе)** — Жасмин: backend up локально → `adb install composeApp-debug.apk` → прогнать Сценарии 1-4 из плана (happy path, guest mode, forgot/reset, edge cases)
+- [x] **Checkpoint (manual smoke-tests на эмуляторе)** — все 4 сценария зелёные на Medium_Phone AVD против docker-compose backend:
+  - Сценарий 1 (happy path): register → cleancity://verify deep-link → Authenticated → MainPlaceholder ✅
+  - Сценарий 2 (guest): «Зайти как гость» → MainPlaceholder(isGuest=true) с «Войти / Регистрация» ✅
+  - Сценарий 3 (forgot/reset): email submit → cleancity://reset deep-link → новый пароль → snackbar «Пароль обновлён» → автоматически на LoginScreen → логин с новым паролем → Authenticated ✅
+  - Сценарий 4 (edge): кнопка submit disabled пока чекбокс согласия не отмечен ✅
+  - **Bug найден и исправлен (commit c6a7f0f):** `AuthApi.login()` парсил response как `AuthResponse`, но backend возвращает `LoginResponse {requires2fa, auth: AuthResponse}` — без unwrap'а ловился JSON parse error, login всегда падал генерик-снэкбаром. Тесты с FakeAuthApi не ловили — fake возвращал тот же тип, который запрашивался; реальный бэкенд раскрыл расхождение.
+  - **Cleartext fix (commit 668afca):** `android:usesCleartextTraffic="true"` для эмулятор-локалхоста — без него Android 9+ блокирует HTTP к 10.0.2.2:8081.
 
 **Checkpoint:** На Android-симуляторе: register → email-link открывает приложение → verify → login → main screen. Без галочки согласия кнопка «Зарегистрироваться» disabled. Гостевой режим: «Зайти как гость» → MapScreen без crashes; тап «Подтверждаю» на жалобе → диалог «Войдите чтобы поддержать».
 

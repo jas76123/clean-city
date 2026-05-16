@@ -30,6 +30,7 @@ voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.
 voyager-tab-navigator = { module = "cafe.adriel.voyager:voyager-tab-navigator", version.ref = "voyager" }
 voyager-transitions = { module = "cafe.adriel.voyager:voyager-transitions", version.ref = "voyager" }
 voyager-screenmodel = { module = "cafe.adriel.voyager:voyager-screenmodel", version.ref = "voyager" }
+voyager-koin = { module = "cafe.adriel.voyager:voyager-koin", version.ref = "voyager" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
 mapkit-android = { module = "com.yandex.android:maps.mobile", version.ref = "mapkit-android" }

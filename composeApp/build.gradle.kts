@@ -38,6 +38,7 @@ kotlin {
             implementation(libs.voyager.tab.navigator)
             implementation(libs.voyager.transitions)
             implementation(libs.voyager.screenmodel)
+            implementation(libs.voyager.koin)
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
             implementation(project(":shared"))

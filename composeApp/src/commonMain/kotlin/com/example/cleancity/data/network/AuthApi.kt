@@ -14,33 +14,44 @@ import io.ktor.client.call.body
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 
-class AuthApi(private val client: HttpClient) {
+interface AuthApiContract {
+    suspend fun register(req: RegisterRequest): UserResponse
+    suspend fun verifyEmail(req: VerifyEmailRequest): AuthResponse
+    suspend fun resendVerification(req: ResendVerificationRequest)
+    suspend fun login(req: LoginRequest): AuthResponse
+    suspend fun refresh(req: RefreshTokenRequest): AuthResponse
+    suspend fun logout()
+    suspend fun forgotPassword(req: ForgotPasswordRequest)
+    suspend fun resetPassword(req: ResetPasswordRequest)
+}
 
-    suspend fun register(req: RegisterRequest): UserResponse =
+class AuthApi(private val client: HttpClient) : AuthApiContract {
+
+    override suspend fun register(req: RegisterRequest): UserResponse =
         client.post("/auth/register") { setBody(req) }.body()
 
-    suspend fun verifyEmail(req: VerifyEmailRequest): AuthResponse =
+    override suspend fun verifyEmail(req: VerifyEmailRequest): AuthResponse =
         client.post("/auth/verify-email") { setBody(req) }.body()
 
-    suspend fun resendVerification(req: ResendVerificationRequest) {
+    override suspend fun resendVerification(req: ResendVerificationRequest) {
         client.post("/auth/resend-verification") { setBody(req) }
     }
 
-    suspend fun login(req: LoginRequest): AuthResponse =
+    override suspend fun login(req: LoginRequest): AuthResponse =
         client.post("/auth/login") { setBody(req) }.body()
 
-    suspend fun refresh(req: RefreshTokenRequest): AuthResponse =
+    override suspend fun refresh(req: RefreshTokenRequest): AuthResponse =
         client.post("/auth/refresh") { setBody(req) }.body()
 
-    suspend fun logout() {
+    override suspend fun logout() {
         client.post("/auth/logout")
     }
 
-    suspend fun forgotPassword(req: ForgotPasswordRequest) {
+    override suspend fun forgotPassword(req: ForgotPasswordRequest) {
         client.post("/auth/forgot-password") { setBody(req) }
     }
 
-    suspend fun resetPassword(req: ResetPasswordRequest) {
+    override suspend fun resetPassword(req: ResetPasswordRequest) {
         client.post("/auth/reset-password") { setBody(req) }
     }
 }

@@ -13,15 +13,13 @@ import com.example.cleancity.domain.DeepLinkBus
 import com.example.cleancity.ui.feature.auth.LoginScreen
 import com.example.cleancity.ui.feature.auth.ResetPasswordScreen
 import com.example.cleancity.ui.feature.auth.VerifyEmailScreen
-import com.example.cleancity.ui.feature.map.MapScreen
+import com.example.cleancity.ui.feature.shell.MainShellScreen
 import com.example.cleancity.ui.feature.splash.SplashLoaderScreen
 import com.example.cleancity.ui.feature.splash.SplashScreen
 import com.example.cleancity.ui.theme.CleanCityTheme
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import org.koin.compose.koinInject
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope
 import cafe.adriel.voyager.core.screen.Screen
 
 @Composable
@@ -29,7 +27,6 @@ fun App() {
     CleanCityTheme {
         val authRepo: AuthRepository = koinInject()
         val authState by authRepo.state.collectAsState()
-        val coroutineScope = rememberCoroutineScope()
 
         // First-time-only init
         LaunchedEffect(Unit) { authRepo.init() }
@@ -38,11 +35,9 @@ fun App() {
             when (val s = authState) {
                 AuthState.Loading -> SplashLoaderScreen()
                 AuthState.Anonymous -> SplashScreen(onContinueAsGuest = { authRepo.continueAsGuest() })
-                AuthState.Guest -> MapScreen(onLogout = { authRepo.toAnonymous() })
+                AuthState.Guest -> MainShellScreen()
                 is AuthState.NeedsVerification -> VerifyEmailScreen(email = s.email)
-                is AuthState.Authenticated -> MapScreen(
-                    onLogout = { coroutineScope.launch { authRepo.logout() } },
-                )
+                is AuthState.Authenticated -> MainShellScreen()
             }
         }
 
@@ -52,11 +47,9 @@ fun App() {
                 val newRoot: Screen? = when (val s = authState) {
                     AuthState.Loading -> SplashLoaderScreen()
                     AuthState.Anonymous -> SplashScreen(onContinueAsGuest = { authRepo.continueAsGuest() })
-                    AuthState.Guest -> MapScreen(onLogout = { authRepo.toAnonymous() })
+                    AuthState.Guest -> MainShellScreen()
                     is AuthState.NeedsVerification -> VerifyEmailScreen(email = s.email)
-                    is AuthState.Authenticated -> MapScreen(
-                        onLogout = { coroutineScope.launch { authRepo.logout() } },
-                    )
+                    is AuthState.Authenticated -> MainShellScreen()
                 }
                 if (newRoot != null && navigator.lastItem::class != newRoot::class) {
                     navigator.replaceAll(newRoot)

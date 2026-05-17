@@ -11,11 +11,13 @@ import com.example.cleancity.data.network.createHttpClient
 import com.example.cleancity.data.repository.AuthRepository
 import com.example.cleancity.data.storage.TokenStorage
 import com.example.cleancity.data.storage.TokenStorageFactory
+import com.example.cleancity.domain.location.LocationProvider
 import com.example.cleancity.ui.feature.auth.ForgotPasswordScreenModel
 import com.example.cleancity.ui.feature.auth.LoginScreenModel
 import com.example.cleancity.ui.feature.auth.RegisterScreenModel
 import com.example.cleancity.ui.feature.auth.ResetPasswordScreenModel
 import com.example.cleancity.ui.feature.auth.VerifyEmailScreenModel
+import com.example.cleancity.ui.feature.map.MapScreenModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import org.koin.core.module.Module
@@ -56,4 +58,5 @@ fun appModule(): Module = module {
     factory { (email: String) -> VerifyEmailScreenModel(email, get()) }
     factory { ForgotPasswordScreenModel(get()) }
     factory { (token: String) -> ResetPasswordScreenModel(token, get()) }
+    factory { MapScreenModel(get<ComplaintsApiContract>(), get<LocationProvider>()) }
 }

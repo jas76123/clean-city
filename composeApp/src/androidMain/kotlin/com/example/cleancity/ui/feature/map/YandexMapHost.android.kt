@@ -25,6 +25,7 @@ import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.MapMarker
 import android.graphics.PointF
 import androidx.compose.ui.graphics.toArgb
+import com.example.cleancity.ui.theme.Accent
 import com.example.cleancity.ui.theme.AccentDark
 import com.example.cleancity.ui.theme.Amber
 import com.example.cleancity.ui.theme.Blue
@@ -63,6 +64,8 @@ actual fun YandexMapHost(
         ResourcesCompat.getFont(context, R.font.unbounded_semibold) ?: Typeface.DEFAULT_BOLD
     }
 
+    val localDensity = density
+
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
@@ -78,7 +81,10 @@ actual fun YandexMapHost(
                 // допустим ровно один раз на mapWindow, поэтому делаем его здесь, вместе с MapView.
                 MapKitFactory.getInstance()
                     .createUserLocationLayer(view.mapWindow)
-                    .apply { isVisible = true }
+                    .apply {
+                        isVisible = true
+                        setObjectListener(UserLocationDecorator(localDensity, Accent.toArgb()))
+                    }
                 mapViewState.value = view
             }
         },

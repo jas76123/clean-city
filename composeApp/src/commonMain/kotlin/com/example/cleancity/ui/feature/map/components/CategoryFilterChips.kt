@@ -15,15 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.cleancity.shared.models.ProblemCategory
-
-private val CHIP_SELECTED_BG = Color(0xFF1F5233)
-private val CHIP_SELECTED_FG = Color(0xFFFFFFFF)
+import com.example.cleancity.ui.theme.Green700
 
 @Composable
 private fun chipColors() = FilterChipDefaults.filterChipColors(
-    selectedContainerColor = CHIP_SELECTED_BG,
-    selectedLabelColor = CHIP_SELECTED_FG,
-    selectedTrailingIconColor = CHIP_SELECTED_FG,
+    selectedContainerColor = Green700,
+    selectedLabelColor = Color.White,
+    selectedTrailingIconColor = Color.White,
 )
 
 private val TOP_6 = listOf(

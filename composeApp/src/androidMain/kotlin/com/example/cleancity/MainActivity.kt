@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.example.cleancity.domain.DeepLink
 import com.example.cleancity.domain.DeepLinkBus
+import com.yandex.mapkit.MapKitFactory
 
 class MainActivity : ComponentActivity() {
 
@@ -13,6 +14,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent { App() }
         handleIntent(intent)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        MapKitFactory.getInstance().onStart()
+    }
+
+    override fun onStop() {
+        MapKitFactory.getInstance().onStop()
+        super.onStop()
     }
 
     override fun onNewIntent(intent: Intent) {

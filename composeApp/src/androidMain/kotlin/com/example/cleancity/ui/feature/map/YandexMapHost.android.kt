@@ -209,23 +209,26 @@ private fun statusColor(status: ComplaintStatus): Int = when (status) {
     ComplaintStatus.REJECTED, ComplaintStatus.DUPLICATE -> Gray400.toArgb()
 }
 
-private fun createPinBitmap(color: Int, widthPx: Int = 56, heightPx: Int = 72): Bitmap {
+private fun createPinBitmap(color: Int, widthPx: Int = 36, heightPx: Int = 46): Bitmap {
     val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
 
-    // Drop-pin силуэт: круг сверху + треугольный «хвост» вниз
     val cx = widthPx / 2f
-    val headRadius = widthPx / 2f - 4f
-    val headCy = headRadius + 4f
-    val tipY = heightPx - 4f
+    val headRadius = widthPx / 2f - 3f
+    val headCy = headRadius + 3f
+    val tipY = heightPx - 3f
     val tailHalfWidth = headRadius * 0.55f
 
-    val path = Path().apply {
+    // Силуэт «капля» — единый Path (UNION круга и треугольника). Сплошной контур без
+    // внутренней дуги на стыке: stroke идёт ровно по внешней границе.
+    val circlePath = Path().apply { addCircle(cx, headCy, headRadius, Path.Direction.CW) }
+    val tailPath = Path().apply {
         moveTo(cx - tailHalfWidth, headCy + headRadius * 0.55f)
         lineTo(cx, tipY)
         lineTo(cx + tailHalfWidth, headCy + headRadius * 0.55f)
         close()
     }
+    val pinPath = Path().apply { op(circlePath, tailPath, Path.Op.UNION) }
 
     val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = color
@@ -234,20 +237,15 @@ private fun createPinBitmap(color: Int, widthPx: Int = 56, heightPx: Int = 72): 
     val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = 0xFFFFFFFF.toInt()
         style = Paint.Style.STROKE
-        strokeWidth = 3f
+        strokeWidth = 2.5f
     }
     val centerDot = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = 0xFFFFFFFF.toInt()
         style = Paint.Style.FILL
     }
 
-    // Хвост целиком (fill+stroke) рисуем первым, затем голова поверх.
-    // Верхнее основание треугольника лежит внутри круга — заливка головы его перекрывает,
-    // иначе stroke оставит на голове белую горизонтальную полоску («трапецию»).
-    canvas.drawPath(path, fill)
-    canvas.drawPath(path, stroke)
-    canvas.drawCircle(cx, headCy, headRadius, fill)
-    canvas.drawCircle(cx, headCy, headRadius, stroke)
+    canvas.drawPath(pinPath, fill)
+    canvas.drawPath(pinPath, stroke)
     canvas.drawCircle(cx, headCy, headRadius * 0.32f, centerDot)
     return bitmap
 }
@@ -257,7 +255,7 @@ private fun createClusterBitmap(
     density: Float,
     typeface: Typeface,
 ): Bitmap {
-    val sizePx = (64f * density).toInt()         // 64dp
+    val sizePx = (36f * density).toInt()         // 36dp
     val strokePx = 2f * density                  // 2dp
     val padPx = strokePx / 2f + 1f
     val radius = sizePx / 2f - padPx

@@ -92,4 +92,20 @@ class MapScreenModelTest {
         assertEquals(listOf(42L), model.state.value.markers.map { it.id })
         model.close()
     }
+
+    @Test
+    fun `selectCategory triggers immediate request without debounce`() = runTest(dispatcher) {
+        val model = MapScreenModel(api, location, dispatcher)
+        advanceUntilIdle()
+        api.calls.clear()
+
+        model.selectCategory(ProblemCategory.GARBAGE)
+        advanceTimeBy(50)
+        advanceUntilIdle()
+
+        assertEquals(1, api.calls.size)
+        assertEquals(ProblemCategory.GARBAGE, api.calls.first().category)
+        assertEquals(ProblemCategory.GARBAGE, model.state.value.selectedCategory)
+        model.close()
+    }
 }

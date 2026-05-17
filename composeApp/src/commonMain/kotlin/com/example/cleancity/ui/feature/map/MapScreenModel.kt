@@ -104,6 +104,10 @@ class MapScreenModel(
         _state.update { it.copy(error = null) }
     }
 
+    fun zoomTo(lat: Double, lon: Double, zoom: Float) {
+        _state.update { it.copy(cameraPosition = CameraPosition(lat, lon, zoom)) }
+    }
+
     private suspend fun doRequest(bbox: BoundingBox, cat: ProblemCategory?) {
         _state.update { it.copy(isLoading = true) }
         runCatching { api.getMapMarkers(bbox.swLat, bbox.swLon, bbox.neLat, bbox.neLon, cat) }

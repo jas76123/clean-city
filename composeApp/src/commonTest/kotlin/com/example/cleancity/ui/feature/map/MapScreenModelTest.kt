@@ -1,5 +1,7 @@
 package com.example.cleancity.ui.feature.map
 
+import com.example.cleancity.domain.location.Location
+import com.example.cleancity.domain.location.PermissionStatus
 import com.example.cleancity.domain.map.BoundingBox
 import com.example.cleancity.domain.map.SochiDefaults
 import com.example.cleancity.shared.models.ComplaintStatus
@@ -164,6 +166,48 @@ class MapScreenModelTest {
 
         assertEquals(2, model.state.value.markers.size, "markers should NOT be cleared on error")
         assertEquals("offline", model.state.value.error)
+        model.close()
+    }
+
+    @Test
+    fun `onLocationFabClicked when granted fetches location and moves camera`() = runTest(dispatcher) {
+        val provider = FakeLocationProvider(Result.success(Location(43.6, 39.8)))
+        val model = MapScreenModel(api, provider, dispatcher)
+        advanceUntilIdle()
+        var launchedRequest = false
+
+        model.onLocationFabClicked(PermissionStatus.Granted) { launchedRequest = true }
+        advanceUntilIdle()
+
+        assertEquals(1, provider.callCount)
+        assertEquals(false, launchedRequest)
+        assertEquals(43.6, model.state.value.cameraPosition.latitude)
+        assertEquals(39.8, model.state.value.cameraPosition.longitude)
+        assertEquals(15f, model.state.value.cameraPosition.zoom)
+        model.close()
+    }
+
+    @Test
+    fun `onLocationFabClicked when NotRequested calls launchRequest`() = runTest(dispatcher) {
+        val model = MapScreenModel(api, location, dispatcher)
+        advanceUntilIdle()
+        var launched = false
+
+        model.onLocationFabClicked(PermissionStatus.NotRequested) { launched = true }
+
+        assertEquals(true, launched)
+        assertEquals(0, location.callCount)
+        model.close()
+    }
+
+    @Test
+    fun `onLocationFabClicked when Denied sets error snackbar`() = runTest(dispatcher) {
+        val model = MapScreenModel(api, location, dispatcher)
+        advanceUntilIdle()
+
+        model.onLocationFabClicked(PermissionStatus.Denied) {}
+
+        assertEquals("Разрешите геолокацию в настройках", model.state.value.error)
         model.close()
     }
 }

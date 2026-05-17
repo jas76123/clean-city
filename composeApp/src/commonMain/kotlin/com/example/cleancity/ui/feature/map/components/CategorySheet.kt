@@ -58,7 +58,7 @@ fun CategorySheet(
                             onClick = { pending = category },
                         )
                         Text(
-                            category.localizedLabel,
+                            "${category.emoji()} ${category.localizedLabel}",
                             modifier = Modifier.padding(start = 8.dp),
                         )
                     }

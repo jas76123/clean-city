@@ -7,12 +7,24 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.cleancity.shared.models.ProblemCategory
+
+private val CHIP_SELECTED_BG = Color(0xFF1F5233)
+private val CHIP_SELECTED_FG = Color(0xFFFFFFFF)
+
+@Composable
+private fun chipColors() = FilterChipDefaults.filterChipColors(
+    selectedContainerColor = CHIP_SELECTED_BG,
+    selectedLabelColor = CHIP_SELECTED_FG,
+    selectedTrailingIconColor = CHIP_SELECTED_FG,
+)
 
 private val TOP_6 = listOf(
     ProblemCategory.GARBAGE,
@@ -22,6 +34,7 @@ private val TOP_6 = listOf(
     ProblemCategory.SIDEWALKS,
     ProblemCategory.LANDSCAPING,
 )
+
 
 @Composable
 fun CategoryFilterChips(
@@ -45,13 +58,14 @@ fun CategoryFilterChips(
                     selected = selectedCategory == null,
                     onClick = { onCategorySelected(null) },
                     label = { Text("Все") },
+                    colors = chipColors(),
                     modifier = Modifier.padding(end = 8.dp),
                 )
                 MoreChip -> {
                     val moreLabel = selectedCategory
                         ?.takeIf { it !in TOP_6 }
-                        ?.localizedLabel
-                        ?: "Ещё"
+                        ?.let { "${it.emoji()} ${it.localizedLabel}" }
+                        ?: "⋯ Ещё"
                     FilterChip(
                         selected = selectedCategory != null && selectedCategory !in TOP_6,
                         onClick = onMoreClicked,
@@ -59,6 +73,7 @@ fun CategoryFilterChips(
                         trailingIcon = {
                             Icon(Icons.Default.ArrowDropDown, contentDescription = null)
                         },
+                        colors = chipColors(),
                         modifier = Modifier.padding(end = 8.dp),
                     )
                 }
@@ -67,7 +82,8 @@ fun CategoryFilterChips(
                     onClick = {
                         onCategorySelected(if (selectedCategory == item) null else item)
                     },
-                    label = { Text(item.localizedLabel) },
+                    label = { Text("${item.emoji()} ${item.localizedLabel}") },
+                    colors = chipColors(),
                     modifier = Modifier.padding(end = 8.dp),
                 )
             }

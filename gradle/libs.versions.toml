@@ -24,6 +24,7 @@ commons-codec = "1.17.1"
 imgscalr = "4.2"
 metadata-extractor = "2.19.0"
 aws-sdk = "2.29.10"
+play-services-location = "21.3.0"
 
 [libraries]
 voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.ref = "voyager" }
@@ -72,6 +73,7 @@ koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin-com
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "androidx-security" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

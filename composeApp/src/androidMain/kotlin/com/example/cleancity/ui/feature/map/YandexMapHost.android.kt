@@ -64,7 +64,11 @@ actual fun YandexMapHost(
         ResourcesCompat.getFont(context, R.font.unbounded_semibold) ?: Typeface.DEFAULT_BOLD
     }
 
-    val localDensity = density
+    // MapKit native code держит weak reference на UserLocationObjectListener — без strong
+    // reference в Kotlin/Java объект уходит в GC, и callback'и (onObjectAdded и др.) теряются
+    // (в logcat это видно как «yandex.maps.runtime: Java object is already finalized»).
+    // remember удерживает decorator на всё время жизни composable.
+    val userLocationDecorator = remember { UserLocationDecorator(Accent.toArgb()) }
 
     AndroidView(
         modifier = modifier,
@@ -79,11 +83,13 @@ actual fun YandexMapHost(
                 // Стандартный «синий пульсирующий маркер» юзера. MapKit подписывается на
                 // FusedLocationProvider сам и тихо ждёт ACCESS_FINE_LOCATION. createUserLocationLayer
                 // допустим ровно один раз на mapWindow, поэтому делаем его здесь, вместе с MapView.
+                // setObjectListener должен быть зарегистрирован ДО isVisible — MapKit вызывает
+                // onObjectAdded один раз при первом включении видимости layer'а.
                 MapKitFactory.getInstance()
                     .createUserLocationLayer(view.mapWindow)
                     .apply {
+                        setObjectListener(userLocationDecorator)
                         isVisible = true
-                        setObjectListener(UserLocationDecorator(localDensity, Accent.toArgb()))
                     }
                 mapViewState.value = view
             }

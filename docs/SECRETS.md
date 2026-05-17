@@ -51,6 +51,18 @@ openssl rand -base64 48 > /tmp/jwt-secret
 docker compose up
 ```
 
+## Known issue: YANDEX_MAPS_API_KEY в истории git
+
+В коммитах `6fbc2c0`, `44d2bdd`, `1be40f7` (Day 3 — первоначальная интеграция MapKit) ключ был зашит прямо в `CleanCityApplication.kt` и spec. В HEAD код уже читает ключ из `BuildConfig.YANDEX_MAPS_API_KEY` (через `local.properties`), но **история коммитов всё ещё содержит старое значение**.
+
+Сейчас репо локальный (`git remote -v` пуст), наружу ничего не утекло. Перед первым `git remote add` / `push` сделать **обязательно**:
+
+1. Ротировать ключ в кабинете https://developer.tech.yandex.ru (создать новый, отозвать старый).
+2. Записать новый ключ в `local.properties` (никаких хардкодов в коде).
+3. Один из:
+   - **Если репо ещё пустой на remote** — переписать историю: `git filter-repo --replace-text <(echo 'OLD_KEY==>YANDEX_MAPS_KEY_REDACTED')` и сделать первый push с уже чистой историей.
+   - **Если push уже состоялся до ротации** — старый ключ публичный, ограничиться п.1 (ротация делает старое значение бесполезным), переписывать историю необязательно.
+
 ## Что делать при утечке
 
 1. **Немедленно ротируй ключ** в кабинете провайдера (Yandex Cloud, Firebase, SMTP-провайдер).

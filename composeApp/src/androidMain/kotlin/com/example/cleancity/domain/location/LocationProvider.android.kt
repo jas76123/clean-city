@@ -21,23 +21,9 @@ class AndroidLocationProvider(context: Context) : LocationProvider {
                     if (loc != null) {
                         cont.resume(Result.success(Location(loc.latitude, loc.longitude)))
                     } else {
-                        // getCurrentLocation вернул null — fallback на последнее известное,
-                        // его FusedProvider кэширует с предыдущих сессий
-                        client.lastLocation
-                            .addOnSuccessListener { last ->
-                                if (last != null) {
-                                    cont.resume(
-                                        Result.success(Location(last.latitude, last.longitude)),
-                                    )
-                                } else {
-                                    cont.resume(
-                                        Result.failure(
-                                            IllegalStateException("Location unavailable"),
-                                        ),
-                                    )
-                                }
-                            }
-                            .addOnFailureListener { e -> cont.resume(Result.failure(e)) }
+                        cont.resume(
+                            Result.failure(IllegalStateException("Location unavailable")),
+                        )
                     }
                 }
                 .addOnFailureListener { e -> cont.resume(Result.failure(e)) }

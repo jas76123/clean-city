@@ -54,6 +54,27 @@ class MapScreenModel(
         categoryFlow.value = category
     }
 
+    fun onMarkerClick(id: Long) {
+        _state.update { it.copy(selectedMarkerId = id) }
+    }
+
+    fun closeMarkerSheet() {
+        _state.update { it.copy(selectedMarkerId = null) }
+    }
+
+    fun toggleCategory(category: ProblemCategory) {
+        val newCategory = if (_state.value.selectedCategory == category) null else category
+        selectCategory(newCategory)
+    }
+
+    fun openCategorySheet() {
+        _state.update { it.copy(isCategorySheetOpen = true) }
+    }
+
+    fun closeCategorySheet() {
+        _state.update { it.copy(isCategorySheetOpen = false) }
+    }
+
     private suspend fun doRequest(bbox: BoundingBox, cat: ProblemCategory?) {
         _state.update { it.copy(isLoading = true) }
         runCatching { api.getMapMarkers(bbox.swLat, bbox.swLon, bbox.neLat, bbox.neLon, cat) }

@@ -108,4 +108,42 @@ class MapScreenModelTest {
         assertEquals(ProblemCategory.GARBAGE, model.state.value.selectedCategory)
         model.close()
     }
+
+    @Test
+    fun `onMarkerClick sets selectedMarkerId`() = runTest(dispatcher) {
+        val model = MapScreenModel(api, location, dispatcher)
+        advanceUntilIdle()
+
+        model.onMarkerClick(42L)
+        assertEquals(42L, model.state.value.selectedMarkerId)
+        model.close()
+    }
+
+    @Test
+    fun `closeMarkerSheet clears selectedMarkerId`() = runTest(dispatcher) {
+        val model = MapScreenModel(api, location, dispatcher)
+        advanceUntilIdle()
+        model.onMarkerClick(42L)
+
+        model.closeMarkerSheet()
+        assertEquals(null, model.state.value.selectedMarkerId)
+        model.close()
+    }
+
+    @Test
+    fun `selectCategory of currently selected resets to null`() = runTest(dispatcher) {
+        val model = MapScreenModel(api, location, dispatcher)
+        advanceUntilIdle()
+        model.selectCategory(ProblemCategory.GARBAGE)
+        advanceUntilIdle()
+        api.calls.clear()
+
+        model.toggleCategory(ProblemCategory.GARBAGE)
+        advanceUntilIdle()
+
+        assertEquals(null, model.state.value.selectedCategory)
+        assertEquals(1, api.calls.size)
+        assertEquals(null, api.calls.first().category)
+        model.close()
+    }
 }

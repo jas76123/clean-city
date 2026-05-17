@@ -13,7 +13,7 @@ import com.example.cleancity.domain.DeepLinkBus
 import com.example.cleancity.ui.feature.auth.LoginScreen
 import com.example.cleancity.ui.feature.auth.ResetPasswordScreen
 import com.example.cleancity.ui.feature.auth.VerifyEmailScreen
-import com.example.cleancity.ui.feature.main.MainPlaceholderScreen
+import com.example.cleancity.ui.feature.map.MapScreen
 import com.example.cleancity.ui.feature.splash.SplashLoaderScreen
 import com.example.cleancity.ui.feature.splash.SplashScreen
 import com.example.cleancity.ui.theme.CleanCityTheme
@@ -38,11 +38,10 @@ fun App() {
             when (val s = authState) {
                 AuthState.Loading -> SplashLoaderScreen()
                 AuthState.Anonymous -> SplashScreen(onContinueAsGuest = { authRepo.continueAsGuest() })
-                AuthState.Guest -> MainPlaceholderScreen(isGuest = true, onPrimaryAction = { authRepo.toAnonymous() })
+                AuthState.Guest -> MapScreen(onLogout = { authRepo.toAnonymous() })
                 is AuthState.NeedsVerification -> VerifyEmailScreen(email = s.email)
-                is AuthState.Authenticated -> MainPlaceholderScreen(
-                    isGuest = false,
-                    onPrimaryAction = { coroutineScope.launch { authRepo.logout() } },
+                is AuthState.Authenticated -> MapScreen(
+                    onLogout = { coroutineScope.launch { authRepo.logout() } },
                 )
             }
         }
@@ -53,11 +52,10 @@ fun App() {
                 val newRoot: Screen? = when (val s = authState) {
                     AuthState.Loading -> SplashLoaderScreen()
                     AuthState.Anonymous -> SplashScreen(onContinueAsGuest = { authRepo.continueAsGuest() })
-                    AuthState.Guest -> MainPlaceholderScreen(isGuest = true, onPrimaryAction = { authRepo.toAnonymous() })
+                    AuthState.Guest -> MapScreen(onLogout = { authRepo.toAnonymous() })
                     is AuthState.NeedsVerification -> VerifyEmailScreen(email = s.email)
-                    is AuthState.Authenticated -> MainPlaceholderScreen(
-                        isGuest = false,
-                        onPrimaryAction = { coroutineScope.launch { authRepo.logout() } },
+                    is AuthState.Authenticated -> MapScreen(
+                        onLogout = { coroutineScope.launch { authRepo.logout() } },
                     )
                 }
                 if (newRoot != null && navigator.lastItem::class != newRoot::class) {

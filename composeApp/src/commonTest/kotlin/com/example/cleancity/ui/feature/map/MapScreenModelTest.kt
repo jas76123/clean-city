@@ -146,4 +146,24 @@ class MapScreenModelTest {
         assertEquals(null, api.calls.first().category)
         model.close()
     }
+
+    @Test
+    fun `error preserves previously loaded markers`() = runTest(dispatcher) {
+        api.nextResponse = listOf(
+            MapMarker(1, ProblemCategory.GARBAGE, ComplaintStatus.NEW, 43.5, 39.5),
+            MapMarker(2, ProblemCategory.ROADS, ComplaintStatus.IN_PROGRESS, 43.6, 39.6),
+        )
+        val model = MapScreenModel(api, location, dispatcher)
+        advanceUntilIdle()
+        assertEquals(2, model.state.value.markers.size)
+
+        api.nextError = RuntimeException("offline")
+        model.onCameraMoved(BoundingBox(43.5, 39.5, 43.6, 39.6))
+        advanceTimeBy(600)
+        advanceUntilIdle()
+
+        assertEquals(2, model.state.value.markers.size, "markers should NOT be cleared on error")
+        assertEquals("offline", model.state.value.error)
+        model.close()
+    }
 }

@@ -4,16 +4,21 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Typeface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.cleancity.R
 import com.example.cleancity.domain.map.BoundingBox
 import com.example.cleancity.domain.map.CameraPosition
 import com.example.cleancity.shared.models.ComplaintStatus
@@ -24,6 +29,8 @@ import com.example.cleancity.ui.theme.AccentDark
 import com.example.cleancity.ui.theme.Amber
 import com.example.cleancity.ui.theme.Blue
 import com.example.cleancity.ui.theme.Gray400
+import com.example.cleancity.ui.theme.Green700
+import com.example.cleancity.ui.theme.Green900
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
@@ -50,6 +57,11 @@ actual fun YandexMapHost(
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapViewState = remember { mutableStateOf<MapView?>(null) }
+    val context = LocalContext.current
+    val density = LocalDensity.current.density
+    val clusterTypeface = remember(context) {
+        ResourcesCompat.getFont(context, R.font.unbounded_semibold) ?: Typeface.DEFAULT_BOLD
+    }
 
     AndroidView(
         modifier = modifier,
@@ -124,7 +136,9 @@ actual fun YandexMapHost(
 
         val clusterListener = ClusterListener { cluster ->
             cluster.appearance.setIcon(
-                ImageProvider.fromBitmap(createClusterBitmap(cluster.size)),
+                ImageProvider.fromBitmap(
+                    createClusterBitmap(cluster.size, density, clusterTypeface),
+                ),
             )
             cluster.addClusterTapListener(
                 ClusterTapListener { c ->
@@ -226,27 +240,42 @@ private fun createPinBitmap(color: Int, widthPx: Int = 56, heightPx: Int = 72): 
     return bitmap
 }
 
-private fun createClusterBitmap(count: Int, sizePx: Int = 80): Bitmap {
+private fun createClusterBitmap(
+    count: Int,
+    density: Float,
+    typeface: Typeface,
+): Bitmap {
+    val sizePx = (64f * density).toInt()         // 64dp
+    val strokePx = 2f * density                  // 2dp
+    val padPx = strokePx / 2f + 1f
+    val radius = sizePx / 2f - padPx
+
     val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
+
     val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFFFFFFFF.toInt()
         style = Paint.Style.FILL
     }
     val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF374151.toInt()
+        color = Green700.toArgb()
         style = Paint.Style.STROKE
-        strokeWidth = 4f
+        strokeWidth = strokePx
     }
     val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF111827.toInt()
+        color = Green900.toArgb()
         textAlign = Paint.Align.CENTER
-        textSize = sizePx * 0.4f
-        isFakeBoldText = true
+        textSize = sizePx * 0.34f
+        this.typeface = typeface
     }
-    val r = sizePx / 2f - 4f
-    canvas.drawCircle(sizePx / 2f, sizePx / 2f, r, fill)
-    canvas.drawCircle(sizePx / 2f, sizePx / 2f, r, stroke)
-    canvas.drawText(count.toString(), sizePx / 2f, sizePx / 2f + text.textSize / 3f, text)
+
+    canvas.drawCircle(sizePx / 2f, sizePx / 2f, radius, fill)
+    canvas.drawCircle(sizePx / 2f, sizePx / 2f, radius, stroke)
+    canvas.drawText(
+        count.toString(),
+        sizePx / 2f,
+        sizePx / 2f - (text.descent() + text.ascent()) / 2f,
+        text,
+    )
     return bitmap
 }

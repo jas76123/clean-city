@@ -49,6 +49,11 @@ class MapScreenModel(
         cameraBbox.tryEmit(bbox)
     }
 
+    fun selectCategory(category: ProblemCategory?) {
+        _state.update { it.copy(selectedCategory = category, isCategorySheetOpen = false) }
+        categoryFlow.value = category
+    }
+
     private suspend fun doRequest(bbox: BoundingBox, cat: ProblemCategory?) {
         _state.update { it.copy(isLoading = true) }
         runCatching { api.getMapMarkers(bbox.swLat, bbox.swLon, bbox.neLat, bbox.neLon, cat) }

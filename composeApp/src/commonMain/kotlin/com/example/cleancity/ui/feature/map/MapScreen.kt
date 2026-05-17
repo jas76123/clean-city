@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -38,6 +39,7 @@ import com.example.cleancity.ui.feature.create.CreateComplaintPlaceholderScreen
 import com.example.cleancity.ui.feature.map.components.CategoryFilterChips
 import com.example.cleancity.ui.feature.map.components.CategorySheet
 import com.example.cleancity.ui.feature.map.components.MapFabGroup
+import com.example.cleancity.ui.feature.map.components.MapLegend
 import com.example.cleancity.ui.feature.map.components.MarkerPreviewSheet
 
 class MapScreen(private val onLogout: () -> Unit) : Screen {
@@ -113,6 +115,11 @@ class MapScreen(private val onLogout: () -> Unit) : Screen {
                                     .align(Alignment.TopStart),
                             )
                         }
+                        MapLegend(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(start = 16.dp, bottom = 16.dp),
+                        )
                         MapFabGroup(
                             onLocationClick = {
                                 model.onLocationFabClicked(permission.status, permission.launchRequest)

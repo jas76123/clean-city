@@ -13,6 +13,7 @@ data class MapUiState(
     val selectedMarkerId: Long? = null,
     val isCategorySheetOpen: Boolean = false,
     val isLoading: Boolean = false,
+    val isLocating: Boolean = false,
     val error: String? = null,
     val lastKnownLocation: Location? = null,
 )

@@ -84,17 +84,24 @@ class MapScreenModel(
                 it.copy(error = "Разрешите геолокацию в настройках")
             }
             PermissionStatus.Granted -> screenModelScope.launch(dispatcher) {
+                _state.update { it.copy(isLocating = true) }
                 locationProvider.getLastKnownLocation()
                     .onSuccess { loc ->
                         _state.update {
                             it.copy(
+                                isLocating = false,
                                 lastKnownLocation = loc,
                                 cameraPosition = CameraPosition(loc.latitude, loc.longitude, zoom = 15f),
                             )
                         }
                     }
                     .onFailure {
-                        _state.update { it.copy(error = "Не удалось получить местоположение") }
+                        _state.update {
+                            it.copy(
+                                isLocating = false,
+                                error = "Не удалось получить местоположение",
+                            )
+                        }
                     }
             }
         }

@@ -19,6 +19,11 @@ import com.example.cleancity.domain.map.CameraPosition
 import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.MapMarker
 import android.graphics.PointF
+import androidx.compose.ui.graphics.toArgb
+import com.example.cleancity.ui.theme.AccentDark
+import com.example.cleancity.ui.theme.Amber
+import com.example.cleancity.ui.theme.Blue
+import com.example.cleancity.ui.theme.Gray400
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
@@ -172,10 +177,10 @@ actual fun YandexMapHost(
 }
 
 private fun statusColor(status: ComplaintStatus): Int = when (status) {
-    ComplaintStatus.NEW -> 0xFFF59E0B.toInt()
-    ComplaintStatus.IN_PROGRESS -> 0xFF3B82F6.toInt()
-    ComplaintStatus.RESOLVED -> 0xFF10B981.toInt()
-    ComplaintStatus.REJECTED, ComplaintStatus.DUPLICATE -> 0xFF9CA3AF.toInt()
+    ComplaintStatus.NEW -> Amber.toArgb()
+    ComplaintStatus.IN_PROGRESS -> Blue.toArgb()
+    ComplaintStatus.RESOLVED -> AccentDark.toArgb()
+    ComplaintStatus.REJECTED, ComplaintStatus.DUPLICATE -> Gray400.toArgb()
 }
 
 private fun createPinBitmap(color: Int, widthPx: Int = 56, heightPx: Int = 72): Bitmap {

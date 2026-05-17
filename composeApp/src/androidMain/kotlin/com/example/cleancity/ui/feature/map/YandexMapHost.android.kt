@@ -203,10 +203,12 @@ private fun createPinBitmap(color: Int, widthPx: Int = 56, heightPx: Int = 72): 
         style = Paint.Style.FILL
     }
 
-    // Сначала «хвост» как продолжение фона, потом голова поверх — даёт классическую каплю с белым контуром
+    // Хвост целиком (fill+stroke) рисуем первым, затем голова поверх.
+    // Верхнее основание треугольника лежит внутри круга — заливка головы его перекрывает,
+    // иначе stroke оставит на голове белую горизонтальную полоску («трапецию»).
     canvas.drawPath(path, fill)
-    canvas.drawCircle(cx, headCy, headRadius, fill)
     canvas.drawPath(path, stroke)
+    canvas.drawCircle(cx, headCy, headRadius, fill)
     canvas.drawCircle(cx, headCy, headRadius, stroke)
     canvas.drawCircle(cx, headCy, headRadius * 0.32f, centerDot)
     return bitmap

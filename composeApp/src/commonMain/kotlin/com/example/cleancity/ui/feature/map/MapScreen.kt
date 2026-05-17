@@ -125,6 +125,7 @@ class MapScreen(private val onLogout: () -> Unit) : Screen {
                                 model.onLocationFabClicked(permission.status, permission.launchRequest)
                             },
                             onCreateClick = { navigator.push(CreateComplaintPlaceholderScreen()) },
+                            isLocating = state.isLocating,
                             modifier = Modifier.align(Alignment.BottomEnd),
                         )
                     }

@@ -21,6 +21,7 @@ import com.example.cleancity.ui.feature.auth.LoginScreenModel
 import com.example.cleancity.ui.feature.auth.RegisterScreenModel
 import com.example.cleancity.ui.feature.auth.ResetPasswordScreenModel
 import com.example.cleancity.ui.feature.auth.VerifyEmailScreenModel
+import com.example.cleancity.ui.feature.detail.ComplaintDetailScreenModel
 import com.example.cleancity.ui.feature.feed.FeedScreenModel
 import com.example.cleancity.ui.feature.map.MapScreenModel
 import io.ktor.client.HttpClient
@@ -70,6 +71,13 @@ fun appModule(): Module = module {
         FeedScreenModel(
             complaintsApi = get<ComplaintsApiContract>(),
             announcementsApi = get<AnnouncementsApiContract>(),
+            authRepo = get(),
+        )
+    }
+    factory { (complaintId: Long) ->
+        ComplaintDetailScreenModel(
+            complaintId = complaintId,
+            complaintsApi = get<ComplaintsApiContract>(),
             authRepo = get(),
         )
     }

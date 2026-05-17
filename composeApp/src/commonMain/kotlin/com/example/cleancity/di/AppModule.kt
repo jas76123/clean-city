@@ -1,9 +1,13 @@
 package com.example.cleancity.di
 
+import com.example.cleancity.data.network.AnnouncementsApi
+import com.example.cleancity.data.network.AnnouncementsApiContract
 import com.example.cleancity.data.network.AuthApi
 import com.example.cleancity.data.network.AuthApiContract
 import com.example.cleancity.data.network.ComplaintsApi
 import com.example.cleancity.data.network.ComplaintsApiContract
+import com.example.cleancity.data.network.NotificationsApi
+import com.example.cleancity.data.network.NotificationsApiContract
 import com.example.cleancity.data.network.UserApi
 import com.example.cleancity.data.network.UserApiContract
 import com.example.cleancity.data.network.AuthFailureHandler
@@ -50,6 +54,8 @@ fun appModule(): Module = module {
     single<AuthApiContract> { AuthApi(get<HttpClient>()) }
     single<UserApiContract> { UserApi(get<HttpClient>()) }
     single<ComplaintsApiContract> { ComplaintsApi(get<HttpClient>()) }
+    single<AnnouncementsApiContract> { AnnouncementsApi(get<HttpClient>()) }
+    single<NotificationsApiContract> { NotificationsApi(get<HttpClient>()) }
 
     single { AuthRepository(get(), get(), get()) }
 

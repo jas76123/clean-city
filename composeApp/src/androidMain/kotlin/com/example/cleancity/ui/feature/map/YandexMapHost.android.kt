@@ -1,5 +1,8 @@
 package com.example.cleancity.ui.feature.map
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -12,13 +15,20 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.cleancity.domain.map.BoundingBox
 import com.example.cleancity.domain.map.CameraPosition
+import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.MapMarker
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.map.CameraListener
+import com.yandex.mapkit.map.ClusterListener
+import com.yandex.mapkit.map.ClusterTapListener
+import com.yandex.mapkit.map.ClusterizedPlacemarkCollection
 import com.yandex.mapkit.map.Map as YMap
+import com.yandex.mapkit.map.MapObjectTapListener
+import com.yandex.mapkit.map.PlacemarkMapObject
 import com.yandex.mapkit.mapview.MapView
 import com.yandex.mapkit.map.CameraPosition as YCameraPosition
+import com.yandex.runtime.image.ImageProvider
 
 @Composable
 actual fun YandexMapHost(
@@ -92,4 +102,106 @@ actual fun YandexMapHost(
         view.mapWindow.map.addCameraListener(listener)
         onDispose { view.mapWindow.map.removeCameraListener(listener) }
     }
+
+    DisposableEffect(mapViewState.value, markers, onMarkerClick, onClusterTap) {
+        val view = mapViewState.value ?: return@DisposableEffect onDispose { }
+        val tapListeners = mutableListOf<Pair<PlacemarkMapObject, MapObjectTapListener>>()
+
+        val clusterListener = ClusterListener { cluster ->
+            cluster.appearance.setIcon(
+                ImageProvider.fromBitmap(createClusterBitmap(cluster.size)),
+            )
+            cluster.addClusterTapListener(
+                ClusterTapListener { c ->
+                    val placemarks = c.placemarks
+                    if (placemarks.isEmpty()) return@ClusterTapListener true
+                    var minLat = Double.MAX_VALUE
+                    var maxLat = -Double.MAX_VALUE
+                    var minLon = Double.MAX_VALUE
+                    var maxLon = -Double.MAX_VALUE
+                    placemarks.forEach { p ->
+                        val pt = p.geometry
+                        if (pt.latitude < minLat) minLat = pt.latitude
+                        if (pt.latitude > maxLat) maxLat = pt.latitude
+                        if (pt.longitude < minLon) minLon = pt.longitude
+                        if (pt.longitude > maxLon) maxLon = pt.longitude
+                    }
+                    onClusterTap(BoundingBox(minLat, minLon, maxLat, maxLon))
+                    true
+                },
+            )
+        }
+
+        val collection: ClusterizedPlacemarkCollection =
+            view.mapWindow.map.mapObjects.addClusterizedPlacemarkCollection(clusterListener)
+
+        markers.forEach { marker ->
+            val placemark = collection.addPlacemark().apply {
+                geometry = Point(marker.latitude, marker.longitude)
+                setIcon(ImageProvider.fromBitmap(createPinBitmap(statusColor(marker.status))))
+            }
+            val listener = MapObjectTapListener { _, _ ->
+                onMarkerClick(marker.id)
+                true
+            }
+            placemark.addTapListener(listener)
+            tapListeners.add(placemark to listener)
+        }
+        collection.clusterPlacemarks(60.0, 15)
+
+        onDispose {
+            tapListeners.forEach { (p, l) -> p.removeTapListener(l) }
+            view.mapWindow.map.mapObjects.remove(collection)
+        }
+    }
+}
+
+private fun statusColor(status: ComplaintStatus): Int = when (status) {
+    ComplaintStatus.NEW -> 0xFFF59E0B.toInt()
+    ComplaintStatus.IN_PROGRESS -> 0xFF3B82F6.toInt()
+    ComplaintStatus.RESOLVED -> 0xFF10B981.toInt()
+    ComplaintStatus.REJECTED, ComplaintStatus.DUPLICATE -> 0xFF9CA3AF.toInt()
+}
+
+private fun createPinBitmap(color: Int, sizePx: Int = 48): Bitmap {
+    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = color
+        style = Paint.Style.FILL
+    }
+    val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.color = 0xFFFFFFFF.toInt()
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+    }
+    val r = sizePx / 2f - 2f
+    canvas.drawCircle(sizePx / 2f, sizePx / 2f, r, fill)
+    canvas.drawCircle(sizePx / 2f, sizePx / 2f, r, stroke)
+    return bitmap
+}
+
+private fun createClusterBitmap(count: Int, sizePx: Int = 80): Bitmap {
+    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFFFFFFFF.toInt()
+        style = Paint.Style.FILL
+    }
+    val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF374151.toInt()
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+    }
+    val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = 0xFF111827.toInt()
+        textAlign = Paint.Align.CENTER
+        textSize = sizePx * 0.4f
+        isFakeBoldText = true
+    }
+    val r = sizePx / 2f - 4f
+    canvas.drawCircle(sizePx / 2f, sizePx / 2f, r, fill)
+    canvas.drawCircle(sizePx / 2f, sizePx / 2f, r, stroke)
+    canvas.drawText(count.toString(), sizePx / 2f, sizePx / 2f + text.textSize / 3f, text)
+    return bitmap
 }

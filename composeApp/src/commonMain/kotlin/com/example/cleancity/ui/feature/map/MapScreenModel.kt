@@ -4,7 +4,9 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.example.cleancity.data.network.ComplaintsApiContract
 import com.example.cleancity.domain.location.LocationProvider
+import com.example.cleancity.domain.location.PermissionStatus
 import com.example.cleancity.domain.map.BoundingBox
+import com.example.cleancity.domain.map.CameraPosition
 import com.example.cleancity.domain.map.SochiDefaults
 import com.example.cleancity.shared.models.ProblemCategory
 import kotlinx.coroutines.CoroutineDispatcher
@@ -73,6 +75,33 @@ class MapScreenModel(
 
     fun closeCategorySheet() {
         _state.update { it.copy(isCategorySheetOpen = false) }
+    }
+
+    fun onLocationFabClicked(status: PermissionStatus, launchRequest: () -> Unit) {
+        when (status) {
+            PermissionStatus.NotRequested -> launchRequest()
+            PermissionStatus.Denied -> _state.update {
+                it.copy(error = "Разрешите геолокацию в настройках")
+            }
+            PermissionStatus.Granted -> screenModelScope.launch(dispatcher) {
+                locationProvider.getLastKnownLocation()
+                    .onSuccess { loc ->
+                        _state.update {
+                            it.copy(
+                                lastKnownLocation = loc,
+                                cameraPosition = CameraPosition(loc.latitude, loc.longitude, zoom = 15f),
+                            )
+                        }
+                    }
+                    .onFailure {
+                        _state.update { it.copy(error = "Не удалось получить местоположение") }
+                    }
+            }
+        }
+    }
+
+    fun clearError() {
+        _state.update { it.copy(error = null) }
     }
 
     private suspend fun doRequest(bbox: BoundingBox, cat: ProblemCategory?) {

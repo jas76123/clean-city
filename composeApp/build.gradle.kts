@@ -56,6 +56,7 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.koin.android)
             implementation(libs.androidx.security.crypto)
+            implementation(libs.play.services.location)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

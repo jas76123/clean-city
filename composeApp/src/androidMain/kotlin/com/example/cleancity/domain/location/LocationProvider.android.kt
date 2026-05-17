@@ -1,0 +1,25 @@
+package com.example.cleancity.domain.location
+
+import android.annotation.SuppressLint
+import android.content.Context
+import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+
+class AndroidLocationProvider(context: Context) : LocationProvider {
+    private val client = LocationServices.getFusedLocationProviderClient(context)
+
+    @SuppressLint("MissingPermission")
+    override suspend fun getLastKnownLocation(): Result<Location> =
+        suspendCancellableCoroutine { cont ->
+            client.lastLocation
+                .addOnSuccessListener { loc ->
+                    if (loc != null) {
+                        cont.resume(Result.success(Location(loc.latitude, loc.longitude)))
+                    } else {
+                        cont.resume(Result.failure(IllegalStateException("Location null")))
+                    }
+                }
+                .addOnFailureListener { e -> cont.resume(Result.failure(e)) }
+        }
+}

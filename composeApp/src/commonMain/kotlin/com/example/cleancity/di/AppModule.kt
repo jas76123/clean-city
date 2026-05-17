@@ -2,6 +2,8 @@ package com.example.cleancity.di
 
 import com.example.cleancity.data.network.AuthApi
 import com.example.cleancity.data.network.AuthApiContract
+import com.example.cleancity.data.network.ComplaintsApi
+import com.example.cleancity.data.network.ComplaintsApiContract
 import com.example.cleancity.data.network.UserApi
 import com.example.cleancity.data.network.UserApiContract
 import com.example.cleancity.data.network.AuthFailureHandler
@@ -9,11 +11,13 @@ import com.example.cleancity.data.network.createHttpClient
 import com.example.cleancity.data.repository.AuthRepository
 import com.example.cleancity.data.storage.TokenStorage
 import com.example.cleancity.data.storage.TokenStorageFactory
+import com.example.cleancity.domain.location.LocationProvider
 import com.example.cleancity.ui.feature.auth.ForgotPasswordScreenModel
 import com.example.cleancity.ui.feature.auth.LoginScreenModel
 import com.example.cleancity.ui.feature.auth.RegisterScreenModel
 import com.example.cleancity.ui.feature.auth.ResetPasswordScreenModel
 import com.example.cleancity.ui.feature.auth.VerifyEmailScreenModel
+import com.example.cleancity.ui.feature.map.MapScreenModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import org.koin.core.module.Module
@@ -45,6 +49,7 @@ fun appModule(): Module = module {
 
     single<AuthApiContract> { AuthApi(get<HttpClient>()) }
     single<UserApiContract> { UserApi(get<HttpClient>()) }
+    single<ComplaintsApiContract> { ComplaintsApi(get<HttpClient>()) }
 
     single { AuthRepository(get(), get(), get()) }
 
@@ -53,4 +58,5 @@ fun appModule(): Module = module {
     factory { (email: String) -> VerifyEmailScreenModel(email, get()) }
     factory { ForgotPasswordScreenModel(get()) }
     factory { (token: String) -> ResetPasswordScreenModel(token, get()) }
+    factory { MapScreenModel(get<ComplaintsApiContract>(), get<LocationProvider>()) }
 }

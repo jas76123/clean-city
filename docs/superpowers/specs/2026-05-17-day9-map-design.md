@@ -330,9 +330,9 @@ Single-select (backend API принимает один `category`). Повтор
 
 | Что | Куда отложено | Почему |
 |---|---|---|
-| Поиск адреса (SearchManager.suggest/submit) | Day 11 | Нужен для CreateComplaintScreen, на MapScreen не используется |
+| Поиск адреса (SearchBar наверху карты, см. mockup) | Day 11 | Реализуется вместе с `CreateComplaintScreen` (нужен SearchManager.suggest/submit), на Day 9 не требуется |
+| BottomNavigation (4 таба: Лента/Карта/Уведомл./Профиль из mockup) | Day 10 | Появится с `FeedScreen`. На Day 9 logout сидит во временной TopAppBar→DropdownMenu, на Day 10 уйдёт в Profile-таб |
 | Подгрузка деталей жалобы в превью-sheet | Day 10 | Зависит от `ComplaintDetailScreen` и `ComplaintApi.getById` |
-| BottomNavigation (5 табов) | Day 10 | Нужна, когда появится второй экран (FeedScreen) |
 | Pull-to-refresh | Не делаем | Bbox-запрос триггерится движением камеры, отдельный жест не нужен |
 | iOS-таргет | Никогда | Релиз только Android |
 | Локализация category captions | После защиты | Все строки hardcoded русские (как в Day 8 — i18n debt) |

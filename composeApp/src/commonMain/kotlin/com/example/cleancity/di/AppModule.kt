@@ -21,6 +21,7 @@ import com.example.cleancity.ui.feature.auth.LoginScreenModel
 import com.example.cleancity.ui.feature.auth.RegisterScreenModel
 import com.example.cleancity.ui.feature.auth.ResetPasswordScreenModel
 import com.example.cleancity.ui.feature.auth.VerifyEmailScreenModel
+import com.example.cleancity.ui.feature.feed.FeedScreenModel
 import com.example.cleancity.ui.feature.map.MapScreenModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
@@ -65,4 +66,11 @@ fun appModule(): Module = module {
     factory { ForgotPasswordScreenModel(get()) }
     factory { (token: String) -> ResetPasswordScreenModel(token, get()) }
     factory { MapScreenModel(get<ComplaintsApiContract>(), get<LocationProvider>()) }
+    factory {
+        FeedScreenModel(
+            complaintsApi = get<ComplaintsApiContract>(),
+            announcementsApi = get<AnnouncementsApiContract>(),
+            authRepo = get(),
+        )
+    }
 }

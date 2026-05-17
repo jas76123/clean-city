@@ -2,6 +2,7 @@ package com.example.cleancity.ui.feature.map.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -37,10 +38,10 @@ fun CategorySheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        Column(modifier = Modifier.fillMaxHeight().padding(horizontal = 16.dp)) {
             Text("Выберите категорию", modifier = Modifier.padding(vertical = 12.dp))
 
-            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 items(ProblemCategory.entries) { category ->
                     Row(
                         modifier = Modifier

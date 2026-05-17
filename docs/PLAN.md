@@ -220,16 +220,18 @@ Web admin может быть проще (показываем основной 
 
 ### День 9 (16.05) — Mobile карта (Yandex Maps SDK)
 
-- [ ] Подключить Yandex Maps Mobile SDK (получить API-ключ в кабинете developer.tech.yandex.ru)
-- [ ] `MapScreen` с тайлами, навигация
-- [ ] При перемещении карты → запрос `/complaints/map?bbox=...` с дебаунсом 500мс
-- [ ] Маркеры разными цветами по статусу (amber/blue/green)
-- [ ] Категории-чипы наверху (топ-6 + «Ещё» — открывает bottom sheet с 18 категориями)
-- [ ] FAB «Сообщить о проблеме» → CreateComplaintScreen
-- [ ] FAB «моё местоположение» (запрос permissions)
-- [ ] При тапе на маркер → bottom sheet с превью + переход в детали
+- [x] Подключить Yandex Maps Mobile SDK (получить API-ключ в кабинете developer.tech.yandex.ru)
+- [x] `MapScreen` с тайлами, навигация
+- [x] При перемещении карты → запрос `/complaints/map?bbox=...` с дебаунсом 500мс
+- [x] Маркеры разными цветами по статусу (amber/blue/green)
+- [x] Категории-чипы наверху (топ-6 + «Ещё» — открывает bottom sheet с 18 категориями)
+- [x] FAB «Сообщить о проблеме» → CreateComplaintScreen (placeholder, реальный экран — Day 11)
+- [x] FAB «моё местоположение» (запрос permissions)
+- [x] При тапе на маркер → bottom sheet с превью + переход в детали (детальный переход — Day 10)
 
 **Checkpoint:** На реальном Android-устройстве: открыть карту, увидеть маркеры реальных жалоб (созданных в Postman), фильтровать по категории.
+
+**День 9 закрыт 2026-05-17** — 10/12 smoke-сценариев прошли на Medium_Phone AVD (38/38 unit-тестов зелёные). Не прошли: (7) tap на кластер не зумит камеру — `ClusterTapListener` в Yandex MapKit 4.25 не вызывается в Compose-обёртке, проверить на реальном устройстве в Day 10; (12) поворот экрана не восстанавливает MarkerPreviewSheet — Activity recreate без `configChanges` в manifest, фиксится в Day 13 polish. Найден и пофикшен bug в `CategorySheet`: кнопка «Применить» уезжала за пределы sheet при 18 категориях (commit c97d591).
 
 ---
 

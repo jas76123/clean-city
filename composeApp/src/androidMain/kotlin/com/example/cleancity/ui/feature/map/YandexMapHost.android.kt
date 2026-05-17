@@ -20,6 +20,7 @@ import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.MapMarker
 import android.graphics.PointF
 import com.yandex.mapkit.Animation
+import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.map.CameraListener
 import com.yandex.mapkit.map.IconStyle
@@ -55,6 +56,12 @@ actual fun YandexMapHost(
                         cameraPosition.zoom, 0f, 0f,
                     ),
                 )
+                // Стандартный «синий пульсирующий маркер» юзера. MapKit подписывается на
+                // FusedLocationProvider сам и тихо ждёт ACCESS_FINE_LOCATION. createUserLocationLayer
+                // допустим ровно один раз на mapWindow, поэтому делаем его здесь, вместе с MapView.
+                MapKitFactory.getInstance()
+                    .createUserLocationLayer(view.mapWindow)
+                    .apply { isVisible = true }
                 mapViewState.value = view
             }
         },

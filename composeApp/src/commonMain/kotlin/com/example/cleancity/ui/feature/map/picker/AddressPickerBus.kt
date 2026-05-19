@@ -18,4 +18,6 @@ class AddressPickerBus {
     suspend fun publish(picked: PickedAddress) {
         _results.emit(picked)
     }
+
+    fun tryPublish(picked: PickedAddress): Boolean = _results.tryEmit(picked)
 }

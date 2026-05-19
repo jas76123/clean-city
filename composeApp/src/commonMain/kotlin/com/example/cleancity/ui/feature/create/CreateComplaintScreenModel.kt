@@ -227,11 +227,26 @@ class CreateComplaintScreenModel(
         searchProvider.reverseGeocode(lat, lon)
             .onSuccess { result ->
                 _state.update {
+                    // Снапим lat/lon на координаты найденного toponym'а: иначе маркер
+                    // жалобы на карте окажется не там, где написан адрес, а дубликат-чек
+                    // будет искать вокруг пина, а не вокруг здания. Если геокодер не отдал
+                    // координаты — оставляем исходные.
+                    val newLat = result.latitude ?: it.latitude
+                    val newLon = result.longitude ?: it.longitude
                     // Не перетираем адрес, если пользователь уже что-то ввёл вручную
                     if (it.address.isBlank()) {
-                        it.copy(address = result.address, district = result.district)
+                        it.copy(
+                            address = result.address,
+                            district = result.district,
+                            latitude = newLat,
+                            longitude = newLon,
+                        )
                     } else {
-                        it.copy(district = result.district)
+                        it.copy(
+                            district = result.district,
+                            latitude = newLat,
+                            longitude = newLon,
+                        )
                     }
                 }
             }

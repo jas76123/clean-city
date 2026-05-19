@@ -29,6 +29,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +39,7 @@ import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.example.cleancity.domain.map.CameraPosition
+import com.example.cleancity.domain.map.SochiDefaults
 import com.example.cleancity.ui.feature.map.YandexMapHost
 import org.koin.core.parameter.parametersOf
 
@@ -55,12 +57,16 @@ data class MapPickerScreen(
         }
         val state by model.state.collectAsState()
 
-        val zoom = if (initialLat != null && initialLon != null) 16f else 12f
-        val cameraPosition = CameraPosition(
-            latitude = state.currentLat,
-            longitude = state.currentLon,
-            zoom = zoom,
-        )
+        // cameraPosition строится один раз и не зависит от state — иначе onCameraMoved →
+        // update(state) → recomposition → LaunchedEffect(cameraPosition) в YandexMapHost снова
+        // двигает карту → CameraListener.finished → бесконечный цикл и pin «дёргается».
+        val cameraPosition = remember(initialLat, initialLon) {
+            CameraPosition(
+                latitude = initialLat ?: SochiDefaults.CENTER.latitude,
+                longitude = initialLon ?: SochiDefaults.CENTER.longitude,
+                zoom = if (initialLat != null && initialLon != null) 16f else 12f,
+            )
+        }
 
         Scaffold(
             topBar = {
@@ -77,7 +83,9 @@ data class MapPickerScreen(
                 Surface(tonalElevation = 4.dp) {
                     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                         Button(
-                            onClick = model::confirm,
+                            onClick = {
+                                if (model.confirm()) navigator.pop()
+                            },
                             enabled = state.address != null,
                             modifier = Modifier.fillMaxWidth().height(50.dp),
                             colors = ButtonDefaults.buttonColors(),
@@ -104,7 +112,7 @@ data class MapPickerScreen(
                 ) {
                     AddressPill(
                         state = state,
-                        modifier = Modifier.offset(y = (-56).dp).widthIn(max = 320.dp),
+                        modifier = Modifier.offset(y = (-96).dp).widthIn(max = 320.dp),
                     )
                     Icon(
                         imageVector = Icons.Default.LocationOn,

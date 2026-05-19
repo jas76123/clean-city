@@ -87,6 +87,12 @@ class CreateComplaintScreenModel(
     private var duplicatesJob: Job? = null
     private var suggestJob: Job? = null
 
+    init {
+        screenModelScope.launch {
+            addressPickerBus.results.collect { picked -> onPickedFromMap(picked) }
+        }
+    }
+
     fun onPhotosAdded(added: List<PhotoBytes>) {
         _state.update { s ->
             val remaining = MAX_PHOTOS - s.photos.size
@@ -164,6 +170,22 @@ class CreateComplaintScreenModel(
             )
         }
         screenModelScope.launch { reverseGeocode(suggestion.latitude, suggestion.longitude) }
+        scheduleDuplicatesCheck()
+    }
+
+    private fun onPickedFromMap(p: com.example.cleancity.ui.feature.map.picker.PickedAddress) {
+        suggestJob?.cancel()
+        _state.update {
+            it.copy(
+                address = p.address,
+                latitude = p.latitude,
+                longitude = p.longitude,
+                district = p.district,
+                addressSource = AddressSource.Picker,
+                suggestions = emptyList(),
+                isSuggesting = false,
+            )
+        }
         scheduleDuplicatesCheck()
     }
 

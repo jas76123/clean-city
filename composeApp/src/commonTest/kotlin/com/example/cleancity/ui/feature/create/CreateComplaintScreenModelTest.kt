@@ -222,6 +222,75 @@ class CreateComplaintScreenModelTest {
         assertEquals(listOf(42L), api.voteCalls)
     }
 
+    // --- suggest debounce ----------------------------------------------------
+
+    @Test fun `suggest fires after debounce when query length is at least 2`() = runTest {
+        search.nextResult = listOf(
+            com.example.cleancity.ui.feature.map.MapSuggestion(
+                id = "1", title = "ул. Транспортная, 14", subtitle = "Сочи",
+                latitude = 43.58, longitude = 39.72,
+            ),
+        )
+        val model = newModel()
+
+        model.onAddressChanged("ул")
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, search.calls.size)
+        assertEquals("ул", search.calls.first().query)
+        assertEquals(com.example.cleancity.domain.map.SochiDefaults.SUGGEST_REGION, search.calls.first().region)
+        assertEquals(1, model.state.value.suggestions.size)
+        assertFalse(model.state.value.isSuggesting)
+    }
+
+    @Test fun `suggest skipped when query shorter than 2 chars`() = runTest {
+        val model = newModel()
+
+        model.onAddressChanged("у")
+        testScheduler.advanceUntilIdle()
+
+        assertTrue(search.calls.isEmpty())
+        assertTrue(model.state.value.suggestions.isEmpty())
+    }
+
+    // --- source transitions on edit / clear ---------------------------------
+
+    @Test fun `editing GPS-sourced address downgrades source to None and keeps coords`() = runTest {
+        location.nextResult = Result.success(Location(43.585, 39.723))
+        search.nextReverseResult = Result.success(ReverseGeocodeResult("ул. Транспортная, 14", "Центральный"))
+        val model = newModel()
+        model.onLocationPermissionGranted()
+        testScheduler.advanceUntilIdle()
+        assertEquals(AddressSource.Gps, model.state.value.addressSource)
+
+        model.onAddressChanged("ул. Кирова, 5")
+        testScheduler.advanceUntilIdle()
+
+        val s = model.state.value
+        assertEquals(AddressSource.None, s.addressSource)
+        assertEquals(43.585, s.latitude)
+        assertEquals(39.723, s.longitude)
+        assertEquals("ул. Кирова, 5", s.address)
+    }
+
+    @Test fun `clearing address resets coords district and source`() = runTest {
+        location.nextResult = Result.success(Location(43.585, 39.723))
+        search.nextReverseResult = Result.success(ReverseGeocodeResult("ул", "Центральный"))
+        val model = newModel()
+        model.onLocationPermissionGranted()
+        testScheduler.advanceUntilIdle()
+
+        model.onAddressChanged("")
+        testScheduler.advanceUntilIdle()
+
+        val s = model.state.value
+        assertNull(s.latitude)
+        assertNull(s.longitude)
+        assertNull(s.district)
+        assertEquals(AddressSource.None, s.addressSource)
+        assertTrue(s.suggestions.isEmpty())
+    }
+
     // --- helpers ----------------------------------------------------------------
 
     private fun readyButMissing(mutator: (CreateComplaintUiState) -> CreateComplaintUiState) = runTest {

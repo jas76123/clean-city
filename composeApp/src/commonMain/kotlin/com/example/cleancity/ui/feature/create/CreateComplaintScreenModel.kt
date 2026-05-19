@@ -147,10 +147,22 @@ class CreateComplaintScreenModel(
             val result = runCatching {
                 searchProvider.suggest(query, com.example.cleancity.domain.map.SochiDefaults.SUGGEST_REGION)
             }
+            val suggestions = result.getOrNull() ?: emptyList()
             _state.update {
                 it.copy(
-                    suggestions = result.getOrNull() ?: emptyList(),
+                    suggestions = suggestions,
                     isSuggesting = false,
+                )
+            }
+            // Если у пользователя ещё нет точных координат (не тапал suggest/picker, GPS не дал),
+            // но Яндекс нашёл подсказки по тексту — поднимаем дубликат-чек на координатах первой
+            // подсказки как "best guess", чтобы блок «Возможно, эта проблема уже есть» появился
+            // и при чисто ручном вводе адреса.
+            val firstSuggestion = suggestions.firstOrNull()
+            if (firstSuggestion != null && _state.value.latitude == null) {
+                scheduleDuplicatesCheck(
+                    overrideLat = firstSuggestion.latitude,
+                    overrideLon = firstSuggestion.longitude,
                 )
             }
         }
@@ -253,11 +265,14 @@ class CreateComplaintScreenModel(
         // Сетевая ошибка геокодера — пользователь введёт адрес сам, тихо игнорируем.
     }
 
-    private fun scheduleDuplicatesCheck() {
+    private fun scheduleDuplicatesCheck(
+        overrideLat: Double? = null,
+        overrideLon: Double? = null,
+    ) {
         val s = _state.value
         val cat = s.category ?: return
-        val lat = s.latitude ?: return
-        val lon = s.longitude ?: return
+        val lat = overrideLat ?: s.latitude ?: return
+        val lon = overrideLon ?: s.longitude ?: return
 
         duplicatesJob?.cancel()
         duplicatesJob = screenModelScope.launch {

@@ -11,17 +11,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.cleancity.ui.theme.Gray700
 
 @Composable
 fun MapFabGroup(
@@ -32,7 +29,7 @@ fun MapFabGroup(
 ) {
     Column(
         modifier = modifier.padding(
-            PaddingValues(start = 16.dp, top = 16.dp, end = 8.dp, bottom = 16.dp),
+            PaddingValues(start = 16.dp, top = 16.dp, end = 8.dp, bottom = 40.dp),
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.End,
@@ -41,8 +38,8 @@ fun MapFabGroup(
             FloatingActionButton(
                 onClick = onLocationClick,
                 shape = RoundedCornerShape(16.dp),
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = Gray700,
+                containerColor = MaterialTheme.colorScheme.secondary,
+                contentColor = MaterialTheme.colorScheme.onSecondary,
                 elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
                 modifier = Modifier.size(52.dp),
             ) {
@@ -50,7 +47,7 @@ fun MapFabGroup(
                     CircularProgressIndicator(
                         modifier = Modifier.size(22.dp),
                         strokeWidth = 2.dp,
-                        color = Gray700,
+                        color = MaterialTheme.colorScheme.onSecondary,
                     )
                 } else {
                     Icon(
@@ -61,13 +58,19 @@ fun MapFabGroup(
                 }
             }
         }
-        ExtendedFloatingActionButton(
+        FloatingActionButton(
             onClick = onCreateClick,
+            shape = RoundedCornerShape(16.dp),
             containerColor = MaterialTheme.colorScheme.secondary,
             contentColor = MaterialTheme.colorScheme.onSecondary,
-            shape = RoundedCornerShape(16.dp),
-            text = { Text("Сообщить") },
-            icon = { Icon(Icons.Default.Add, contentDescription = null) },
-        )
+            elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
+            modifier = Modifier.size(52.dp),
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = "Сообщить о проблеме",
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }

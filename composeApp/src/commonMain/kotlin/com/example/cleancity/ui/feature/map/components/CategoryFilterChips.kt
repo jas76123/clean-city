@@ -15,10 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.cleancity.shared.models.ProblemCategory
+import com.example.cleancity.ui.theme.Gray700
 import com.example.cleancity.ui.theme.Green700
 
 @Composable
 private fun chipColors() = FilterChipDefaults.filterChipColors(
+    containerColor = Color.White,
+    labelColor = Gray700,
     selectedContainerColor = Green700,
     selectedLabelColor = Color.White,
     selectedTrailingIconColor = Color.White,
@@ -48,7 +51,7 @@ fun CategoryFilterChips(
     }
     LazyRow(
         modifier = modifier,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 0.dp, bottom = 8.dp),
     ) {
         items(items) { item ->
             when (item) {

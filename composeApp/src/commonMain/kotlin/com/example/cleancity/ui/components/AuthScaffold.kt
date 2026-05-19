@@ -28,6 +28,7 @@ fun AuthScaffold(
             .fillMaxSize()
             .background(Color.White)
             .verticalScroll(rememberScrollState())
+            .safeDrawingPadding()
             .padding(start = 28.dp, end = 28.dp, top = Dimens.spaceXxl, bottom = Dimens.spaceXxl)
     ) {
         if (onBack != null) {

@@ -24,6 +24,7 @@ import com.example.cleancity.ui.feature.auth.VerifyEmailScreenModel
 import com.example.cleancity.ui.feature.detail.ComplaintDetailScreenModel
 import com.example.cleancity.ui.feature.feed.FeedScreenModel
 import com.example.cleancity.ui.feature.map.MapScreenModel
+import com.example.cleancity.ui.feature.map.MapSearchProvider
 import com.example.cleancity.ui.feature.profile.ProfileScreenModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
@@ -60,14 +61,22 @@ fun appModule(): Module = module {
     single<AnnouncementsApiContract> { AnnouncementsApi(get<HttpClient>()) }
     single<NotificationsApiContract> { NotificationsApi(get<HttpClient>()) }
 
-    single { AuthRepository(get(), get(), get()) }
+    single { com.example.cleancity.data.network.httpClientTokenInvalidator(get()) }
+
+    single { AuthRepository(get(), get(), get(), get()) }
 
     factory { LoginScreenModel(get()) }
     factory { RegisterScreenModel(get()) }
     factory { (email: String) -> VerifyEmailScreenModel(email, get()) }
     factory { ForgotPasswordScreenModel(get()) }
     factory { (token: String) -> ResetPasswordScreenModel(token, get()) }
-    factory { MapScreenModel(get<ComplaintsApiContract>(), get<LocationProvider>()) }
+    factory {
+        MapScreenModel(
+            api = get<ComplaintsApiContract>(),
+            locationProvider = get<LocationProvider>(),
+            searchProvider = get<MapSearchProvider>(),
+        )
+    }
     factory {
         FeedScreenModel(
             complaintsApi = get<ComplaintsApiContract>(),

@@ -42,7 +42,7 @@ class LoginScreenModel(private val authRepo: AuthRepository) : ScreenModel {
         screenModelScope.launch {
             _state.update { it.copy(loading = true, emailError = null, passwordError = null, snackbar = null, emailNotVerifiedFor = null) }
             authRepo.login(s.email, s.password).fold(
-                onSuccess = { /* AuthState changes → App routes away */ },
+                onSuccess = { _state.update { it.copy(loading = false) } },
                 onFailure = { e ->
                     val placement = ErrorMapper.map(e, fallbackEmail = s.email)
                     _state.update { st ->

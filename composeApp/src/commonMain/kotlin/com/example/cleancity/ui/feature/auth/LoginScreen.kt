@@ -17,6 +17,8 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.example.cleancity.data.repository.AuthRepository
+import com.example.cleancity.domain.AuthState
 import com.example.cleancity.ui.components.AuthLinkRow
 import com.example.cleancity.ui.components.AuthScaffold
 import com.example.cleancity.ui.components.AuthSub
@@ -26,6 +28,7 @@ import com.example.cleancity.ui.components.FormField
 import com.example.cleancity.ui.components.PrimaryButton
 import com.example.cleancity.ui.theme.Green600
 import com.example.cleancity.ui.theme.Green700
+import org.koin.compose.koinInject
 
 class LoginScreen : Screen {
     @Composable
@@ -34,6 +37,14 @@ class LoginScreen : Screen {
         val model: LoginScreenModel = koinScreenModel()
         val state by model.state.collectAsState()
         val snackbarHost = remember { SnackbarHostState() }
+        val authRepo: AuthRepository = koinInject()
+        val authState by authRepo.state.collectAsState()
+
+        LaunchedEffect(authState) {
+            if (authState is AuthState.Authenticated) {
+                nav.pop()
+            }
+        }
 
         LaunchedEffect(state.snackbar) {
             state.snackbar?.let {
@@ -91,7 +102,7 @@ class LoginScreen : Screen {
                 )
                 AuthLinkRow(
                     prefix = "Нет аккаунта?",
-                    linkText = "Зарегистрироваться",
+                    linkText = "Регистрация",
                     onClick = { nav.replace(RegisterScreen()) },
                 )
             }

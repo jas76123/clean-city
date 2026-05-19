@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,7 +20,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.AlertDialog
@@ -28,15 +28,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -59,6 +56,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.example.cleancity.shared.models.ComplaintResponse
 import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.StatusChangeResponse
+import com.example.cleancity.ui.components.SectionTopBar
 import com.example.cleancity.ui.feature.auth.LoginScreen
 import com.example.cleancity.ui.feature.map.components.emoji
 import com.example.cleancity.ui.theme.Accent
@@ -99,21 +97,10 @@ class ComplaintDetailScreen(private val complaintId: Long) : Screen {
 
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text("Жалоба") },
-                    navigationIcon = {
-                        IconButton(onClick = { navigator.pop() }) {
-                            Icon(Icons.AutoMirrored.Default.ArrowBack, contentDescription = "Назад")
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = Color.White,
-                        navigationIconContentColor = Color.White,
-                    ),
-                )
+                SectionTopBar(title = "Жалоба", onBack = { navigator.pop() })
             },
             snackbarHost = { SnackbarHost(snackbarHost) },
+            contentWindowInsets = WindowInsets(0),
         ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding)) {
                 when (val s = state) {
@@ -326,10 +313,10 @@ private fun VoteCard(
         c.status == ComplaintStatus.IN_PROGRESS ||
         c.status == ComplaintStatus.RESOLVED
     val buttonLabel = when {
-        isGuest -> "Войдите, чтобы поддержать"
+        isGuest -> "Войти, чтобы поддержать"
         !canVote -> "Голосование закрыто"
-        c.userVoted -> "Вы подтвердили — нажмите чтобы отозвать"
-        else -> "Подтверждаю — я тоже это вижу"
+        c.userVoted -> "Отозвать подтверждение"
+        else -> "Подтверждаю"
     }
     Column(
         modifier = modifier

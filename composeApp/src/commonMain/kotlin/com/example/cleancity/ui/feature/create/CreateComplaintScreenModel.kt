@@ -1,0 +1,214 @@
+package com.example.cleancity.ui.feature.create
+
+import cafe.adriel.voyager.core.model.ScreenModel
+import cafe.adriel.voyager.core.model.screenModelScope
+import com.example.cleancity.data.network.ComplaintsApiContract
+import com.example.cleancity.domain.location.LocationProvider
+import com.example.cleancity.domain.photo.PhotoBytes
+import com.example.cleancity.shared.models.DuplicateCandidateResponse
+import com.example.cleancity.shared.models.ProblemCategory
+import com.example.cleancity.shared.requests.CreateComplaintRequest
+import com.example.cleancity.ui.feature.map.MapSearchProvider
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+const val MAX_DESCRIPTION_LENGTH = 1000
+const val MAX_PHOTOS = 5
+private const val DUPLICATE_DEBOUNCE_MS = 400L
+
+data class CreateComplaintUiState(
+    val photos: List<PhotoBytes> = emptyList(),
+    val category: ProblemCategory? = null,
+    val categoryQuery: String = "",
+    val address: String = "",
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val district: String? = null,
+    val description: String = "",
+    val locationStatus: LocationStatus = LocationStatus.Idle,
+    val duplicates: List<DuplicateCandidateResponse> = emptyList(),
+    val isCheckingDuplicates: Boolean = false,
+    val isSubmitting: Boolean = false,
+    val submitError: String? = null,
+) {
+    val canSubmit: Boolean
+        get() = !isSubmitting &&
+            photos.isNotEmpty() &&
+            category != null &&
+            address.isNotBlank() &&
+            latitude != null &&
+            longitude != null
+}
+
+sealed interface LocationStatus {
+    data object Idle : LocationStatus
+    data object Requesting : LocationStatus
+    data object PermissionDenied : LocationStatus
+    data class Failed(val reason: String) : LocationStatus
+    data object Ready : LocationStatus
+}
+
+sealed interface CreateComplaintEvent {
+    data class CreatedSuccessfully(val complaintId: Long) : CreateComplaintEvent
+    data class OpenExistingComplaint(val complaintId: Long) : CreateComplaintEvent
+}
+
+class CreateComplaintScreenModel(
+    private val complaintsApi: ComplaintsApiContract,
+    private val locationProvider: LocationProvider,
+    private val searchProvider: MapSearchProvider,
+) : ScreenModel {
+
+    private val _state = MutableStateFlow(CreateComplaintUiState())
+    val state: StateFlow<CreateComplaintUiState> = _state.asStateFlow()
+
+    private val _events = MutableSharedFlow<CreateComplaintEvent>(extraBufferCapacity = 4)
+    val events: SharedFlow<CreateComplaintEvent> = _events.asSharedFlow()
+
+    private var duplicatesJob: Job? = null
+
+    fun onPhotosAdded(added: List<PhotoBytes>) {
+        _state.update { s ->
+            val remaining = MAX_PHOTOS - s.photos.size
+            s.copy(photos = s.photos + added.take(remaining))
+        }
+    }
+
+    fun onPhotoRemoved(index: Int) {
+        _state.update { s ->
+            if (index !in s.photos.indices) s else s.copy(photos = s.photos.toMutableList().apply { removeAt(index) })
+        }
+    }
+
+    fun onCategorySelected(category: ProblemCategory) {
+        _state.update { it.copy(category = category) }
+        scheduleDuplicatesCheck()
+    }
+
+    fun onCategoryQueryChanged(query: String) {
+        _state.update { it.copy(categoryQuery = query) }
+    }
+
+    fun onAddressChanged(address: String) {
+        _state.update { it.copy(address = address) }
+    }
+
+    fun onDescriptionChanged(description: String) {
+        if (description.length > MAX_DESCRIPTION_LENGTH) return
+        _state.update { it.copy(description = description) }
+    }
+
+    /** Called from the Composable once GPS permission is granted. */
+    fun onLocationPermissionGranted() {
+        _state.update { it.copy(locationStatus = LocationStatus.Requesting) }
+        screenModelScope.launch {
+            locationProvider.getLastKnownLocation()
+                .onSuccess { loc ->
+                    _state.update {
+                        it.copy(
+                            latitude = loc.latitude,
+                            longitude = loc.longitude,
+                            locationStatus = LocationStatus.Ready,
+                        )
+                    }
+                    reverseGeocode(loc.latitude, loc.longitude)
+                    scheduleDuplicatesCheck()
+                }
+                .onFailure { e ->
+                    _state.update {
+                        it.copy(locationStatus = LocationStatus.Failed(e.message ?: "GPS недоступен"))
+                    }
+                }
+        }
+    }
+
+    fun onLocationPermissionDenied() {
+        _state.update { it.copy(locationStatus = LocationStatus.PermissionDenied) }
+    }
+
+    private suspend fun reverseGeocode(lat: Double, lon: Double) {
+        searchProvider.reverseGeocode(lat, lon)
+            .onSuccess { result ->
+                _state.update {
+                    // Не перетираем адрес, если пользователь уже что-то ввёл вручную
+                    if (it.address.isBlank()) {
+                        it.copy(address = result.address, district = result.district)
+                    } else {
+                        it.copy(district = result.district)
+                    }
+                }
+            }
+        // Сетевая ошибка геокодера — пользователь введёт адрес сам, тихо игнорируем.
+    }
+
+    private fun scheduleDuplicatesCheck() {
+        val s = _state.value
+        val cat = s.category ?: return
+        val lat = s.latitude ?: return
+        val lon = s.longitude ?: return
+
+        duplicatesJob?.cancel()
+        duplicatesJob = screenModelScope.launch {
+            delay(DUPLICATE_DEBOUNCE_MS)
+            _state.update { it.copy(isCheckingDuplicates = true) }
+            runCatching { complaintsApi.findDuplicates(lat, lon, cat) }
+                .onSuccess { resp ->
+                    _state.update { it.copy(duplicates = resp.items, isCheckingDuplicates = false) }
+                }
+                .onFailure {
+                    _state.update { it.copy(duplicates = emptyList(), isCheckingDuplicates = false) }
+                }
+        }
+    }
+
+    fun voteForDuplicate(complaintId: Long) {
+        screenModelScope.launch {
+            runCatching { complaintsApi.vote(complaintId) }
+                .onSuccess { _events.emit(CreateComplaintEvent.OpenExistingComplaint(complaintId)) }
+                .onFailure { e ->
+                    _state.update { it.copy(submitError = e.message ?: "Не удалось проголосовать") }
+                }
+        }
+    }
+
+    fun submit() {
+        val s = _state.value
+        if (!s.canSubmit) return
+        val request = CreateComplaintRequest(
+            category = s.category!!,
+            description = s.description,
+            latitude = s.latitude!!,
+            longitude = s.longitude!!,
+            address = s.address,
+            district = s.district,
+        )
+        _state.update { it.copy(isSubmitting = true, submitError = null) }
+        screenModelScope.launch {
+            runCatching { complaintsApi.create(request, s.photos) }
+                .onSuccess { created ->
+                    _state.update { it.copy(isSubmitting = false) }
+                    _events.emit(CreateComplaintEvent.CreatedSuccessfully(created.id))
+                }
+                .onFailure { e ->
+                    _state.update {
+                        it.copy(
+                            isSubmitting = false,
+                            submitError = e.message ?: "Не удалось отправить жалобу",
+                        )
+                    }
+                }
+        }
+    }
+
+    fun clearError() {
+        _state.update { it.copy(submitError = null) }
+    }
+}

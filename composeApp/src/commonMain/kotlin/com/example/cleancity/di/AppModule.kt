@@ -21,6 +21,7 @@ import com.example.cleancity.ui.feature.auth.LoginScreenModel
 import com.example.cleancity.ui.feature.auth.RegisterScreenModel
 import com.example.cleancity.ui.feature.auth.ResetPasswordScreenModel
 import com.example.cleancity.ui.feature.auth.VerifyEmailScreenModel
+import com.example.cleancity.ui.feature.create.CreateComplaintScreenModel
 import com.example.cleancity.ui.feature.detail.ComplaintDetailScreenModel
 import com.example.cleancity.ui.feature.feed.FeedScreenModel
 import com.example.cleancity.ui.feature.map.MapScreenModel
@@ -95,6 +96,13 @@ fun appModule(): Module = module {
         ProfileScreenModel(
             complaintsApi = get<ComplaintsApiContract>(),
             authRepo = get(),
+        )
+    }
+    factory {
+        CreateComplaintScreenModel(
+            complaintsApi = get<ComplaintsApiContract>(),
+            locationProvider = get<LocationProvider>(),
+            searchProvider = get<MapSearchProvider>(),
         )
     }
 }

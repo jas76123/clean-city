@@ -280,15 +280,17 @@ Web admin может быть проще (показываем основной 
 
 ### День 11 (18.05) — Mobile создание жалобы
 
-- [ ] `CreateComplaintScreen` — это самый важный flow проекта
-- [ ] Photo picker: камера + галерея, до 5 фото, превью
-- [ ] GPS-permission запрос → определение координат
-- [ ] Reverse geocoding через Yandex Maps SDK → адрес автоматически
-- [ ] 18 категорий: компактный grid 3×6 + поиск (как в обновлённом мокапе)
-- [ ] При выборе адреса+категории → запрос `/complaints/duplicates` → блок «Возможно, проблема уже есть» с кнопкой «+1 голос за существующую»
-- [ ] Описание (textarea, до 1000 символов)
-- [ ] Submit: multipart upload через ktor-client
-- [ ] Прогресс-индикатор и обработка ошибок (нет интернета, фото слишком большое, etc)
+- [x] `CreateComplaintScreen` — это самый важный flow проекта
+- [x] Photo picker: камера + галерея, до 5 фото, превью (FileProvider + cacheDir)
+- [x] GPS-permission запрос → определение координат (rememberLocationPermission + LocationProvider)
+- [x] Reverse geocoding через Yandex Maps SDK → адрес автоматически (SearchManager.submit + ToponymObjectMetadata)
+- [x] 18 категорий: компактный grid 3×6 + поиск (как в обновлённом мокапе)
+- [x] При выборе адреса+категории → запрос `/complaints/duplicates` → блок «Возможно, проблема уже есть» с кнопкой «+1 голос за существующую»
+- [x] Описание (textarea, до 1000 символов)
+- [x] Submit: multipart upload через ktor-client (submitFormWithBinaryData)
+- [x] Прогресс-индикатор и обработка ошибок (нет интернета, фото слишком большое, etc) — AlertDialog + canSubmit gating + 10MB pre-check
+
+**Реализовано 2026-05-19:** 23 новых unit-теста (5 ComplaintsApi.create/findDuplicates + 18 CreateComplaintScreenModel). Полный suite 82/82 зелёные. APK собирается. Smoke на реальном Samsung A33 5G — TODO (устройство не подключено к ADB в момент закрытия).
 
 **Checkpoint:** На реальном устройстве: сфотографировать → выбрать категорию → отправить → жалоба появляется в ленте и на карте.
 

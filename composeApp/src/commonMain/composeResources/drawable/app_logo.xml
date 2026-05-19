@@ -1,0 +1,88 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="1024dp"
+    android:height="1024dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+
+    <!-- Circular eco mark -->
+    <path
+        android:pathData="M803 220C727 137 602 94 472 106 296 122 158 253 139 423 115 635 270 802 462 836 587 858 710 821 794 741"
+        android:strokeWidth="50"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="164"
+                android:startY="142"
+                android:endX="858"
+                android:endY="874">
+                <item android:color="#FFB7E86E" android:offset="0"/>
+                <item android:color="#FF61B54A" android:offset="1"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- City skyline, clipped to inner circle area -->
+    <group>
+        <clip-path android:pathData="M210 270C300 130 486 77 642 124C773 163 859 268 884 389C899 462 890 537 849 604C803 681 723 743 618 769C454 810 287 738 217 604C162 499 164 342 210 270Z"/>
+
+        <!-- Building 1 (left small) -->
+        <path android:fillColor="#FF7BC651" android:pathData="M258 566L318 528 378 566V724H258V566Z"/>
+        <path android:fillColor="#FF58A845" android:fillAlpha="0.9" android:pathData="M318 528L378 566V724H318V528Z"/>
+        <path android:strokeColor="#FFFFFFFF" android:strokeAlpha="0.85" android:strokeWidth="14" android:strokeLineCap="round" android:pathData="M278 592H316M278 624H316M278 656H316"/>
+
+        <!-- Building 2 -->
+        <path android:fillColor="#FF92D964" android:pathData="M404 462L480 432 556 462V724H404V462Z"/>
+        <path android:fillColor="#FF62B04A" android:fillAlpha="0.9" android:pathData="M480 432L556 462V724H480V432Z"/>
+        <path android:strokeColor="#FFFFFFFF" android:strokeAlpha="0.75" android:strokeWidth="14" android:pathData="M480 454V724"/>
+
+        <!-- Building 3 (tall centre) -->
+        <path android:fillColor="#FF96DC66" android:pathData="M574 340L654 282 734 340V724H574V340Z"/>
+        <path android:fillColor="#FF55A544" android:fillAlpha="0.92" android:pathData="M654 282L734 340V724H654V282Z"/>
+        <path android:strokeColor="#FFFFFFFF" android:strokeAlpha="0.72" android:strokeWidth="16" android:pathData="M654 324V724"/>
+
+        <!-- Building 4 -->
+        <path android:fillColor="#FF83CC55" android:pathData="M708 532L766 480 824 532V724H708V532Z"/>
+        <path android:fillColor="#FF4E9D43" android:fillAlpha="0.88" android:pathData="M766 480L824 532V724H766V480Z"/>
+
+        <!-- Building 5 (right with windows) -->
+        <path android:fillColor="#FF75BE4E" android:pathData="M802 448L852 426 902 448V724H802V448Z"/>
+        <path android:fillColor="#FF4B9A40" android:fillAlpha="0.9" android:pathData="M852 426L902 448V724H852V426Z"/>
+        <path android:strokeColor="#FFFFFFFF" android:strokeAlpha="0.82" android:strokeWidth="12" android:strokeLineCap="round" android:pathData="M824 482V666M852 468V666M880 482V666"/>
+
+        <!-- Ground / bowl -->
+        <path android:pathData="M234 728C292 688 384 678 474 690 559 701 638 730 704 772 602 842 438 852 319 802 281 786 252 762 234 728Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="220" android:startY="620"
+                    android:endX="780" android:endY="860">
+                    <item android:color="#FF8FD15E" android:offset="0"/>
+                    <item android:color="#FF55A942" android:offset="1"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:strokeColor="#FFFFFFFF" android:strokeAlpha="0.95" android:strokeWidth="16" android:strokeLineCap="round" android:pathData="M222 735C340 692 565 688 726 760"/>
+    </group>
+
+    <!-- Leaf body -->
+    <path android:pathData="M684 800C641 676 703 566 812 497 887 450 923 394 939 333 978 468 942 615 822 695 773 728 724 748 684 800Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="164" android:startY="142"
+                android:endX="858" android:endY="874">
+                <item android:color="#FFB7E86E" android:offset="0"/>
+                <item android:color="#FF61B54A" android:offset="1"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Leaf midrib (white) -->
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="18" android:strokeLineCap="round" android:pathData="M678 817C739 716 795 628 887 543"/>
+
+    <!-- Leaf vein hint -->
+    <path android:strokeColor="#FFFFFFFF" android:strokeAlpha="0.4" android:strokeWidth="10" android:strokeLineCap="round" android:pathData="M724 748C761 668 812 597 899 476"/>
+
+</vector>

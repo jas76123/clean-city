@@ -4,21 +4,34 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.Typeface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.cleancity.R
 import com.example.cleancity.domain.map.BoundingBox
 import com.example.cleancity.domain.map.CameraPosition
 import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.MapMarker
 import android.graphics.PointF
+import androidx.compose.ui.graphics.toArgb
+import com.example.cleancity.ui.theme.Accent
+import com.example.cleancity.ui.theme.AccentDark
+import com.example.cleancity.ui.theme.Amber
+import com.example.cleancity.ui.theme.Blue
+import com.example.cleancity.ui.theme.Gray400
+import com.example.cleancity.ui.theme.Green700
+import com.example.cleancity.ui.theme.Green900
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
@@ -45,6 +58,17 @@ actual fun YandexMapHost(
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapViewState = remember { mutableStateOf<MapView?>(null) }
+    val context = LocalContext.current
+    val density = LocalDensity.current.density
+    val clusterTypeface = remember(context) {
+        ResourcesCompat.getFont(context, R.font.unbounded_semibold) ?: Typeface.DEFAULT_BOLD
+    }
+
+    // MapKit native code держит weak reference на UserLocationObjectListener — без strong
+    // reference в Kotlin/Java объект уходит в GC, и callback'и (onObjectAdded и др.) теряются
+    // (в logcat это видно как «yandex.maps.runtime: Java object is already finalized»).
+    // remember удерживает decorator на всё время жизни composable.
+    val userLocationDecorator = remember { UserLocationDecorator(Accent.toArgb()) }
 
     AndroidView(
         modifier = modifier,
@@ -59,9 +83,14 @@ actual fun YandexMapHost(
                 // Стандартный «синий пульсирующий маркер» юзера. MapKit подписывается на
                 // FusedLocationProvider сам и тихо ждёт ACCESS_FINE_LOCATION. createUserLocationLayer
                 // допустим ровно один раз на mapWindow, поэтому делаем его здесь, вместе с MapView.
+                // setObjectListener должен быть зарегистрирован ДО isVisible — MapKit вызывает
+                // onObjectAdded один раз при первом включении видимости layer'а.
                 MapKitFactory.getInstance()
                     .createUserLocationLayer(view.mapWindow)
-                    .apply { isVisible = true }
+                    .apply {
+                        setObjectListener(userLocationDecorator)
+                        isVisible = true
+                    }
                 mapViewState.value = view
             }
         },
@@ -119,7 +148,9 @@ actual fun YandexMapHost(
 
         val clusterListener = ClusterListener { cluster ->
             cluster.appearance.setIcon(
-                ImageProvider.fromBitmap(createClusterBitmap(cluster.size)),
+                ImageProvider.fromBitmap(
+                    createClusterBitmap(cluster.size, density, clusterTypeface),
+                ),
             )
             cluster.addClusterTapListener(
                 ClusterTapListener { c ->
@@ -151,7 +182,7 @@ actual fun YandexMapHost(
             val placemark = collection.addPlacemark().apply {
                 geometry = Point(marker.latitude, marker.longitude)
                 setIcon(
-                    ImageProvider.fromBitmap(createPinBitmap(statusColor(marker.status))),
+                    ImageProvider.fromBitmap(createPinBitmap(statusColor(marker.status), density)),
                     pinIconStyle,
                 )
             }
@@ -172,29 +203,40 @@ actual fun YandexMapHost(
 }
 
 private fun statusColor(status: ComplaintStatus): Int = when (status) {
-    ComplaintStatus.NEW -> 0xFFF59E0B.toInt()
-    ComplaintStatus.IN_PROGRESS -> 0xFF3B82F6.toInt()
-    ComplaintStatus.RESOLVED -> 0xFF10B981.toInt()
-    ComplaintStatus.REJECTED, ComplaintStatus.DUPLICATE -> 0xFF9CA3AF.toInt()
+    ComplaintStatus.NEW -> Amber.toArgb()
+    ComplaintStatus.IN_PROGRESS -> Blue.toArgb()
+    ComplaintStatus.RESOLVED -> AccentDark.toArgb()
+    ComplaintStatus.REJECTED, ComplaintStatus.DUPLICATE -> Gray400.toArgb()
 }
 
-private fun createPinBitmap(color: Int, widthPx: Int = 56, heightPx: Int = 72): Bitmap {
+private fun createPinBitmap(
+    color: Int,
+    density: Float,
+    widthDp: Float = 36f,
+    heightDp: Float = 46f,
+): Bitmap {
+    val widthPx = (widthDp * density).toInt()
+    val heightPx = (heightDp * density).toInt()
     val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
 
-    // Drop-pin силуэт: круг сверху + треугольный «хвост» вниз
+    val pad = 3f * density
     val cx = widthPx / 2f
-    val headRadius = widthPx / 2f - 4f
-    val headCy = headRadius + 4f
-    val tipY = heightPx - 4f
+    val headRadius = widthPx / 2f - pad
+    val headCy = headRadius + pad
+    val tipY = heightPx - pad
     val tailHalfWidth = headRadius * 0.55f
 
-    val path = Path().apply {
+    // Силуэт «капля» — единый Path (UNION круга и треугольника). Сплошной контур без
+    // внутренней дуги на стыке: stroke идёт ровно по внешней границе.
+    val circlePath = Path().apply { addCircle(cx, headCy, headRadius, Path.Direction.CW) }
+    val tailPath = Path().apply {
         moveTo(cx - tailHalfWidth, headCy + headRadius * 0.55f)
         lineTo(cx, tipY)
         lineTo(cx + tailHalfWidth, headCy + headRadius * 0.55f)
         close()
     }
+    val pinPath = Path().apply { op(circlePath, tailPath, Path.Op.UNION) }
 
     val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = color
@@ -203,45 +245,55 @@ private fun createPinBitmap(color: Int, widthPx: Int = 56, heightPx: Int = 72): 
     val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = 0xFFFFFFFF.toInt()
         style = Paint.Style.STROKE
-        strokeWidth = 3f
+        strokeWidth = 2.5f * density
     }
     val centerDot = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = 0xFFFFFFFF.toInt()
         style = Paint.Style.FILL
     }
 
-    // Хвост целиком (fill+stroke) рисуем первым, затем голова поверх.
-    // Верхнее основание треугольника лежит внутри круга — заливка головы его перекрывает,
-    // иначе stroke оставит на голове белую горизонтальную полоску («трапецию»).
-    canvas.drawPath(path, fill)
-    canvas.drawPath(path, stroke)
-    canvas.drawCircle(cx, headCy, headRadius, fill)
-    canvas.drawCircle(cx, headCy, headRadius, stroke)
+    canvas.drawPath(pinPath, fill)
+    canvas.drawPath(pinPath, stroke)
     canvas.drawCircle(cx, headCy, headRadius * 0.32f, centerDot)
     return bitmap
 }
 
-private fun createClusterBitmap(count: Int, sizePx: Int = 80): Bitmap {
+private fun createClusterBitmap(
+    count: Int,
+    density: Float,
+    typeface: Typeface,
+): Bitmap {
+    val sizePx = (36f * density).toInt()         // 36dp
+    val strokePx = 2f * density                  // 2dp
+    val padPx = strokePx / 2f + 1f
+    val radius = sizePx / 2f - padPx
+
     val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
+
     val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = 0xFFFFFFFF.toInt()
         style = Paint.Style.FILL
     }
     val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF374151.toInt()
+        color = Green700.toArgb()
         style = Paint.Style.STROKE
-        strokeWidth = 4f
+        strokeWidth = strokePx
     }
     val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = 0xFF111827.toInt()
+        color = Green900.toArgb()
         textAlign = Paint.Align.CENTER
-        textSize = sizePx * 0.4f
-        isFakeBoldText = true
+        textSize = sizePx * 0.34f
+        this.typeface = typeface
     }
-    val r = sizePx / 2f - 4f
-    canvas.drawCircle(sizePx / 2f, sizePx / 2f, r, fill)
-    canvas.drawCircle(sizePx / 2f, sizePx / 2f, r, stroke)
-    canvas.drawText(count.toString(), sizePx / 2f, sizePx / 2f + text.textSize / 3f, text)
+
+    canvas.drawCircle(sizePx / 2f, sizePx / 2f, radius, fill)
+    canvas.drawCircle(sizePx / 2f, sizePx / 2f, radius, stroke)
+    canvas.drawText(
+        count.toString(),
+        sizePx / 2f,
+        sizePx / 2f - (text.descent() + text.ascent()) / 2f,
+        text,
+    )
     return bitmap
 }

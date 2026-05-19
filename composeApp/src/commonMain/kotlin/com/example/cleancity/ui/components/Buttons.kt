@@ -75,7 +75,12 @@ fun SecondaryButton(
         border = androidx.compose.foundation.BorderStroke(1.5.dp, borderColor),
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(text = text, style = MaterialTheme.typography.labelLarge)
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                softWrap = false,
+            )
         }
     }
 }

@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
@@ -28,6 +31,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class MapScreenModel(
     private val api: ComplaintsApiContract,
     private val locationProvider: LocationProvider,
+    private val searchProvider: MapSearchProvider,
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ScreenModel {
 
@@ -36,15 +40,34 @@ class MapScreenModel(
 
     private val cameraBbox = MutableSharedFlow<BoundingBox>(extraBufferCapacity = 64)
     private val categoryFlow = MutableStateFlow<ProblemCategory?>(null)
+    private val searchQueryFlow = MutableStateFlow("")
 
     @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
     private val pipelineJob = screenModelScope.launch(dispatcher) {
         cameraBbox
-            .debounce(500.milliseconds)
-            .onStart { emit(SochiDefaults.BBOX) }
+            .debounce(800.milliseconds)
+            .map { it.rounded(decimals = 4) }
+            .onStart { emit(SochiDefaults.BBOX.rounded(decimals = 4)) }
+            .distinctUntilChanged()
             .combine(categoryFlow) { bbox, cat -> bbox to cat }
             .mapLatest { (bbox, cat) -> doRequest(bbox, cat) }
             .collect { /* state уже обновлён в doRequest */ }
+    }
+
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    private val searchJob = screenModelScope.launch(dispatcher) {
+        searchQueryFlow
+            .debounce(250.milliseconds)
+            .distinctUntilChanged()
+            .filter { it.trim().length >= 2 }
+            .mapLatest { query ->
+                _state.update { it.copy(isSearching = true) }
+                runCatching { searchProvider.suggest(query, SochiDefaults.BBOX) }
+                    .getOrElse { emptyList() }
+            }
+            .collect { suggestions ->
+                _state.update { it.copy(searchSuggestions = suggestions, isSearching = false) }
+            }
     }
 
     fun onCameraMoved(bbox: BoundingBox) {
@@ -115,11 +138,57 @@ class MapScreenModel(
         _state.update { it.copy(cameraPosition = CameraPosition(lat, lon, zoom)) }
     }
 
+    fun onSearchQueryChange(query: String) {
+        _state.update {
+            it.copy(
+                searchQuery = query,
+                searchSuggestions = if (query.trim().length < 2) emptyList() else it.searchSuggestions,
+            )
+        }
+        searchQueryFlow.value = query
+    }
+
+    fun onSuggestionSelected(suggestion: MapSuggestion) {
+        _state.update {
+            it.copy(
+                searchQuery = suggestion.title,
+                searchSuggestions = emptyList(),
+                isSearching = false,
+                cameraPosition = CameraPosition(suggestion.latitude, suggestion.longitude, zoom = 16f),
+            )
+        }
+        searchQueryFlow.value = ""
+    }
+
+    fun clearSearch() {
+        _state.update {
+            it.copy(searchQuery = "", searchSuggestions = emptyList(), isSearching = false)
+        }
+        searchQueryFlow.value = ""
+    }
+
     private suspend fun doRequest(bbox: BoundingBox, cat: ProblemCategory?) {
         _state.update { it.copy(isLoading = true) }
         runCatching { api.getMapMarkers(bbox.swLat, bbox.swLon, bbox.neLat, bbox.neLon, cat) }
-            .onSuccess { resp -> _state.update { it.copy(markers = resp.markers, isLoading = false, error = null) } }
-            .onFailure { e -> _state.update { it.copy(isLoading = false, error = e.message ?: "Network error") } }
+            .onSuccess { resp ->
+                _state.update {
+                    it.copy(
+                        markers = resp.markers,
+                        isLoading = false,
+                        hasInitialDataLoaded = true,
+                        error = null,
+                    )
+                }
+            }
+            .onFailure { e ->
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        hasInitialDataLoaded = true,
+                        error = e.message ?: "Network error",
+                    )
+                }
+            }
     }
 
     /** Закрытие модели — для тестов. В Voyager обычно вызывается автоматически. */

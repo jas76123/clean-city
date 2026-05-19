@@ -80,6 +80,14 @@ fun appModule(): Module = module {
             searchProvider = get<MapSearchProvider>(),
         )
     }
+    factory { (lat: Double?, lon: Double?) ->
+        com.example.cleancity.ui.feature.map.picker.MapPickerScreenModel(
+            initialLat = lat,
+            initialLon = lon,
+            searchProvider = get<MapSearchProvider>(),
+            bus = get<com.example.cleancity.ui.feature.map.picker.AddressPickerBus>(),
+        )
+    }
     factory {
         FeedScreenModel(
             complaintsApi = get<ComplaintsApiContract>(),

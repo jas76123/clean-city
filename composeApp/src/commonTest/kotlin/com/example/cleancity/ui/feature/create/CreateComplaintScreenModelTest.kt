@@ -10,6 +10,7 @@ import com.example.cleancity.shared.models.ProblemCategory
 import com.example.cleancity.shared.models.VoteResponse
 import com.example.cleancity.ui.feature.map.FakeMapSearchProvider
 import com.example.cleancity.ui.feature.map.ReverseGeocodeResult
+import com.example.cleancity.ui.feature.map.picker.AddressPickerBus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
@@ -31,17 +32,19 @@ class CreateComplaintScreenModelTest {
     private lateinit var api: FakeCreateComplaintsApi
     private lateinit var location: FakeLocationProvider
     private lateinit var search: FakeMapSearchProvider
+    private lateinit var bus: AddressPickerBus
 
     @BeforeTest fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
         api = FakeCreateComplaintsApi()
         location = FakeLocationProvider()
         search = FakeMapSearchProvider()
+        bus = AddressPickerBus()
     }
 
     @AfterTest fun tearDown() { Dispatchers.resetMain() }
 
-    private fun newModel() = CreateComplaintScreenModel(api, location, search)
+    private fun newModel() = CreateComplaintScreenModel(api, location, search, bus)
 
     private fun photo(name: String = "p.jpg") = PhotoBytes(byteArrayOf(1, 2, 3), name)
 

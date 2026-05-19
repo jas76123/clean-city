@@ -9,6 +9,8 @@ import com.example.cleancity.shared.models.DuplicateCandidateResponse
 import com.example.cleancity.shared.models.ProblemCategory
 import com.example.cleancity.shared.requests.CreateComplaintRequest
 import com.example.cleancity.ui.feature.map.MapSearchProvider
+import com.example.cleancity.ui.feature.map.MapSuggestion
+import com.example.cleancity.ui.feature.map.picker.AddressPickerBus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -24,6 +26,8 @@ const val MAX_DESCRIPTION_LENGTH = 1000
 const val MAX_PHOTOS = 5
 private const val DUPLICATE_DEBOUNCE_MS = 400L
 
+enum class AddressSource { None, Gps, Suggest, Picker }
+
 data class CreateComplaintUiState(
     val photos: List<PhotoBytes> = emptyList(),
     val category: ProblemCategory? = null,
@@ -38,6 +42,9 @@ data class CreateComplaintUiState(
     val isCheckingDuplicates: Boolean = false,
     val isSubmitting: Boolean = false,
     val submitError: String? = null,
+    val addressSource: AddressSource = AddressSource.None,
+    val suggestions: List<MapSuggestion> = emptyList(),
+    val isSuggesting: Boolean = false,
 ) {
     val canSubmit: Boolean
         get() = !isSubmitting &&
@@ -66,6 +73,7 @@ class CreateComplaintScreenModel(
     private val complaintsApi: ComplaintsApiContract,
     private val locationProvider: LocationProvider,
     private val searchProvider: MapSearchProvider,
+    private val addressPickerBus: AddressPickerBus,
 ) : ScreenModel {
 
     private val _state = MutableStateFlow(CreateComplaintUiState())

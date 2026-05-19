@@ -66,6 +66,8 @@ fun appModule(): Module = module {
 
     single { AuthRepository(get(), get(), get(), get()) }
 
+    single { com.example.cleancity.ui.feature.map.picker.AddressPickerBus() }
+
     factory { LoginScreenModel(get()) }
     factory { RegisterScreenModel(get()) }
     factory { (email: String) -> VerifyEmailScreenModel(email, get()) }
@@ -103,6 +105,7 @@ fun appModule(): Module = module {
             complaintsApi = get<ComplaintsApiContract>(),
             locationProvider = get<LocationProvider>(),
             searchProvider = get<MapSearchProvider>(),
+            addressPickerBus = get<com.example.cleancity.ui.feature.map.picker.AddressPickerBus>(),
         )
     }
 }

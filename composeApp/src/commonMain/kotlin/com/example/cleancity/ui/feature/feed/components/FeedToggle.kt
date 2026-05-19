@@ -42,9 +42,9 @@ fun FeedToggle(
             onClick = { onModeChange(FeedMode.ALL) },
         )
         val mineLabel = when {
-            isGuest -> "📌 Мои"
-            showMineCount && mineCount > 0 -> "📌 Мои ($mineCount)"
-            else -> "📌 Мои"
+            isGuest -> "Мои"
+            showMineCount && mineCount > 0 -> "Мои ($mineCount)"
+            else -> "Мои"
         }
         ToggleChip(
             text = mineLabel,

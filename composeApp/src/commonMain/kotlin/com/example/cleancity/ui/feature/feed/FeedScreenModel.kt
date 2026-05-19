@@ -6,6 +6,7 @@ import com.example.cleancity.data.network.AnnouncementsApiContract
 import com.example.cleancity.data.network.ComplaintsApiContract
 import com.example.cleancity.data.repository.AuthRepository
 import com.example.cleancity.domain.AuthState
+import com.example.cleancity.domain.VoteEventBus
 import com.example.cleancity.shared.models.AnnouncementResponse
 import com.example.cleancity.shared.models.ComplaintResponse
 import kotlinx.coroutines.async
@@ -44,6 +45,24 @@ class FeedScreenModel(
 
     private val _state = MutableStateFlow<FeedState>(FeedState.Initial)
     val state: StateFlow<FeedState> = _state.asStateFlow()
+
+    init {
+        // Detail после голоса эмитит событие — обновляем соответствующую
+        // карточку в ленте, не дожидаясь pull-to-refresh.
+        screenModelScope.launch {
+            VoteEventBus.events.collect { ev ->
+                _state.update { current ->
+                    val loaded = current as? FeedState.Loaded ?: return@update current
+                    val updated = loaded.complaints.map {
+                        if (it.id == ev.complaintId) {
+                            it.copy(votesCount = ev.votesCount, userVoted = ev.userVoted)
+                        } else it
+                    }
+                    loaded.copy(complaints = updated)
+                }
+            }
+        }
+    }
 
     fun loadInitial() {
         if (_state.value is FeedState.Loaded) return

@@ -235,6 +235,8 @@ Web admin может быть проще (показываем основной 
 
 **День 9 закрыт 2026-05-17** — 10/12 smoke-сценариев прошли на Medium_Phone AVD (38/38 unit-тестов зелёные). Не прошли: (7) tap на кластер не зумит камеру — `ClusterTapListener` в Yandex MapKit 4.25 не вызывается в Compose-обёртке, проверить на реальном устройстве в Day 10; (12) поворот экрана не восстанавливает MarkerPreviewSheet — Activity recreate без `configChanges` в manifest, фиксится в Day 13 polish. Найден и пофикшен bug в `CategorySheet`: кнопка «Применить» уезжала за пределы sheet при 18 категориях (commit c97d591).
 
+**Day 10 ревью 2026-05-18 (smoke на AVD):** баг #7 шире, чем казалось — и `MapObjectTapListener` (одиночные маркеры) на AVD тоже молчит, не только `ClusterTapListener`. То есть **любые** map-tap события на AVD не доходят до listener'ов. Это означает что MarkerPreview → Detail на AVD проверить невозможно (но код корректен — unit-тесты ✅, компилируется, типы совпадают). Проверять обязательно на реальном Android. См. полный отчёт smoke: `docs/superpowers/checklists/2026-05-18-day10-smoke.md`.
+
 ---
 
 ### День 10 (17.05) — Mobile лента + детали жалобы + голос + shell-навигация
@@ -255,7 +257,7 @@ Web admin может быть проще (показываем основной 
 - [ ] `ComplaintDetailScreen`: фото-pager (HorizontalPager + indicator), мета (адрес/время/автор), `VoteCard`, описание, история статусов (timeline из `statusHistory`)
 - [ ] `VoteCard`: **одностороннее «Подтверждаю»** (`POST /complaints/{id}/votes` с `value:1`, повторный тап → `DELETE` для отзыва). Мок `mobile-mockup-v3.html` с yes/no — устарел, идём по SPEC §5.3
 - [ ] Для гостей — диалог «Войдите, чтобы поддержать» → `LoginScreen`
-- [ ] Переход из `MarkerPreviewSheet` (карта) → `ComplaintDetailScreen` — на Day 9 был placeholder (перенесено)
+- [x] Переход из `MarkerPreviewSheet` (карта) → `ComplaintDetailScreen` — на Day 9 был placeholder (перенесено). Реализовано 2026-05-18 + 17 unit-тестов на `ComplaintDetailScreenModel` (всего 59/59 зелёных).
 
 **Map (перенесено с Day 9):**
 - [ ] Map search bar (Yandex Geosuggest): suggest-list по вводу → выбор → `Map.move(camera, point)` на адрес

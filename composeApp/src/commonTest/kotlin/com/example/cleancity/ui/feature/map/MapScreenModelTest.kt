@@ -25,16 +25,24 @@ class MapScreenModelTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var api: FakeComplaintsApi
     private lateinit var location: FakeLocationProvider
+    private lateinit var search: FakeMapSearchProvider
 
     @BeforeTest
     fun setup() {
         api = FakeComplaintsApi()
         location = FakeLocationProvider()
+        search = FakeMapSearchProvider()
     }
+
+    private fun newModel(
+        api: FakeComplaintsApi = this.api,
+        location: FakeLocationProvider = this.location,
+        search: FakeMapSearchProvider = this.search,
+    ): MapScreenModel = MapScreenModel(api, location, search, dispatcher)
 
     @Test
     fun `init triggers map load with default Sochi bbox`() = runTest(dispatcher) {
-        val model = MapScreenModel(api, location, dispatcher)
+        val model = newModel()
 
         advanceUntilIdle()
 
@@ -50,7 +58,7 @@ class MapScreenModelTest {
 
     @Test
     fun `onCameraMoved debounces 500ms`() = runTest(dispatcher) {
-        val model = MapScreenModel(api, location, dispatcher)
+        val model = newModel()
         advanceUntilIdle()
         api.calls.clear()
 
@@ -72,7 +80,7 @@ class MapScreenModelTest {
         api.nextResponse = listOf(
             MapMarker(99, ProblemCategory.GARBAGE, ComplaintStatus.NEW, 43.0, 39.0),
         )
-        val model = MapScreenModel(api, location, dispatcher)
+        val model = newModel()
         advanceUntilIdle()
         api.calls.clear()
 
@@ -97,7 +105,7 @@ class MapScreenModelTest {
 
     @Test
     fun `selectCategory triggers immediate request without debounce`() = runTest(dispatcher) {
-        val model = MapScreenModel(api, location, dispatcher)
+        val model = newModel()
         advanceUntilIdle()
         api.calls.clear()
 
@@ -113,7 +121,7 @@ class MapScreenModelTest {
 
     @Test
     fun `onMarkerClick sets selectedMarkerId`() = runTest(dispatcher) {
-        val model = MapScreenModel(api, location, dispatcher)
+        val model = newModel()
         advanceUntilIdle()
 
         model.onMarkerClick(42L)
@@ -123,7 +131,7 @@ class MapScreenModelTest {
 
     @Test
     fun `closeMarkerSheet clears selectedMarkerId`() = runTest(dispatcher) {
-        val model = MapScreenModel(api, location, dispatcher)
+        val model = newModel()
         advanceUntilIdle()
         model.onMarkerClick(42L)
 
@@ -134,7 +142,7 @@ class MapScreenModelTest {
 
     @Test
     fun `selectCategory of currently selected resets to null`() = runTest(dispatcher) {
-        val model = MapScreenModel(api, location, dispatcher)
+        val model = newModel()
         advanceUntilIdle()
         model.selectCategory(ProblemCategory.GARBAGE)
         advanceUntilIdle()
@@ -155,7 +163,7 @@ class MapScreenModelTest {
             MapMarker(1, ProblemCategory.GARBAGE, ComplaintStatus.NEW, 43.5, 39.5),
             MapMarker(2, ProblemCategory.ROADS, ComplaintStatus.IN_PROGRESS, 43.6, 39.6),
         )
-        val model = MapScreenModel(api, location, dispatcher)
+        val model = newModel()
         advanceUntilIdle()
         assertEquals(2, model.state.value.markers.size)
 
@@ -172,7 +180,7 @@ class MapScreenModelTest {
     @Test
     fun `onLocationFabClicked when granted fetches location and moves camera`() = runTest(dispatcher) {
         val provider = FakeLocationProvider(Result.success(Location(43.6, 39.8)))
-        val model = MapScreenModel(api, provider, dispatcher)
+        val model = newModel(location = provider)
         advanceUntilIdle()
         var launchedRequest = false
 
@@ -189,7 +197,7 @@ class MapScreenModelTest {
 
     @Test
     fun `onLocationFabClicked when NotRequested calls launchRequest`() = runTest(dispatcher) {
-        val model = MapScreenModel(api, location, dispatcher)
+        val model = newModel()
         advanceUntilIdle()
         var launched = false
 
@@ -202,12 +210,85 @@ class MapScreenModelTest {
 
     @Test
     fun `onLocationFabClicked when Denied sets error snackbar`() = runTest(dispatcher) {
-        val model = MapScreenModel(api, location, dispatcher)
+        val model = newModel()
         advanceUntilIdle()
 
         model.onLocationFabClicked(PermissionStatus.Denied) {}
 
         assertEquals("Разрешите геолокацию в настройках", model.state.value.error)
+        model.close()
+    }
+
+    @Test
+    fun `onSearchQueryChange debounces 250ms then queries provider`() = runTest(dispatcher) {
+        search.nextResult = listOf(
+            MapSuggestion("id1", "ул. Ленина", "Сочи", 43.6, 39.7),
+        )
+        val model = newModel()
+        advanceUntilIdle()
+
+        repeat(4) { i ->
+            model.onSearchQueryChange("лен" + "и".repeat(i))
+            advanceTimeBy(50)
+        }
+        advanceTimeBy(250)
+        advanceUntilIdle()
+
+        assertEquals(1, search.calls.size, "должен быть один вызов после debounce")
+        assertEquals("лениии", search.calls.first().query)
+        assertEquals(SochiDefaults.BBOX, search.calls.first().region)
+        assertEquals(1, model.state.value.searchSuggestions.size)
+        assertEquals("ул. Ленина", model.state.value.searchSuggestions.first().title)
+        model.close()
+    }
+
+    @Test
+    fun `onSearchQueryChange shorter than 2 chars skips provider`() = runTest(dispatcher) {
+        val model = newModel()
+        advanceUntilIdle()
+
+        model.onSearchQueryChange("л")
+        advanceTimeBy(500)
+        advanceUntilIdle()
+
+        assertEquals(0, search.calls.size)
+        assertEquals(emptyList(), model.state.value.searchSuggestions)
+        model.close()
+    }
+
+    @Test
+    fun `onSuggestionSelected moves camera and clears suggestions`() = runTest(dispatcher) {
+        val model = newModel()
+        advanceUntilIdle()
+        val suggestion = MapSuggestion("id1", "ул. Навагинская", "Сочи", 43.583, 39.720)
+
+        model.onSuggestionSelected(suggestion)
+
+        val state = model.state.value
+        assertEquals(43.583, state.cameraPosition.latitude)
+        assertEquals(39.720, state.cameraPosition.longitude)
+        assertEquals(16f, state.cameraPosition.zoom)
+        assertEquals(emptyList(), state.searchSuggestions)
+        assertEquals("ул. Навагинская", state.searchQuery)
+        model.close()
+    }
+
+    @Test
+    fun `clearSearch resets query and suggestions`() = runTest(dispatcher) {
+        search.nextResult = listOf(
+            MapSuggestion("id1", "ул. Ленина", null, 43.6, 39.7),
+        )
+        val model = newModel()
+        advanceUntilIdle()
+        model.onSearchQueryChange("ленина")
+        advanceTimeBy(300)
+        advanceUntilIdle()
+        assertTrue(model.state.value.searchSuggestions.isNotEmpty())
+
+        model.clearSearch()
+
+        assertEquals("", model.state.value.searchQuery)
+        assertEquals(emptyList(), model.state.value.searchSuggestions)
         model.close()
     }
 }

@@ -3,6 +3,7 @@ package com.example.cleancity.data.repository
 import com.example.cleancity.data.network.ApiError
 import com.example.cleancity.data.network.ApiException
 import com.example.cleancity.data.network.AuthApiContract
+import com.example.cleancity.data.network.TokenInvalidator
 import com.example.cleancity.data.network.UserApiContract
 import com.example.cleancity.data.storage.TokenStorage
 import com.example.cleancity.domain.AuthState
@@ -20,6 +21,7 @@ class AuthRepository(
     private val authApi: AuthApiContract,
     private val userApi: UserApiContract,
     private val storage: TokenStorage,
+    private val tokenInvalidator: TokenInvalidator = TokenInvalidator { /* no-op (тесты) */ },
 ) {
     private val _state = MutableStateFlow<AuthState>(AuthState.Loading)
     val state: StateFlow<AuthState> = _state.asStateFlow()
@@ -53,6 +55,7 @@ class AuthRepository(
     suspend fun verifyEmail(token: String): Result<Unit> = runCatching {
         val resp = authApi.verifyEmail(VerifyEmailRequest(token))
         storage.write(resp.accessToken, resp.refreshToken)
+        tokenInvalidator.invalidate()
         _state.value = AuthState.Authenticated(resp.user)
     }
 
@@ -67,6 +70,7 @@ class AuthRepository(
             403,
         )
         storage.write(auth.accessToken, auth.refreshToken)
+        tokenInvalidator.invalidate()
         _state.value = AuthState.Authenticated(auth.user)
     }
 
@@ -82,12 +86,14 @@ class AuthRepository(
     fun toAnonymous() { _state.value = AuthState.Anonymous }
 
     suspend fun logout() {
-        runCatching { authApi.logout() }
+        storage.read()?.let { runCatching { authApi.logout(it.refresh) } }
         storage.clear()
+        tokenInvalidator.invalidate()
         _state.value = AuthState.Anonymous
     }
 
     internal fun forceAnonymous() {
+        tokenInvalidator.invalidate()
         _state.value = AuthState.Anonymous
     }
 }

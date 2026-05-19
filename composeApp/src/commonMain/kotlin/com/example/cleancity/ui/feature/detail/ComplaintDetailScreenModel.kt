@@ -5,6 +5,8 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import com.example.cleancity.data.network.ComplaintsApiContract
 import com.example.cleancity.data.repository.AuthRepository
 import com.example.cleancity.domain.AuthState
+import com.example.cleancity.domain.VoteEvent
+import com.example.cleancity.domain.VoteEventBus
 import com.example.cleancity.shared.models.ComplaintResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -95,6 +97,7 @@ class ComplaintDetailScreenModel(
                             isVoting = false,
                         )
                     }
+                    VoteEventBus.emit(VoteEvent(complaintId, resp.votesCount, resp.userVoted))
                 }
                 .onFailure { e ->
                     _state.update { s ->

@@ -10,9 +10,10 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.tab.CurrentTab
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
@@ -24,7 +25,6 @@ import com.example.cleancity.ui.feature.shell.tabs.NotificationsTab
 import com.example.cleancity.ui.feature.shell.tabs.ProfileTab
 import com.example.cleancity.ui.theme.Accent
 import com.example.cleancity.ui.theme.Gray500
-import com.example.cleancity.ui.theme.Green700
 import com.example.cleancity.ui.theme.Green900
 
 class MainShellScreen : Screen {
@@ -39,7 +39,10 @@ class MainShellScreen : Screen {
                     }
                 },
                 bottomBar = {
-                    NavigationBar {
+                    NavigationBar(
+                        containerColor = Color.Transparent,
+                        tonalElevation = 0.dp,
+                    ) {
                         TabNavigationItem(FeedTab)
                         TabNavigationItem(MapTab)
                         TabNavigationItem(NotificationsTab)
@@ -64,13 +67,10 @@ private fun RowScope.TabNavigationItem(tab: Tab) {
                 contentDescription = tab.options.title,
             )
         },
-        label = { Text(tab.options.title) },
         colors = NavigationBarItemDefaults.colors(
             selectedIconColor = Green900,
-            selectedTextColor = Green700,
             indicatorColor = Accent,
             unselectedIconColor = Gray500,
-            unselectedTextColor = Gray500,
         ),
     )
 }

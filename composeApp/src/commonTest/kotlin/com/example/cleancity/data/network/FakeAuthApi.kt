@@ -17,7 +17,7 @@ class FakeAuthApi(
     var loginResult: Result<LoginResponse>? = null,
     var refreshResult: Result<AuthResponse>? = null,
 ) {
-    val logoutCalls = mutableListOf<Unit>()
+    val logoutCalls = mutableListOf<String>()
     val resendCalls = mutableListOf<String>()
     val forgotCalls = mutableListOf<String>()
     val resetCalls = mutableListOf<Pair<String, String>>()
@@ -34,7 +34,7 @@ class FakeAuthApi(
             requireNotNull(loginResult).getOrThrow()
         override suspend fun refresh(req: RefreshTokenRequest): AuthResponse =
             requireNotNull(refreshResult).getOrThrow()
-        override suspend fun logout() { logoutCalls += Unit }
+        override suspend fun logout(refreshToken: String) { logoutCalls += refreshToken }
         override suspend fun forgotPassword(req: ForgotPasswordRequest) { forgotCalls += req.email }
         override suspend fun resetPassword(req: ResetPasswordRequest) {
             resetCalls += req.token to req.newPassword

@@ -1,12 +1,12 @@
 package com.example.cleancity.ui.feature.profile
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -17,9 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
@@ -51,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -59,7 +57,10 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import cleancity.composeapp.generated.resources.Res
+import cleancity.composeapp.generated.resources.app_logo
 import com.example.cleancity.shared.models.UserResponse
+import org.jetbrains.compose.resources.painterResource
 import com.example.cleancity.ui.feature.auth.LoginScreen
 import com.example.cleancity.ui.feature.auth.RegisterScreen
 import com.example.cleancity.ui.theme.Accent
@@ -151,15 +152,11 @@ private fun GuestPromptView(onLoginClick: () -> Unit, onRegisterClick: () -> Uni
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Box(
-            modifier = Modifier
-                .size(72.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(Brush.linearGradient(listOf(Accent, Green400))),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("🛡", style = MaterialTheme.typography.headlineMedium, color = Green900)
-        }
+        Image(
+            painter = painterResource(Res.drawable.app_logo),
+            contentDescription = "Чистый Город",
+            modifier = Modifier.size(128.dp),
+        )
         Spacer(Modifier.height(16.dp))
         Text(
             "Войдите, чтобы видеть свои жалобы",
@@ -271,15 +268,17 @@ private fun ProfileStatsGrid(stats: ProfileStats) {
         StatCard("Решено", stats.resolved, Icons.Default.CheckCircle, Green50, Green600),
         StatCard("Подтверждено", stats.confirmed, Icons.Default.ThumbUp, RedLight.copy(alpha = 0.5f), Purple),
     )
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
-        userScrollEnabled = false,
-        modifier = Modifier.height(220.dp),
     ) {
-        items(items = cards) { card -> StatCardView(card) }
+        cards.chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { card ->
+                    StatCardView(card = card, modifier = Modifier.weight(1f))
+                }
+            }
+        }
     }
 }
 
@@ -292,9 +291,9 @@ private data class StatCard(
 )
 
 @Composable
-private fun StatCardView(card: StatCard) {
+private fun StatCardView(card: StatCard, modifier: Modifier = Modifier) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surface)

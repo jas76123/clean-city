@@ -182,7 +182,7 @@ actual fun YandexMapHost(
             val placemark = collection.addPlacemark().apply {
                 geometry = Point(marker.latitude, marker.longitude)
                 setIcon(
-                    ImageProvider.fromBitmap(createPinBitmap(statusColor(marker.status))),
+                    ImageProvider.fromBitmap(createPinBitmap(statusColor(marker.status), density)),
                     pinIconStyle,
                 )
             }
@@ -209,14 +209,22 @@ private fun statusColor(status: ComplaintStatus): Int = when (status) {
     ComplaintStatus.REJECTED, ComplaintStatus.DUPLICATE -> Gray400.toArgb()
 }
 
-private fun createPinBitmap(color: Int, widthPx: Int = 36, heightPx: Int = 46): Bitmap {
+private fun createPinBitmap(
+    color: Int,
+    density: Float,
+    widthDp: Float = 36f,
+    heightDp: Float = 46f,
+): Bitmap {
+    val widthPx = (widthDp * density).toInt()
+    val heightPx = (heightDp * density).toInt()
     val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
 
+    val pad = 3f * density
     val cx = widthPx / 2f
-    val headRadius = widthPx / 2f - 3f
-    val headCy = headRadius + 3f
-    val tipY = heightPx - 3f
+    val headRadius = widthPx / 2f - pad
+    val headCy = headRadius + pad
+    val tipY = heightPx - pad
     val tailHalfWidth = headRadius * 0.55f
 
     // Силуэт «капля» — единый Path (UNION круга и треугольника). Сплошной контур без
@@ -237,7 +245,7 @@ private fun createPinBitmap(color: Int, widthPx: Int = 36, heightPx: Int = 46): 
     val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = 0xFFFFFFFF.toInt()
         style = Paint.Style.STROKE
-        strokeWidth = 2.5f
+        strokeWidth = 2.5f * density
     }
     val centerDot = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = 0xFFFFFFFF.toInt()

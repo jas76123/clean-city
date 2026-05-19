@@ -44,7 +44,7 @@ class VerifyEmailScreen(private val email: String) : Screen {
                 }
             }
             SecondaryButton(
-                text = if (state.cooldownSec > 0) "Отправить повторно через ${state.cooldownSec} с" else "Отправить повторно",
+                text = if (state.cooldownSec > 0) "Повторно через ${state.cooldownSec} с" else "Отправить повторно",
                 onClick = model::resend,
                 enabled = state.cooldownSec == 0,
                 contentColor = androidx.compose.ui.graphics.Color.Black,

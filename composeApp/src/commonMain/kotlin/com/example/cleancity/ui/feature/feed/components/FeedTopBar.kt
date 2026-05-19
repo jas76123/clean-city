@@ -1,11 +1,11 @@
 package com.example.cleancity.ui.feature.feed.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,10 +24,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import cleancity.composeapp.generated.resources.Res
+import cleancity.composeapp.generated.resources.app_logo
 import com.example.cleancity.ui.theme.Accent
 import com.example.cleancity.ui.theme.Gray700
 import com.example.cleancity.ui.theme.Green400
-import com.example.cleancity.ui.theme.Green900
+import org.jetbrains.compose.resources.painterResource
 
 @Composable
 fun FeedTopBar(
@@ -44,15 +46,11 @@ fun FeedTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Brush.linearGradient(listOf(Accent, Green400))),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("🛡", color = Green900)
-            }
+            Image(
+                painter = painterResource(Res.drawable.app_logo),
+                contentDescription = null,
+                modifier = Modifier.size(44.dp),
+            )
             Text(
                 text = "Чистый Город",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),

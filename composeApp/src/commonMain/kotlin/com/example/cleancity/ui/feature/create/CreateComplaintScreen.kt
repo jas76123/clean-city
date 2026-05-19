@@ -54,8 +54,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -79,6 +82,7 @@ import com.example.cleancity.ui.feature.map.components.AddressSuggestionList
 import com.example.cleancity.ui.feature.map.components.emoji
 import com.example.cleancity.ui.feature.map.picker.MapPickerScreen
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class CreateComplaintScreen : Screen {
 
@@ -89,6 +93,15 @@ class CreateComplaintScreen : Screen {
         val model = koinScreenModel<CreateComplaintScreenModel>()
         val state by model.state.collectAsState()
         val permission = rememberLocationPermission()
+        val scrollState = rememberScrollState()
+        val coroutineScope = rememberCoroutineScope()
+        // Авто-скролл к блоку дубликатов один раз на каждое "появление" списка.
+        // Когда state.duplicates переходит из пустого в непустой, onGloballyPositioned
+        // ниже выполнит скролл; пока список не очистится, повторных прыжков не будет.
+        var hasScrolledToDuplicates by remember { mutableStateOf(false) }
+        LaunchedEffect(state.duplicates.isEmpty()) {
+            if (state.duplicates.isEmpty()) hasScrolledToDuplicates = false
+        }
 
         // Запрашиваем GPS-разрешение один раз при первом отображении экрана.
         LaunchedEffect(Unit) {
@@ -149,7 +162,7 @@ class CreateComplaintScreen : Screen {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
                     .padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
@@ -163,6 +176,14 @@ class CreateComplaintScreen : Screen {
                     DuplicateWarning(
                         items = state.duplicates,
                         onVote = model::voteForDuplicate,
+                        modifier = Modifier.onGloballyPositioned { coords ->
+                            if (!hasScrolledToDuplicates) {
+                                hasScrolledToDuplicates = true
+                                coroutineScope.launch {
+                                    scrollState.animateScrollTo(coords.positionInParent().y.toInt())
+                                }
+                            }
+                        },
                     )
                 }
 
@@ -416,11 +437,12 @@ private fun SheetRow(icon: androidx.compose.ui.graphics.vector.ImageVector, labe
 private fun DuplicateWarning(
     items: List<DuplicateCandidateResponse>,
     onVote: (Long) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(
@@ -478,7 +500,7 @@ private fun DuplicateRow(item: DuplicateCandidateResponse, onVote: () -> Unit) {
                     maxLines = 1,
                 )
                 Text(
-                    "${item.votesCount} голосов · ${item.distanceMeters}м · ${item.status.label()}",
+                    "${item.votesCount} голосов · ${formatDistance(item.distanceMeters)} · ${item.status.label()}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
                     maxLines = 1,
@@ -500,6 +522,15 @@ private fun ComplaintStatus.label(): String = when (this) {
     ComplaintStatus.RESOLVED -> "Решена"
     ComplaintStatus.REJECTED -> "Отклонена"
     ComplaintStatus.DUPLICATE -> "Дубликат"
+}
+
+// "0 м" / "3 м" сбивают с толку — это distance от создаваемой жалобы до найденного дубликата.
+// Делаем human-readable: совсем рядом → "тот же адрес", иначе метры или километры.
+private fun formatDistance(meters: Int): String = when {
+    meters < 5 -> "тот же адрес"
+    meters < 1000 -> "$meters м"
+    meters % 1000 == 0 -> "${meters / 1000} км"
+    else -> "${meters / 1000}.${(meters % 1000) / 100} км"
 }
 
 // ---------- Category section ----------

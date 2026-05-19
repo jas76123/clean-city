@@ -13,6 +13,7 @@ import com.example.cleancity.data.network.UserApiContract
 import com.example.cleancity.data.network.AuthFailureHandler
 import com.example.cleancity.data.network.createHttpClient
 import com.example.cleancity.data.repository.AuthRepository
+import com.example.cleancity.domain.UnreadCountStore
 import com.example.cleancity.data.storage.TokenStorage
 import com.example.cleancity.data.storage.TokenStorageFactory
 import com.example.cleancity.domain.location.LocationProvider
@@ -65,6 +66,10 @@ fun appModule(): Module = module {
     single { com.example.cleancity.data.network.httpClientTokenInvalidator(get()) }
 
     single { AuthRepository(get(), get(), get(), get()) }
+
+    single {
+        UnreadCountStore(api = get<NotificationsApiContract>())
+    }
 
     single { com.example.cleancity.ui.feature.map.picker.AddressPickerBus() }
 

@@ -150,6 +150,23 @@ class CreateComplaintScreenModel(
         }
     }
 
+    fun onSuggestionTapped(suggestion: MapSuggestion) {
+        suggestJob?.cancel()
+        _state.update {
+            it.copy(
+                address = suggestion.title,
+                latitude = suggestion.latitude,
+                longitude = suggestion.longitude,
+                district = null,
+                addressSource = AddressSource.Suggest,
+                suggestions = emptyList(),
+                isSuggesting = false,
+            )
+        }
+        screenModelScope.launch { reverseGeocode(suggestion.latitude, suggestion.longitude) }
+        scheduleDuplicatesCheck()
+    }
+
     fun onDescriptionChanged(description: String) {
         if (description.length > MAX_DESCRIPTION_LENGTH) return
         _state.update { it.copy(description = description) }

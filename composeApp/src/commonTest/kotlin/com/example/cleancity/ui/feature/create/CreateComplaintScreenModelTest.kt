@@ -291,6 +291,80 @@ class CreateComplaintScreenModelTest {
         assertTrue(s.suggestions.isEmpty())
     }
 
+    // --- suggestion tap ------------------------------------------------------
+
+    @Test fun `onSuggestionTapped sets coords address and source Suggest`() = runTest {
+        search.nextReverseResult = Result.success(ReverseGeocodeResult("ул. Транспортная, 14", "Центральный"))
+        val model = newModel()
+        val s = com.example.cleancity.ui.feature.map.MapSuggestion(
+            id = "1", title = "ул. Транспортная, 14", subtitle = "Сочи",
+            latitude = 43.58, longitude = 39.72,
+        )
+
+        model.onSuggestionTapped(s)
+        testScheduler.advanceUntilIdle()
+
+        val st = model.state.value
+        assertEquals(43.58, st.latitude)
+        assertEquals(39.72, st.longitude)
+        assertEquals("ул. Транспортная, 14", st.address)
+        assertEquals(AddressSource.Suggest, st.addressSource)
+        assertTrue(st.suggestions.isEmpty())
+    }
+
+    @Test fun `onSuggestionTapped loads district via reverseGeocode`() = runTest {
+        search.nextReverseResult = Result.success(ReverseGeocodeResult("ignored", "Хостинский"))
+        val model = newModel()
+        val s = com.example.cleancity.ui.feature.map.MapSuggestion(
+            id = "1", title = "ул. Парковая, 7", subtitle = null,
+            latitude = 43.55, longitude = 39.78,
+        )
+
+        model.onSuggestionTapped(s)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(1, search.reverseCalls.size)
+        assertEquals(43.55, search.reverseCalls.first().latitude)
+        assertEquals(39.78, search.reverseCalls.first().longitude)
+        assertEquals("Хостинский", model.state.value.district)
+    }
+
+    @Test fun `onSuggestionTapped triggers duplicate check when category selected`() = runTest {
+        search.nextReverseResult = Result.success(ReverseGeocodeResult("ул", null))
+        api.nextDuplicatesResult = Result.success(DuplicateCandidatesResponse(items = listOf(dupCandidate(1L))))
+        val model = newModel()
+        model.onCategorySelected(ProblemCategory.GARBAGE)
+        val s = com.example.cleancity.ui.feature.map.MapSuggestion(
+            id = "1", title = "ул", subtitle = null, latitude = 43.5, longitude = 39.7,
+        )
+
+        model.onSuggestionTapped(s)
+        testScheduler.advanceUntilIdle()
+
+        assertTrue(api.duplicateCalls.isNotEmpty())
+        assertEquals(1, model.state.value.duplicates.size)
+    }
+
+    @Test fun `editing address after suggest keeps coords and source`() = runTest {
+        search.nextReverseResult = Result.success(ReverseGeocodeResult("ул", null))
+        val model = newModel()
+        val s = com.example.cleancity.ui.feature.map.MapSuggestion(
+            id = "1", title = "ул. Транспортная, 14", subtitle = null,
+            latitude = 43.58, longitude = 39.72,
+        )
+        model.onSuggestionTapped(s)
+        testScheduler.advanceUntilIdle()
+
+        model.onAddressChanged("ул. Транспортная, 14, кв. 5")
+        testScheduler.advanceUntilIdle()
+
+        val st = model.state.value
+        assertEquals(43.58, st.latitude)
+        assertEquals(39.72, st.longitude)
+        assertEquals("ул. Транспортная, 14, кв. 5", st.address)
+        assertEquals(AddressSource.Suggest, st.addressSource)
+    }
+
     // --- helpers ----------------------------------------------------------------
 
     private fun readyButMissing(mutator: (CreateComplaintUiState) -> CreateComplaintUiState) = runTest {

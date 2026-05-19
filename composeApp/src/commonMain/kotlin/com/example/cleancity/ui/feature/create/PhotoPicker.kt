@@ -21,4 +21,5 @@ interface PhotoPickerLauncher {
 expect fun rememberPhotoPickerLauncher(
     onPhotosPicked: (List<PhotoBytes>) -> Unit,
     onCameraPermissionDenied: () -> Unit = {},
+    onPhotoTooLarge: (sizeMb: Int) -> Unit = {},
 ): PhotoPickerLauncher

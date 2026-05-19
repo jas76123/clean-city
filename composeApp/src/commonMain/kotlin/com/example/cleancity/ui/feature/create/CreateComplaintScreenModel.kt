@@ -44,6 +44,7 @@ data class CreateComplaintUiState(
             photos.isNotEmpty() &&
             category != null &&
             address.isNotBlank() &&
+            description.isNotBlank() &&
             latitude != null &&
             longitude != null
 }

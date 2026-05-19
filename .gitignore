@@ -36,3 +36,6 @@ google-services.json
 
 # OS
 Thumbs.db
+
+# Локальное файловое хранилище для DEV-режима (LocalStorageService)
+uploads/

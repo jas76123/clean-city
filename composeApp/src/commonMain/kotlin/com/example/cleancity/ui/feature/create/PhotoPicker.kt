@@ -20,4 +20,5 @@ interface PhotoPickerLauncher {
 @Composable
 expect fun rememberPhotoPickerLauncher(
     onPhotosPicked: (List<PhotoBytes>) -> Unit,
+    onCameraPermissionDenied: () -> Unit = {},
 ): PhotoPickerLauncher

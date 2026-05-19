@@ -56,6 +56,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.example.cleancity.domain.UnreadCountStore
 import com.example.cleancity.shared.models.AnnouncementResponse
 import com.example.cleancity.shared.models.ComplaintResponse
 import com.example.cleancity.shared.models.ComplaintStatus
@@ -66,6 +67,7 @@ import com.example.cleancity.ui.feature.feed.components.FeedToggle
 import com.example.cleancity.ui.feature.feed.components.FeedTopBar
 import com.example.cleancity.ui.theme.Gray500
 import com.example.cleancity.ui.theme.Gray600
+import org.koin.compose.koinInject
 
 class FeedScreen : Screen {
 
@@ -74,6 +76,8 @@ class FeedScreen : Screen {
     override fun Content() {
         val model: FeedScreenModel = koinScreenModel()
         val state by model.state.collectAsState()
+        val unreadStore: UnreadCountStore = koinInject()
+        val unreadCount by unreadStore.state.collectAsState()
         val navigator = LocalNavigator.currentOrThrow
 
         LaunchedEffect(Unit) { model.loadInitial() }
@@ -81,7 +85,7 @@ class FeedScreen : Screen {
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             FeedTopBar(
                 modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
-                unreadCount = 0, // bridged in Day 12; bell остаётся на FeedTopBar
+                unreadCount = unreadCount,
                 onBellClick = { /* no-op; уведомления — отдельный таб */ },
             )
 

@@ -10,8 +10,12 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
@@ -19,6 +23,9 @@ import cafe.adriel.voyager.navigator.tab.CurrentTab
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabNavigator
+import com.example.cleancity.data.repository.AuthRepository
+import com.example.cleancity.domain.AuthState
+import com.example.cleancity.domain.UnreadCountStore
 import com.example.cleancity.ui.feature.shell.tabs.FeedTab
 import com.example.cleancity.ui.feature.shell.tabs.MapTab
 import com.example.cleancity.ui.feature.shell.tabs.NotificationsTab
@@ -26,10 +33,22 @@ import com.example.cleancity.ui.feature.shell.tabs.ProfileTab
 import com.example.cleancity.ui.theme.Accent
 import com.example.cleancity.ui.theme.Gray500
 import com.example.cleancity.ui.theme.Green900
+import org.koin.compose.koinInject
 
 class MainShellScreen : Screen {
     @Composable
     override fun Content() {
+        val store: UnreadCountStore = koinInject()
+        val authRepo: AuthRepository = koinInject()
+        val authState by authRepo.state.collectAsState()
+
+        LaunchedEffect(authState) {
+            if (authState is AuthState.Authenticated) store.start() else store.stop()
+        }
+        DisposableEffect(Unit) {
+            onDispose { store.stop() }
+        }
+
         TabNavigator(FeedTab) {
             Scaffold(
                 contentWindowInsets = WindowInsets(0),

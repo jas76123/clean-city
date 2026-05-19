@@ -84,4 +84,17 @@ class UnreadCountStoreTest {
         assertEquals(42, store.state.value)
         store.stop()
     }
+
+    @Test
+    fun `start is idempotent — second call does not increase poll rate`() = runTest {
+        val api = FakeNotificationsApi().apply { nextCount = 1L }
+        val store = newStore(api, this)
+
+        store.start()
+        store.start()   // second call must be a no-op
+        testScheduler.runCurrent()
+
+        assertEquals(1, api.callCount)  // only one fetch, not two
+        store.stop()
+    }
 }

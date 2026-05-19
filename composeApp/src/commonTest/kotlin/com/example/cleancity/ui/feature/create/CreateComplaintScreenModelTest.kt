@@ -164,6 +164,8 @@ class CreateComplaintScreenModelTest {
 
     @Test fun `canSubmit false when coords missing`() = readyButMissing { it.copy(latitude = null) }
 
+    @Test fun `canSubmit false when description blank`() = readyButMissing { it.copy(description = "") }
+
     @Test fun `canSubmit true when all required fields set`() = runTest {
         val model = readyToSubmitModel()
         assertTrue(model.state.value.canSubmit)
@@ -237,6 +239,7 @@ class CreateComplaintScreenModelTest {
         model.onPhotosAdded(photos)
         model.onCategorySelected(ProblemCategory.GARBAGE)
         model.onLocationPermissionGranted()
+        model.onDescriptionChanged("описание проблемы")
         return model
     }
 

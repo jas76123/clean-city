@@ -54,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -113,7 +114,11 @@ class CreateComplaintScreen : Screen {
             }
         }
 
-        val photoPicker = rememberPhotoPickerLauncher(onPhotosPicked = model::onPhotosAdded)
+        var cameraDeniedAlert by remember { mutableStateOf(false) }
+        val photoPicker = rememberPhotoPickerLauncher(
+            onPhotosPicked = model::onPhotosAdded,
+            onCameraPermissionDenied = { cameraDeniedAlert = true },
+        )
         var pickerSheetOpen by remember { mutableStateOf(false) }
 
         Scaffold(
@@ -196,6 +201,22 @@ class CreateComplaintScreen : Screen {
                 },
             )
         }
+
+        if (cameraDeniedAlert) {
+            AlertDialog(
+                onDismissRequest = { cameraDeniedAlert = false },
+                title = { Text("Нужно разрешение на камеру") },
+                text = {
+                    Text(
+                        "Чтобы сделать фото, разреши приложению доступ к камере в системных " +
+                            "настройках, либо выбери фото из галереи.",
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { cameraDeniedAlert = false }) { Text("Понятно") }
+                },
+            )
+        }
     }
 }
 
@@ -275,18 +296,19 @@ private fun PhotoThumbnailRow(
             .padding(14.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        photos.forEachIndexed { index, _ ->
+        photos.forEachIndexed { index, photo ->
             Box(
                 modifier = Modifier
                     .size(72.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp)),
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.TopEnd,
             ) {
-                Icon(
-                    Icons.Default.PhotoLibrary,
+                coil3.compose.AsyncImage(
+                    model = photo.bytes,
                     contentDescription = "Фото ${index + 1}",
-                    tint = MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.align(Alignment.Center),
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 )
                 Box(
                     modifier = Modifier

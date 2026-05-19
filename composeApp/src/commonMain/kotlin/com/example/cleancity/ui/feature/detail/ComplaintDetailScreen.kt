@@ -202,25 +202,37 @@ private fun LoadedContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PhotoPager(complaint: ComplaintResponse) {
-    val photoCount = complaint.photos.size.coerceAtLeast(1)
+    val photos = complaint.photos.sortedBy { it.sortOrder }
+    val photoCount = photos.size.coerceAtLeast(1)
     val pagerState = rememberPagerState(pageCount = { photoCount })
 
     Box(Modifier.fillMaxWidth().height(260.dp)) {
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-            val gradient = when (complaint.status) {
-                ComplaintStatus.RESOLVED -> Brush.linearGradient(listOf(Green500, Green800))
-                ComplaintStatus.IN_PROGRESS -> Brush.linearGradient(listOf(Blue, Green700))
-                else -> Brush.linearGradient(listOf(Green700, Green900))
-            }
-            Box(
-                Modifier.fillMaxSize().background(gradient),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = complaint.category.emoji(),
-                    style = MaterialTheme.typography.displayLarge,
-                    color = Color.White.copy(alpha = 0.6f),
+            val photo = photos.getOrNull(page)
+            if (photo != null) {
+                coil3.compose.AsyncImage(
+                    model = photo.photoUrl,
+                    contentDescription = "Фото ${page + 1}",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                 )
+            } else {
+                // Жалоба без фото — fallback на градиент с эмодзи категории.
+                val gradient = when (complaint.status) {
+                    ComplaintStatus.RESOLVED -> Brush.linearGradient(listOf(Green500, Green800))
+                    ComplaintStatus.IN_PROGRESS -> Brush.linearGradient(listOf(Blue, Green700))
+                    else -> Brush.linearGradient(listOf(Green700, Green900))
+                }
+                Box(
+                    Modifier.fillMaxSize().background(gradient),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = complaint.category.emoji(),
+                        style = MaterialTheme.typography.displayLarge,
+                        color = Color.White.copy(alpha = 0.6f),
+                    )
+                }
             }
         }
         if (photoCount > 1) {

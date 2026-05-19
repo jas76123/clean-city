@@ -107,12 +107,16 @@ class AndroidMapSearchProvider : MapSearchProvider {
                     val district = components.firstOrNull { Address.Component.Kind.DISTRICT in it.kinds }?.name
                     val locality = components.firstOrNull { Address.Component.Kind.LOCALITY in it.kinds }?.name
 
-                    val address = when {
-                        street != null && house != null -> "$street, $house"
-                        street != null -> street
-                        locality != null -> locality
-                        else -> obj.name ?: toponym?.address?.formattedAddress.orEmpty()
+                    // Собираем максимально читаемый адрес: "Сочи, Центральный р-н, ул. Транспортная, 14".
+                    // Район отдельно тоже возвращаем — он нужен админке для фильтра/группировки.
+                    val parts = buildList {
+                        if (locality != null) add(locality)
+                        if (district != null) add("$district р-н")
+                        if (street != null) add(street)
+                        if (house != null) add(house)
                     }
+                    val address = if (parts.isNotEmpty()) parts.joinToString(", ")
+                        else obj.name ?: toponym?.address?.formattedAddress.orEmpty()
 
                     if (cont.isActive) cont.resume(
                         Result.success(ReverseGeocodeResult(address = address, district = district)),

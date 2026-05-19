@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -68,18 +69,35 @@ fun ComplaintCard(
 
 @Composable
 private fun PhotoPlaceholder(complaint: ComplaintResponse) {
-    val gradient = when (complaint.status) {
-        ComplaintStatus.RESOLVED -> Brush.linearGradient(listOf(Green500, Green800))
-        ComplaintStatus.IN_PROGRESS -> Brush.linearGradient(listOf(Blue, Green700))
-        else -> Brush.linearGradient(listOf(Green700, Green900))
-    }
+    val firstThumb = complaint.photos.minByOrNull { it.sortOrder }?.thumbUrl
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(130.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(gradient),
+            .clip(RoundedCornerShape(12.dp)),
     ) {
+        if (firstThumb != null) {
+            coil3.compose.AsyncImage(
+                model = firstThumb,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            )
+        } else {
+            val gradient = when (complaint.status) {
+                ComplaintStatus.RESOLVED -> Brush.linearGradient(listOf(Green500, Green800))
+                ComplaintStatus.IN_PROGRESS -> Brush.linearGradient(listOf(Blue, Green700))
+                else -> Brush.linearGradient(listOf(Green700, Green900))
+            }
+            Box(modifier = Modifier.fillMaxSize().background(gradient)) {
+                Text(
+                    text = complaint.category.emoji(),
+                    modifier = Modifier.align(Alignment.Center),
+                    style = MaterialTheme.typography.displaySmall,
+                    color = Color.White.copy(alpha = 0.4f),
+                )
+            }
+        }
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -95,12 +113,6 @@ private fun PhotoPlaceholder(complaint: ComplaintResponse) {
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
             )
         }
-        Text(
-            text = complaint.category.emoji(),
-            modifier = Modifier.align(Alignment.Center),
-            style = MaterialTheme.typography.displaySmall,
-            color = Color.White.copy(alpha = 0.4f),
-        )
     }
 }
 

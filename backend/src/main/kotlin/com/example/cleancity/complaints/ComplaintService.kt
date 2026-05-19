@@ -61,7 +61,10 @@ class ComplaintService(
         private const val MAX_PHOTOS = 5
         private const val MIN_PHOTOS = 1
 
-        private const val DEFAULT_DUPLICATE_RADIUS_M = 100
+        // 500 м ≈ покрывает несколько кварталов в Сочи и ловит дубликаты, которые
+        // 100 м пропускали (двор vs. соседняя улица). 1000 м — технический потолок,
+        // выше уже больше шума, чем полезных совпадений.
+        private const val DEFAULT_DUPLICATE_RADIUS_M = 500
         private const val MAX_DUPLICATE_RADIUS_M = 1000
 
         private val PUBLIC_VISIBLE: Set<ComplaintStatus> =

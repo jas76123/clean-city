@@ -191,13 +191,63 @@ class CreateComplaintScreenModelTest {
 
     @Test fun `submit sets submitError on failure`() = runTest {
         val model = readyToSubmitModel()
+        // Fix B: RuntimeException (non-ApiException) → «Нет интернета»
         api.nextCreateResult = Result.failure(RuntimeException("net down"))
 
         model.submit()
         testScheduler.advanceUntilIdle()
 
-        assertEquals("net down", model.state.value.submitError)
+        assertTrue(model.state.value.submitError?.contains("Нет интернета") == true)
         assertFalse(model.state.value.isSubmitting)
+    }
+
+    @Test fun `canSubmit false when address not validated by Yandex (addressSource = None)`() =
+        readyButMissing { it.copy(addressSource = AddressSource.None) }
+
+    @Test fun `manual edit over Suggest-validated address downgrades addressSource to None`() = runTest {
+        val model = readyToSubmitModel()
+        // Симулируем что пользователь выбрал Suggest (вместо GPS из readyToSubmitModel)
+        model.onSuggestionTapped(
+            com.example.cleancity.ui.feature.map.MapSuggestion(
+                id = "1",
+                title = "Курортный проспект, 1",
+                subtitle = null,
+                latitude = 43.6,
+                longitude = 39.7,
+            ),
+        )
+        testScheduler.advanceUntilIdle()
+        assertEquals(AddressSource.Suggest, model.state.value.addressSource)
+
+        model.onAddressChanged("Курортный проспект, 2") // ручная правка
+        assertEquals(AddressSource.None, model.state.value.addressSource)
+        assertFalse(model.state.value.canSubmit)
+    }
+
+    @Test fun `submit non-ApiException maps to «Нет интернета»`() = runTest {
+        val model = readyToSubmitModel()
+        api.nextCreateResult = Result.failure(RuntimeException("Connection timed out"))
+
+        model.submit()
+        testScheduler.advanceUntilIdle()
+
+        val err = model.state.value.submitError ?: ""
+        assertTrue(err.contains("Нет интернета"), "expected 'Нет интернета' in error, got: $err")
+    }
+
+    @Test fun `submit ApiException uses server message`() = runTest {
+        val model = readyToSubmitModel()
+        api.nextCreateResult = Result.failure(
+            com.example.cleancity.data.network.ApiException(
+                com.example.cleancity.data.network.ApiError("VALIDATION_FAILED", "Адрес обязателен"),
+                400,
+            ),
+        )
+
+        model.submit()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals("Адрес обязателен", model.state.value.submitError)
     }
 
     @Test fun `submit no-op when canSubmit is false`() = runTest {
@@ -345,7 +395,7 @@ class CreateComplaintScreenModelTest {
         assertEquals(1, model.state.value.duplicates.size)
     }
 
-    @Test fun `editing address after suggest keeps coords and source`() = runTest {
+    @Test fun `editing address after suggest downgrades source to None`() = runTest {
         search.nextReverseResult = Result.success(ReverseGeocodeResult("ул", null))
         val model = newModel()
         val s = com.example.cleancity.ui.feature.map.MapSuggestion(
@@ -362,7 +412,8 @@ class CreateComplaintScreenModelTest {
         assertEquals(43.58, st.latitude)
         assertEquals(39.72, st.longitude)
         assertEquals("ул. Транспортная, 14, кв. 5", st.address)
-        assertEquals(AddressSource.Suggest, st.addressSource)
+        // Fix A: любая ручная правка после валидации снимает источник → None
+        assertEquals(AddressSource.None, st.addressSource)
     }
 
     // --- bus emit ------------------------------------------------------------
@@ -407,7 +458,7 @@ class CreateComplaintScreenModelTest {
         assertEquals(1, model.state.value.duplicates.size)
     }
 
-    @Test fun `editing address after picker keeps coords and source`() = runTest {
+    @Test fun `editing address after picker downgrades source to None`() = runTest {
         val model = newModel()
         testScheduler.advanceUntilIdle()
         bus.publish(
@@ -424,7 +475,8 @@ class CreateComplaintScreenModelTest {
         assertEquals(43.42, st.latitude)
         assertEquals(39.92, st.longitude)
         assertEquals("ул. Ленина, 100, кв. 12", st.address)
-        assertEquals(AddressSource.Picker, st.addressSource)
+        // Fix A: любая ручная правка после валидации снимает источник → None
+        assertEquals(AddressSource.None, st.addressSource)
     }
 
     // --- helpers ----------------------------------------------------------------

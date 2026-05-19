@@ -2,6 +2,7 @@ package com.example.cleancity.ui.feature.create
 
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
+import com.example.cleancity.data.network.ApiException
 import com.example.cleancity.data.network.ComplaintsApiContract
 import com.example.cleancity.domain.location.LocationProvider
 import com.example.cleancity.domain.photo.PhotoBytes
@@ -55,7 +56,8 @@ data class CreateComplaintUiState(
             address.isNotBlank() &&
             description.isNotBlank() &&
             latitude != null &&
-            longitude != null
+            longitude != null &&
+            addressSource != AddressSource.None
 }
 
 sealed interface LocationStatus {
@@ -118,17 +120,15 @@ class CreateComplaintScreenModel(
     fun onAddressChanged(text: String) {
         _state.update { s ->
             val cleared = text.isEmpty()
-            val downgradeGps = s.addressSource == AddressSource.Gps && text.isNotEmpty()
+            // Любое ручное редактирование текста после Яндекс-валидации (GPS/Suggest/Picker)
+            // снимает валидацию — пользователь должен переподобрать адрес через подсказку/карту/GPS.
+            val invalidate = s.addressSource != AddressSource.None && text.isNotEmpty()
             s.copy(
                 address = text,
                 latitude = if (cleared) null else s.latitude,
                 longitude = if (cleared) null else s.longitude,
                 district = if (cleared) null else s.district,
-                addressSource = when {
-                    cleared -> AddressSource.None
-                    downgradeGps -> AddressSource.None
-                    else -> s.addressSource
-                },
+                addressSource = if (cleared || invalidate) AddressSource.None else s.addressSource,
                 suggestions = if (cleared) emptyList() else s.suggestions,
             )
         }
@@ -317,12 +317,14 @@ class CreateComplaintScreenModel(
                     _events.emit(CreateComplaintEvent.CreatedSuccessfully(created.id))
                 }
                 .onFailure { e ->
-                    _state.update {
-                        it.copy(
-                            isSubmitting = false,
-                            submitError = e.message ?: "Не удалось отправить жалобу",
-                        )
+                    val msg = if (e is ApiException) {
+                        e.message ?: "Не удалось отправить жалобу"
+                    } else {
+                        // Всё, что не серверная ошибка с кодом — трактуем как сетевую.
+                        // HttpRequestTimeoutException, IOException, UnresolvedAddressException и т.п.
+                        "Нет интернета. Проверь соединение и попробуй снова."
                     }
+                    _state.update { it.copy(isSubmitting = false, submitError = msg) }
                 }
         }
     }

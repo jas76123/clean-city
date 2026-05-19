@@ -24,14 +24,18 @@ import java.io.File
 /** Backend ImageProcessor: 10 MB hard cap. */
 private const val MAX_PHOTO_BYTES = 10L * 1024 * 1024
 
+class PhotoTooLargeException(val sizeBytes: Long) : RuntimeException()
+
 @Composable
 actual fun rememberPhotoPickerLauncher(
     onPhotosPicked: (List<PhotoBytes>) -> Unit,
     onCameraPermissionDenied: () -> Unit,
+    onPhotoTooLarge: (sizeMb: Int) -> Unit,
 ): PhotoPickerLauncher {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val currentDenied = rememberUpdatedState(onCameraPermissionDenied)
+    val currentTooLarge = rememberUpdatedState(onPhotoTooLarge)
 
     // URI выходного файла камеры между launch и onResult. На камере мы знаем URI заранее
     // (TakePicture пишет в указанный), поэтому держим его в state.
@@ -47,11 +51,20 @@ actual fun rememberPhotoPickerLauncher(
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
         scope.launch(Dispatchers.IO) {
             val limit = pendingSlots.value.coerceAtLeast(0)
-            val photos = uris.take(limit).mapNotNull { uri ->
-                runCatching { readPhotoFromUri(context, uri) }.getOrNull()
+            val photos = mutableListOf<PhotoBytes>()
+            var tooLargeMb: Int? = null
+            for (uri in uris.take(limit)) {
+                try {
+                    readPhotoFromUri(context, uri)?.let { photos.add(it) }
+                } catch (e: PhotoTooLargeException) {
+                    tooLargeMb = (e.sizeBytes / 1024 / 1024).toInt()
+                } catch (_: Throwable) {
+                    // прочие ошибки чтения (broken URI и т.п.) — тихо игнорируем
+                }
             }
-            if (photos.isNotEmpty()) {
-                withContext(Dispatchers.Main) { onPhotosPicked(photos) }
+            withContext(Dispatchers.Main) {
+                if (photos.isNotEmpty()) onPhotosPicked(photos)
+                tooLargeMb?.let { currentTooLarge.value(it) }
             }
         }
     }
@@ -63,8 +76,19 @@ actual fun rememberPhotoPickerLauncher(
         pendingCameraUri.value = null
         if (!success || uri == null) return@rememberLauncherForActivityResult
         scope.launch(Dispatchers.IO) {
-            val photo = runCatching { readPhotoFromUri(context, uri) }.getOrNull() ?: return@launch
-            withContext(Dispatchers.Main) { onPhotosPicked(listOf(photo)) }
+            val photo: PhotoBytes? = try {
+                readPhotoFromUri(context, uri)
+            } catch (e: PhotoTooLargeException) {
+                withContext(Dispatchers.Main) {
+                    currentTooLarge.value((e.sizeBytes / 1024 / 1024).toInt())
+                }
+                null
+            } catch (_: Throwable) {
+                null
+            }
+            if (photo != null) {
+                withContext(Dispatchers.Main) { onPhotosPicked(listOf(photo)) }
+            }
         }
     }
 
@@ -134,8 +158,8 @@ private fun createCameraOutputUri(context: Context): Uri {
 private fun readPhotoFromUri(context: Context, uri: Uri): PhotoBytes? {
     val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
         ?: return null
-    require(bytes.size <= MAX_PHOTO_BYTES) {
-        "Photo exceeds 10 MB (${bytes.size / 1024 / 1024} MB)"
+    if (bytes.size > MAX_PHOTO_BYTES) {
+        throw PhotoTooLargeException(bytes.size.toLong())
     }
     val filename = queryFilename(context, uri) ?: "photo_${System.currentTimeMillis()}.jpg"
     val mime = context.contentResolver.getType(uri) ?: "image/jpeg"

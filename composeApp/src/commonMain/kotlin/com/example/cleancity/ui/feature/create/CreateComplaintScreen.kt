@@ -134,9 +134,11 @@ class CreateComplaintScreen : Screen {
         }
 
         var cameraDeniedAlert by remember { mutableStateOf(false) }
+        var photoTooLargeMb by remember { mutableStateOf<Int?>(null) }
         val photoPicker = rememberPhotoPickerLauncher(
             onPhotosPicked = model::onPhotosAdded,
             onCameraPermissionDenied = { cameraDeniedAlert = true },
+            onPhotoTooLarge = { mb -> photoTooLargeMb = mb },
         )
         var pickerSheetOpen by remember { mutableStateOf(false) }
 
@@ -232,6 +234,17 @@ class CreateComplaintScreen : Screen {
                 text = { Text(msg) },
                 confirmButton = {
                     TextButton(onClick = model::clearError) { Text("Ок") }
+                },
+            )
+        }
+
+        photoTooLargeMb?.let { mb ->
+            AlertDialog(
+                onDismissRequest = { photoTooLargeMb = null },
+                title = { Text("Файл слишком большой") },
+                text = { Text("Максимум 10 МБ. Выбранное фото — $mb МБ. Сделай фото в другом режиме или выбери поменьше.") },
+                confirmButton = {
+                    TextButton(onClick = { photoTooLargeMb = null }) { Text("Понятно") }
                 },
             )
         }

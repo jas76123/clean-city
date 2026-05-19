@@ -3,12 +3,17 @@ package com.example.cleancity.ui.feature.map
 import com.example.cleancity.domain.map.BoundingBox
 import com.yandex.mapkit.geometry.BoundingBox as YBoundingBox
 import com.yandex.mapkit.geometry.Point
+import com.yandex.mapkit.search.Address
+import com.yandex.mapkit.search.Response
 import com.yandex.mapkit.search.SearchFactory
 import com.yandex.mapkit.search.SearchManagerType
+import com.yandex.mapkit.search.SearchOptions
 import com.yandex.mapkit.search.SearchType
+import com.yandex.mapkit.search.Session
 import com.yandex.mapkit.search.SuggestOptions
 import com.yandex.mapkit.search.SuggestResponse
 import com.yandex.mapkit.search.SuggestSession
+import com.yandex.mapkit.search.ToponymObjectMetadata
 import com.yandex.runtime.Error
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -25,6 +30,15 @@ class AndroidMapSearchProvider : MapSearchProvider {
 
     private val suggestOptions = SuggestOptions().apply {
         setSuggestTypes(SearchType.GEO.value)
+    }
+
+    private val reverseOptions = SearchOptions().apply {
+        searchTypes = SearchType.GEO.value
+        resultPageSize = 1
+    }
+
+    private companion object {
+        const val REVERSE_ZOOM = 17
     }
 
     override suspend fun suggest(query: String, region: BoundingBox): List<MapSuggestion> {
@@ -64,6 +78,56 @@ class AndroidMapSearchProvider : MapSearchProvider {
                 suggestSession.suggest(trimmed, window, suggestOptions, listener)
                 cont.invokeOnCancellation { suggestSession.reset() }
             }
+        }
+    }
+
+    override suspend fun reverseGeocode(
+        latitude: Double,
+        longitude: Double,
+    ): Result<ReverseGeocodeResult> = withContext(Dispatchers.Main) {
+        suspendCancellableCoroutine { cont ->
+            val point = Point(latitude, longitude)
+            // Локальная переменная — submit возвращает Session, чтобы можно было отменить.
+            var session: Session? = null
+
+            val listener = object : Session.SearchListener {
+                override fun onSearchResponse(response: Response) {
+                    val obj = response.collection.children.firstOrNull()?.obj
+                    if (obj == null) {
+                        if (cont.isActive) cont.resume(
+                            Result.failure(IllegalStateException("Empty geocoder response")),
+                        )
+                        return
+                    }
+                    val toponym = obj.metadataContainer.getItem(ToponymObjectMetadata::class.java)
+                    val components = toponym?.address?.components.orEmpty()
+
+                    val street = components.firstOrNull { Address.Component.Kind.STREET in it.kinds }?.name
+                    val house = components.firstOrNull { Address.Component.Kind.HOUSE in it.kinds }?.name
+                    val district = components.firstOrNull { Address.Component.Kind.DISTRICT in it.kinds }?.name
+                    val locality = components.firstOrNull { Address.Component.Kind.LOCALITY in it.kinds }?.name
+
+                    val address = when {
+                        street != null && house != null -> "$street, $house"
+                        street != null -> street
+                        locality != null -> locality
+                        else -> obj.name ?: toponym?.address?.formattedAddress.orEmpty()
+                    }
+
+                    if (cont.isActive) cont.resume(
+                        Result.success(ReverseGeocodeResult(address = address, district = district)),
+                    )
+                }
+
+                override fun onSearchError(error: Error) {
+                    if (cont.isActive) cont.resume(
+                        Result.failure(IllegalStateException("Geocoder error: $error")),
+                    )
+                }
+            }
+
+            session = searchManager.submit(point, REVERSE_ZOOM, reverseOptions, listener)
+            cont.invokeOnCancellation { session?.cancel() }
         }
     }
 }

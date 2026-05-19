@@ -54,4 +54,16 @@ class FakeComplaintsApi : ComplaintsApiContract {
 
     override suspend fun unvote(id: Long): com.example.cleancity.shared.models.VoteResponse =
         error("FakeComplaintsApi.unvote not implemented")
+
+    override suspend fun create(
+        request: com.example.cleancity.shared.requests.CreateComplaintRequest,
+        photos: List<com.example.cleancity.domain.photo.PhotoBytes>,
+    ): com.example.cleancity.shared.models.ComplaintResponse =
+        error("FakeComplaintsApi.create not implemented — этот fake только для MapScreenModel")
+
+    override suspend fun findDuplicates(
+        latitude: Double, longitude: Double,
+        category: ProblemCategory, radiusMeters: Int?,
+    ): com.example.cleancity.shared.models.DuplicateCandidatesResponse =
+        error("FakeComplaintsApi.findDuplicates not implemented")
 }

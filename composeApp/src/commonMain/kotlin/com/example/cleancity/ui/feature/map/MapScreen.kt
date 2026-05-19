@@ -35,7 +35,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cleancity.composeapp.generated.resources.Res
 import cleancity.composeapp.generated.resources.app_logo
 import com.example.cleancity.domain.location.rememberLocationPermission
-import com.example.cleancity.ui.feature.create.CreateComplaintPlaceholderScreen
+import com.example.cleancity.ui.feature.create.CreateComplaintScreen
 import com.example.cleancity.ui.feature.detail.ComplaintDetailScreen
 import com.example.cleancity.ui.feature.map.components.CategoryFilterChips
 import com.example.cleancity.ui.feature.map.components.CategorySheet
@@ -138,7 +138,7 @@ class MapScreen : Screen {
                     onLocationClick = {
                         model.onLocationFabClicked(permission.status, permission.launchRequest)
                     },
-                    onCreateClick = { navigator.push(CreateComplaintPlaceholderScreen()) },
+                    onCreateClick = { navigator.push(CreateComplaintScreen()) },
                     isLocating = state.isLocating,
                     modifier = Modifier.align(Alignment.BottomEnd),
                 )

@@ -9,6 +9,13 @@ interface MapSearchProvider {
      * Если query пустой / короче 2 символов — возвращает emptyList.
      */
     suspend fun suggest(query: String, region: BoundingBox): List<MapSuggestion>
+
+    /**
+     * Reverse geocoding: координаты → читаемый адрес. Адрес берётся из первого
+     * результата SearchManager.submit с SearchType.GEO. Result.failure при сетевой
+     * ошибке / пустом ответе.
+     */
+    suspend fun reverseGeocode(latitude: Double, longitude: Double): Result<ReverseGeocodeResult>
 }
 
 data class MapSuggestion(
@@ -17,4 +24,9 @@ data class MapSuggestion(
     val subtitle: String?,
     val latitude: Double,
     val longitude: Double,
+)
+
+data class ReverseGeocodeResult(
+    val address: String,
+    val district: String?,
 )

@@ -52,4 +52,15 @@ class FakeDetailComplaintsApi : ComplaintsApiContract {
 
     override suspend fun voted(page: Int, size: Int): ComplaintListResponse =
         error("not used in detail tests")
+
+    override suspend fun create(
+        request: com.example.cleancity.shared.requests.CreateComplaintRequest,
+        photos: List<com.example.cleancity.domain.photo.PhotoBytes>,
+    ): ComplaintResponse = error("not used in detail tests")
+
+    override suspend fun findDuplicates(
+        latitude: Double, longitude: Double,
+        category: ProblemCategory, radiusMeters: Int?,
+    ): com.example.cleancity.shared.models.DuplicateCandidatesResponse =
+        error("not used in detail tests")
 }

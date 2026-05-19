@@ -292,6 +292,8 @@ Web admin может быть проще (показываем основной 
 
 **Реализовано 2026-05-19:** 23 новых unit-теста (5 ComplaintsApi.create/findDuplicates + 18 CreateComplaintScreenModel). Полный suite 82/82 зелёные. APK собирается. Smoke на реальном Samsung A33 5G — TODO (устройство не подключено к ADB в момент закрытия).
 
+**Stage B закрыт 2026-05-19:** address picker (`MapPickerScreen`) + inline suggest в `AddressSection`. `AddressPickerBus` (Koin single) передаёт `PickedAddress` обратно через `tryEmit`. `ReverseGeocodeResult` снапит state.lat/lon на координаты найденного toponym'а от Яндекса — иначе маркер жалобы и дубликат-чек уезжали в сторону от написанного адреса. Дубликат-чек теперь срабатывает и при чисто ручном вводе адреса (по координатам первой подсказки). UX: автоскролл к блоку дубликатов, человеко-читаемое расстояние («тот же адрес» / «N м» / «N.X км»). Backend default duplicate radius поднят 100м → 500м. Полный smoke трёх путей (GPS / Suggest / Picker) на Samsung A33 — частично проверен, остаётся финальный прогон.
+
 **Checkpoint:** На реальном устройстве: сфотографировать → выбрать категорию → отправить → жалоба появляется в ленте и на карте.
 
 ---

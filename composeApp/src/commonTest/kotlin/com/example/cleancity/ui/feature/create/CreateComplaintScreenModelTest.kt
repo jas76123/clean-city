@@ -365,6 +365,68 @@ class CreateComplaintScreenModelTest {
         assertEquals(AddressSource.Suggest, st.addressSource)
     }
 
+    // --- bus emit ------------------------------------------------------------
+
+    @Test fun `bus publish applies PickedAddress and sets source Picker`() = runTest {
+        val model = newModel()
+        testScheduler.advanceUntilIdle() // дать init подписаться на bus
+
+        bus.publish(
+            com.example.cleancity.ui.feature.map.picker.PickedAddress(
+                latitude = 43.42,
+                longitude = 39.92,
+                address = "ул. Ленина, 100",
+                district = "Адлерский",
+            ),
+        )
+        testScheduler.advanceUntilIdle()
+
+        val st = model.state.value
+        assertEquals(43.42, st.latitude)
+        assertEquals(39.92, st.longitude)
+        assertEquals("ул. Ленина, 100", st.address)
+        assertEquals("Адлерский", st.district)
+        assertEquals(AddressSource.Picker, st.addressSource)
+        assertTrue(st.suggestions.isEmpty())
+    }
+
+    @Test fun `bus publish triggers duplicate check when category selected`() = runTest {
+        api.nextDuplicatesResult = Result.success(DuplicateCandidatesResponse(items = listOf(dupCandidate(1L))))
+        val model = newModel()
+        model.onCategorySelected(ProblemCategory.GARBAGE)
+        testScheduler.advanceUntilIdle()
+
+        bus.publish(
+            com.example.cleancity.ui.feature.map.picker.PickedAddress(
+                latitude = 43.5, longitude = 39.7, address = "x", district = null,
+            ),
+        )
+        testScheduler.advanceUntilIdle()
+
+        assertTrue(api.duplicateCalls.isNotEmpty())
+        assertEquals(1, model.state.value.duplicates.size)
+    }
+
+    @Test fun `editing address after picker keeps coords and source`() = runTest {
+        val model = newModel()
+        testScheduler.advanceUntilIdle()
+        bus.publish(
+            com.example.cleancity.ui.feature.map.picker.PickedAddress(
+                latitude = 43.42, longitude = 39.92, address = "ул. Ленина, 100", district = "Адлерский",
+            ),
+        )
+        testScheduler.advanceUntilIdle()
+
+        model.onAddressChanged("ул. Ленина, 100, кв. 12")
+        testScheduler.advanceUntilIdle()
+
+        val st = model.state.value
+        assertEquals(43.42, st.latitude)
+        assertEquals(39.92, st.longitude)
+        assertEquals("ул. Ленина, 100, кв. 12", st.address)
+        assertEquals(AddressSource.Picker, st.addressSource)
+    }
+
     // --- helpers ----------------------------------------------------------------
 
     private fun readyButMissing(mutator: (CreateComplaintUiState) -> CreateComplaintUiState) = runTest {

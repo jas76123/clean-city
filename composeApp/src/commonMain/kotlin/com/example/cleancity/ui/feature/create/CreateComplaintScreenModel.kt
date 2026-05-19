@@ -25,6 +25,8 @@ import kotlinx.coroutines.launch
 const val MAX_DESCRIPTION_LENGTH = 1000
 const val MAX_PHOTOS = 5
 private const val DUPLICATE_DEBOUNCE_MS = 400L
+private const val SUGGEST_DEBOUNCE_MS = 300L
+private const val SUGGEST_MIN_QUERY = 2
 
 enum class AddressSource { None, Gps, Suggest, Picker }
 
@@ -83,6 +85,7 @@ class CreateComplaintScreenModel(
     val events: SharedFlow<CreateComplaintEvent> = _events.asSharedFlow()
 
     private var duplicatesJob: Job? = null
+    private var suggestJob: Job? = null
 
     fun onPhotosAdded(added: List<PhotoBytes>) {
         _state.update { s ->
@@ -106,8 +109,45 @@ class CreateComplaintScreenModel(
         _state.update { it.copy(categoryQuery = query) }
     }
 
-    fun onAddressChanged(address: String) {
-        _state.update { it.copy(address = address) }
+    fun onAddressChanged(text: String) {
+        _state.update { s ->
+            val cleared = text.isEmpty()
+            val downgradeGps = s.addressSource == AddressSource.Gps && text.isNotEmpty()
+            s.copy(
+                address = text,
+                latitude = if (cleared) null else s.latitude,
+                longitude = if (cleared) null else s.longitude,
+                district = if (cleared) null else s.district,
+                addressSource = when {
+                    cleared -> AddressSource.None
+                    downgradeGps -> AddressSource.None
+                    else -> s.addressSource
+                },
+                suggestions = if (cleared) emptyList() else s.suggestions,
+            )
+        }
+        scheduleSuggest(text)
+    }
+
+    private fun scheduleSuggest(query: String) {
+        suggestJob?.cancel()
+        if (query.length < SUGGEST_MIN_QUERY) {
+            _state.update { it.copy(suggestions = emptyList(), isSuggesting = false) }
+            return
+        }
+        suggestJob = screenModelScope.launch {
+            delay(SUGGEST_DEBOUNCE_MS)
+            _state.update { it.copy(isSuggesting = true) }
+            val result = runCatching {
+                searchProvider.suggest(query, com.example.cleancity.domain.map.SochiDefaults.SUGGEST_REGION)
+            }
+            _state.update {
+                it.copy(
+                    suggestions = result.getOrNull() ?: emptyList(),
+                    isSuggesting = false,
+                )
+            }
+        }
     }
 
     fun onDescriptionChanged(description: String) {
@@ -126,6 +166,7 @@ class CreateComplaintScreenModel(
                             latitude = loc.latitude,
                             longitude = loc.longitude,
                             locationStatus = LocationStatus.Ready,
+                            addressSource = if (it.addressSource == AddressSource.None) AddressSource.Gps else it.addressSource,
                         )
                     }
                     reverseGeocode(loc.latitude, loc.longitude)

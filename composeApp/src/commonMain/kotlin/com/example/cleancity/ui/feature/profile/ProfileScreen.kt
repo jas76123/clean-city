@@ -107,7 +107,7 @@ class ProfileScreen : Screen {
                     onMyComplaintsClick = { /* shell-level переключение таба — Day 13 */ },
                     onSettingsClick = {
                         scope.launch {
-                            snackbarHost.showSnackbar("Настройки уведомлений появятся в Day 12 (push)")
+                            snackbarHost.showSnackbar("Появится в ближайшем обновлении")
                         }
                     },
                     onAboutClick = { navigator.push(AboutScreen()) },

@@ -235,18 +235,46 @@ Web admin может быть проще (показываем основной 
 
 **День 9 закрыт 2026-05-17** — 10/12 smoke-сценариев прошли на Medium_Phone AVD (38/38 unit-тестов зелёные). Не прошли: (7) tap на кластер не зумит камеру — `ClusterTapListener` в Yandex MapKit 4.25 не вызывается в Compose-обёртке, проверить на реальном устройстве в Day 10; (12) поворот экрана не восстанавливает MarkerPreviewSheet — Activity recreate без `configChanges` в manifest, фиксится в Day 13 polish. Найден и пофикшен bug в `CategorySheet`: кнопка «Применить» уезжала за пределы sheet при 18 категориях (commit c97d591).
 
+**Day 10 ревью 2026-05-18 (smoke на AVD):** баг #7 шире, чем казалось — и `MapObjectTapListener` (одиночные маркеры) на AVD тоже молчит, не только `ClusterTapListener`. То есть **любые** map-tap события на AVD не доходят до listener'ов. Это означает что MarkerPreview → Detail на AVD проверить невозможно (но код корректен — unit-тесты ✅, компилируется, типы совпадают). Проверять обязательно на реальном Android. См. полный отчёт smoke: `docs/superpowers/checklists/2026-05-18-day10-smoke.md`.
+
 ---
 
-### День 10 (17.05) — Mobile лента + детали жалобы + голос
+### День 10 (17.05) — Mobile лента + детали жалобы + голос + shell-навигация
 
-- [ ] `FeedScreen`: горизонтальная карусель объявлений + список жалоб (`LazyColumn`)
-- [ ] `ComplaintDetailScreen`: фото-pager, мета (адрес/время/автор), VoteCard (счётчик + кнопка), описание, история статусов
-- [ ] Кнопка «Подтверждаю» вызывает `POST /complaints/{id}/votes` (для гостей — диалог «Войдите чтобы поддержать»)
-- [ ] Pull-to-refresh
-- [ ] Фильтр «Все жалобы / Мои» (toggle)
-- [ ] Профиль с менюшками (в MVP большинство — заглушки `flash`)
+**Хост-оболочка (перенесено с Day 9 — не было в плане, обнаружено при ревью 2026-05-17):**
+- [ ] `MainShellScreen` с `BottomNav` (4 item: Лента / Карта / Уведомл. / Профиль) и Voyager `TabNavigator` — становится новым root для `Guest` и `Authenticated` в `App.kt`
+- [ ] `MapTab` оборачивает существующий `MapScreen` (минимум переделок). Внутри каждого таба — собственный sub-`Navigator` для nested-переходов
+- [ ] Бейдж на «Уведомл.» — `GET /notifications/unread-count` polling раз в 30с пока shell виден (FCM откладывается до Day 12, см. [[project_cleancity_notifications]])
+- [ ] Guest на `Profile` / `Notifications` видит заглушку «Войдите …» → `LoginScreen`; `Feed`/`Map` работают
 
-**Checkpoint:** Открыть жалобу из ленты, проголосовать, увидеть обновлённый счётчик. Голос вне аккаунта показывает диалог логина.
+**Лента:**
+- [ ] `FeedScreen`: горизонтальная карусель объявлений (`GET /announcements?limit=5`) + список жалоб `LazyColumn` (`GET /complaints?sort=date&page=...`)
+- [ ] Фильтр «Все жалобы / Мои» (toggle); «Мои» вызывает `GET /complaints/mine` — для автора включает `REJECTED/DUPLICATE` (SPEC §5.3)
+- [ ] Pull-to-refresh + пагинация (infinite scroll, page=0/1/...)
+- [ ] Empty / loading / error состояния
+
+**Детали жалобы и голос:**
+- [ ] `ComplaintDetailScreen`: фото-pager (HorizontalPager + indicator), мета (адрес/время/автор), `VoteCard`, описание, история статусов (timeline из `statusHistory`)
+- [ ] `VoteCard`: **одностороннее «Подтверждаю»** (`POST /complaints/{id}/votes` с `value:1`, повторный тап → `DELETE` для отзыва). Мок `mobile-mockup-v3.html` с yes/no — устарел, идём по SPEC §5.3
+- [ ] Для гостей — диалог «Войдите, чтобы поддержать» → `LoginScreen`
+- [x] Переход из `MarkerPreviewSheet` (карта) → `ComplaintDetailScreen` — на Day 9 был placeholder (перенесено). Реализовано 2026-05-18 + 17 unit-тестов на `ComplaintDetailScreenModel` (всего 59/59 зелёных).
+
+**Map (перенесено с Day 9):**
+- [ ] Map search bar (Yandex Geosuggest): suggest-list по вводу → выбор → `Map.move(camera, point)` на адрес
+- [ ] Smoke #7 (кластер-тап не зумит) — проверить на реальном Android-устройстве. Если воспроизводится — обходной workaround (геометрический hit-test через `MapObjectTapListener` на parent cluster), иначе закрываем
+
+**Профиль с реальными данными:**
+- [ ] Header: имя/email/инициалы из `GET /users/me`
+- [ ] 4 stat-карточки («В обработке / В работе / Решено / Подтверждено») — считаются на клиенте из `/complaints/mine` (группировка по status) + `/complaints/voted` (count). Без нового backend-endpoint
+- [ ] Menu «Мои жалобы» → переключает Feed-tab на toggle «Мои»
+- [ ] Menu «О приложении» — статичный экран (версия, контакты, ссылка на GitHub)
+- [ ] Menu «Выйти» — `authRepo.logout()` (clear токены) → SplashScreen
+- [ ] Edit-кнопка профиля **скрыта** (фаза 2 — требует PATCH `/users/me` + экран редактирования)
+- [ ] Menu «Настройки уведомлений» — `flash`-заглушка до Day 12 (когда подключим FCM-токен)
+
+**Checkpoint:** Открыть жалобу из ленты, проголосовать, увидеть обновлённый счётчик. Голос вне аккаунта показывает диалог логина. Bottom-nav переключает 4 вкладки без потери состояния. Профиль показывает реальное имя + цифры. Поиск адреса на карте центрирует камеру на выбранной точке.
+
+> Дизайн-спека: `docs/superpowers/specs/2026-05-17-day10-feed-detail-vote-design.md`
 
 ---
 

@@ -17,10 +17,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-
-private val AMBER = Color(0xFFF59E0B)
-private val BLUE = Color(0xFF3B82F6)
-private val GREEN = Color(0xFF3AB868)
+import com.example.cleancity.ui.theme.AccentDark
+import com.example.cleancity.ui.theme.Amber
+import com.example.cleancity.ui.theme.Blue
 
 @Composable
 fun MapLegend(modifier: Modifier = Modifier) {
@@ -34,9 +33,9 @@ fun MapLegend(modifier: Modifier = Modifier) {
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            LegendRow(color = AMBER, label = "В обработке")
-            LegendRow(color = BLUE, label = "В работе")
-            LegendRow(color = GREEN, label = "Решено")
+            LegendRow(color = Amber, label = "В обработке")
+            LegendRow(color = Blue, label = "В работе")
+            LegendRow(color = AccentDark, label = "Решено")
         }
     }
 }
@@ -52,9 +51,6 @@ private fun LegendRow(color: Color, label: String) {
                 .size(10.dp)
                 .background(color = color, shape = CircleShape),
         )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-        )
+        Text(text = label, style = MaterialTheme.typography.labelMedium)
     }
 }

@@ -21,6 +21,7 @@ import kotlin.math.roundToLong
 fun MarkerPreviewSheet(
     marker: MapMarker,
     onDismiss: () -> Unit,
+    onOpenDetail: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState()
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
@@ -35,10 +36,9 @@ fun MarkerPreviewSheet(
                 modifier = Modifier.padding(top = 4.dp),
             )
             Button(
-                onClick = { },
-                enabled = false,
+                onClick = onOpenDetail,
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-            ) { Text("Открыть детально (Day 10)") }
+            ) { Text("Открыть детально") }
         }
     }
 }

@@ -1,9 +1,13 @@
 package com.example.cleancity.di
 
+import com.example.cleancity.data.network.AnnouncementsApi
+import com.example.cleancity.data.network.AnnouncementsApiContract
 import com.example.cleancity.data.network.AuthApi
 import com.example.cleancity.data.network.AuthApiContract
 import com.example.cleancity.data.network.ComplaintsApi
 import com.example.cleancity.data.network.ComplaintsApiContract
+import com.example.cleancity.data.network.NotificationsApi
+import com.example.cleancity.data.network.NotificationsApiContract
 import com.example.cleancity.data.network.UserApi
 import com.example.cleancity.data.network.UserApiContract
 import com.example.cleancity.data.network.AuthFailureHandler
@@ -17,7 +21,11 @@ import com.example.cleancity.ui.feature.auth.LoginScreenModel
 import com.example.cleancity.ui.feature.auth.RegisterScreenModel
 import com.example.cleancity.ui.feature.auth.ResetPasswordScreenModel
 import com.example.cleancity.ui.feature.auth.VerifyEmailScreenModel
+import com.example.cleancity.ui.feature.detail.ComplaintDetailScreenModel
+import com.example.cleancity.ui.feature.feed.FeedScreenModel
 import com.example.cleancity.ui.feature.map.MapScreenModel
+import com.example.cleancity.ui.feature.map.MapSearchProvider
+import com.example.cleancity.ui.feature.profile.ProfileScreenModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import org.koin.core.module.Module
@@ -50,13 +58,43 @@ fun appModule(): Module = module {
     single<AuthApiContract> { AuthApi(get<HttpClient>()) }
     single<UserApiContract> { UserApi(get<HttpClient>()) }
     single<ComplaintsApiContract> { ComplaintsApi(get<HttpClient>()) }
+    single<AnnouncementsApiContract> { AnnouncementsApi(get<HttpClient>()) }
+    single<NotificationsApiContract> { NotificationsApi(get<HttpClient>()) }
 
-    single { AuthRepository(get(), get(), get()) }
+    single { com.example.cleancity.data.network.httpClientTokenInvalidator(get()) }
+
+    single { AuthRepository(get(), get(), get(), get()) }
 
     factory { LoginScreenModel(get()) }
     factory { RegisterScreenModel(get()) }
     factory { (email: String) -> VerifyEmailScreenModel(email, get()) }
     factory { ForgotPasswordScreenModel(get()) }
     factory { (token: String) -> ResetPasswordScreenModel(token, get()) }
-    factory { MapScreenModel(get<ComplaintsApiContract>(), get<LocationProvider>()) }
+    factory {
+        MapScreenModel(
+            api = get<ComplaintsApiContract>(),
+            locationProvider = get<LocationProvider>(),
+            searchProvider = get<MapSearchProvider>(),
+        )
+    }
+    factory {
+        FeedScreenModel(
+            complaintsApi = get<ComplaintsApiContract>(),
+            announcementsApi = get<AnnouncementsApiContract>(),
+            authRepo = get(),
+        )
+    }
+    factory { (complaintId: Long) ->
+        ComplaintDetailScreenModel(
+            complaintId = complaintId,
+            complaintsApi = get<ComplaintsApiContract>(),
+            authRepo = get(),
+        )
+    }
+    factory {
+        ProfileScreenModel(
+            complaintsApi = get<ComplaintsApiContract>(),
+            authRepo = get(),
+        )
+    }
 }

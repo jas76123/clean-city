@@ -21,7 +21,7 @@ interface AuthApiContract {
     suspend fun resendVerification(req: ResendVerificationRequest)
     suspend fun login(req: LoginRequest): LoginResponse
     suspend fun refresh(req: RefreshTokenRequest): AuthResponse
-    suspend fun logout()
+    suspend fun logout(refreshToken: String)
     suspend fun forgotPassword(req: ForgotPasswordRequest)
     suspend fun resetPassword(req: ResetPasswordRequest)
 }
@@ -44,8 +44,8 @@ class AuthApi(private val client: HttpClient) : AuthApiContract {
     override suspend fun refresh(req: RefreshTokenRequest): AuthResponse =
         client.post("/auth/refresh") { setBody(req) }.body()
 
-    override suspend fun logout() {
-        client.post("/auth/logout")
+    override suspend fun logout(refreshToken: String) {
+        client.post("/auth/logout") { setBody(RefreshTokenRequest(refreshToken)) }
     }
 
     override suspend fun forgotPassword(req: ForgotPasswordRequest) {

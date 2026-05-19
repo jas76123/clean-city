@@ -54,10 +54,9 @@ fun createHttpClient(
     }
 
     install(Logging) {
-        level = if (isDebug) LogLevel.HEADERS else LogLevel.NONE
-        logger = object : Logger { override fun log(message: String) { println(message) } }
+        level = if (isDebug) LogLevel.ALL else LogLevel.NONE
+        logger = object : Logger { override fun log(message: String) { println("KTOR-HTTP: $message") } }
         sanitizeHeader { name -> name == HttpHeaders.Authorization }
-        filter { req -> !req.url.encodedPath.startsWith("/auth/") }
     }
 
     defaultRequest {

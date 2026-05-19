@@ -29,4 +29,10 @@ data class MapSuggestion(
 data class ReverseGeocodeResult(
     val address: String,
     val district: String?,
+    // Координаты найденного toponym'а от геокодера. Могут отличаться от запрошенных:
+    // если пин стоял посреди двора, Яндекс возвращает ближайший адрес и его координату
+    // на улице/здании. Снапим state на эти координаты, иначе маркер жалобы на карте
+    // окажется не там где написан адрес, а дубликат-чек не найдёт жалобу рядом.
+    val latitude: Double? = null,
+    val longitude: Double? = null,
 )

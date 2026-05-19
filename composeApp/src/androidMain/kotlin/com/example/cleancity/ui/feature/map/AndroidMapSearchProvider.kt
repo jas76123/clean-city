@@ -118,8 +118,19 @@ class AndroidMapSearchProvider : MapSearchProvider {
                     val address = if (parts.isNotEmpty()) parts.joinToString(", ")
                         else obj.name ?: toponym?.address?.formattedAddress.orEmpty()
 
+                    // Координата toponym'а — на ней реально стоит дом/улица из адреса.
+                    // Если её нет (редко), state останется на исходных координатах.
+                    val toponymPoint = obj.geometry.firstOrNull()?.point
+
                     if (cont.isActive) cont.resume(
-                        Result.success(ReverseGeocodeResult(address = address, district = district)),
+                        Result.success(
+                            ReverseGeocodeResult(
+                                address = address,
+                                district = district,
+                                latitude = toponymPoint?.latitude,
+                                longitude = toponymPoint?.longitude,
+                            ),
+                        ),
                     )
                 }
 

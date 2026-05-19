@@ -50,7 +50,13 @@ class MapPickerScreenModel(
             searchProvider.reverseGeocode(lat, lon)
                 .onSuccess { r ->
                     _state.update {
-                        it.copy(address = r.address, district = r.district, isResolving = false)
+                        it.copy(
+                            address = r.address,
+                            district = r.district,
+                            isResolving = false,
+                            currentLat = r.latitude ?: it.currentLat,
+                            currentLon = r.longitude ?: it.currentLon,
+                        )
                     }
                 }
                 .onFailure {
@@ -59,18 +65,16 @@ class MapPickerScreenModel(
         }
     }
 
-    fun confirm() {
+    fun confirm(): Boolean {
         val s = _state.value
-        val addr = s.address ?: return
-        screenModelScope.launch {
-            bus.publish(
-                PickedAddress(
-                    latitude = s.currentLat,
-                    longitude = s.currentLon,
-                    address = addr,
-                    district = s.district,
-                ),
-            )
-        }
+        val addr = s.address ?: return false
+        return bus.tryPublish(
+            PickedAddress(
+                latitude = s.currentLat,
+                longitude = s.currentLon,
+                address = addr,
+                district = s.district,
+            ),
+        )
     }
 }

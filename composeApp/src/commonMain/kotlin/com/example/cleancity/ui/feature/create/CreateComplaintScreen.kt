@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
@@ -35,8 +36,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -71,7 +74,10 @@ import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.DuplicateCandidateResponse
 import com.example.cleancity.shared.models.ProblemCategory
 import com.example.cleancity.ui.feature.detail.ComplaintDetailScreen
+import com.example.cleancity.ui.feature.map.MapSuggestion
+import com.example.cleancity.ui.feature.map.components.AddressSuggestionList
 import com.example.cleancity.ui.feature.map.components.emoji
+import com.example.cleancity.ui.feature.map.picker.MapPickerScreen
 import kotlinx.coroutines.flow.collectLatest
 
 class CreateComplaintScreen : Screen {
@@ -169,8 +175,15 @@ class CreateComplaintScreen : Screen {
 
                 AddressSection(
                     address = state.address,
-                    onAddressChange = model::onAddressChanged,
+                    suggestions = state.suggestions,
+                    isSuggesting = state.isSuggesting,
                     locationStatus = state.locationStatus,
+                    addressSource = state.addressSource,
+                    onAddressChange = model::onAddressChanged,
+                    onSuggestionTap = model::onSuggestionTapped,
+                    onMapPickerClick = {
+                        navigator.push(MapPickerScreen(state.latitude, state.longitude))
+                    },
                 )
 
                 DescriptionSection(
@@ -587,24 +600,68 @@ private fun CategoryCard(
 @Composable
 private fun AddressSection(
     address: String,
-    onAddressChange: (String) -> Unit,
+    suggestions: List<MapSuggestion>,
+    isSuggesting: Boolean,
     locationStatus: LocationStatus,
+    addressSource: AddressSource,
+    onAddressChange: (String) -> Unit,
+    onSuggestionTap: (MapSuggestion) -> Unit,
+    onMapPickerClick: () -> Unit,
 ) {
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             SectionLabel("Адрес")
+
             OutlinedTextField(
                 value = address,
                 onValueChange = onAddressChange,
                 placeholder = { Text("ул. Транспортная, 14") },
-                singleLine = false,
-                maxLines = 2,
+                singleLine = true,
+                trailingIcon = {
+                    if (address.isNotEmpty()) {
+                        IconButton(onClick = { onAddressChange("") }) {
+                            Icon(Icons.Default.Close, contentDescription = "Очистить адрес")
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            if (isSuggesting && suggestions.isEmpty()) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().height(2.dp),
+                )
+            }
+
+            if (suggestions.isNotEmpty()) {
+                AddressSuggestionList(
+                    suggestions = suggestions,
+                    onSuggestionClick = onSuggestionTap,
+                    maxHeight = 240.dp,
+                )
+            }
+
+            OutlinedButton(
+                onClick = onMapPickerClick,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Icon(
+                    Icons.Default.Map,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Выбрать на карте")
+            }
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -616,7 +673,7 @@ private fun AddressSection(
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
-                    text = locationStatus.hint(),
+                    text = addressHint(locationStatus, addressSource),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
                 )
@@ -625,12 +682,17 @@ private fun AddressSection(
     }
 }
 
-private fun LocationStatus.hint(): String = when (this) {
-    LocationStatus.Idle -> "Определяем геопозицию…"
-    LocationStatus.Requesting -> "Получаем GPS…"
-    LocationStatus.Ready -> "Геопозиция определена автоматически"
-    LocationStatus.PermissionDenied -> "Нет разрешения на GPS — введите адрес вручную"
-    is LocationStatus.Failed -> "GPS недоступен — введите адрес вручную"
+private fun addressHint(status: LocationStatus, source: AddressSource): String = when (source) {
+    AddressSource.Picker -> "Адрес выбран на карте"
+    AddressSource.Suggest -> "Адрес выбран из подсказок"
+    AddressSource.Gps -> "Геопозиция определена автоматически"
+    AddressSource.None -> when (status) {
+        LocationStatus.Idle -> "Определяем геопозицию…"
+        LocationStatus.Requesting -> "Получаем GPS…"
+        LocationStatus.Ready -> "Геопозиция определена автоматически"
+        LocationStatus.PermissionDenied -> "Нет разрешения на GPS — введите адрес вручную"
+        is LocationStatus.Failed -> "GPS недоступен — введите адрес вручную"
+    }
 }
 
 // ---------- Description ----------

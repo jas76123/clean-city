@@ -63,6 +63,7 @@ import com.example.cleancity.shared.models.UserResponse
 import org.jetbrains.compose.resources.painterResource
 import com.example.cleancity.ui.feature.auth.LoginScreen
 import com.example.cleancity.ui.feature.auth.RegisterScreen
+import com.example.cleancity.ui.feature.mycomplaints.MyComplaintsScreen
 import com.example.cleancity.ui.theme.Accent
 import com.example.cleancity.ui.theme.AmberLight
 import com.example.cleancity.ui.theme.Blue
@@ -104,7 +105,7 @@ class ProfileScreen : Screen {
                 is ProfileState.Loaded -> LoadedView(
                     user = s.user,
                     stats = s.stats,
-                    onMyComplaintsClick = { /* shell-level переключение таба — Day 13 */ },
+                    onMyComplaintsClick = { navigator.push(MyComplaintsScreen()) },
                     onSettingsClick = {
                         scope.launch {
                             snackbarHost.showSnackbar("Появится в ближайшем обновлении")

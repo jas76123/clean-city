@@ -11,19 +11,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
 
   useEffect(() => {
+    let active = true
     if (!getRefreshToken()) {
       setStatus('unauthenticated')
       return
     }
     refreshAccessToken()
       .then((auth) => {
-        setUser(auth.user)
-        setStatus('authenticated')
+        if (active) applySession(auth)
       })
       .catch(() => {
-        clearSession()
-        setStatus('unauthenticated')
+        if (active) {
+          clearSession()
+          setStatus('unauthenticated')
+        }
       })
+    return () => {
+      active = false
+    }
   }, [])
 
   function applySession(auth: AuthResponse) {

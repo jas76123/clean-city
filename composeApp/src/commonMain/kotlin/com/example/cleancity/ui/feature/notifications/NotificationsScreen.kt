@@ -43,6 +43,7 @@ import com.example.cleancity.ui.components.EmptyState
 import com.example.cleancity.ui.components.ErrorState
 import com.example.cleancity.ui.components.LoadingState
 import com.example.cleancity.ui.feature.auth.LoginScreen
+import com.example.cleancity.ui.feature.auth.RegisterScreen
 import com.example.cleancity.ui.feature.detail.ComplaintDetailScreen
 import com.example.cleancity.ui.feature.notifications.components.NotificationCard
 import com.example.cleancity.ui.feature.shell.tabs.FeedTab
@@ -93,7 +94,17 @@ class NotificationsScreen : Screen {
                             subtitle = "Уведомления о статусе ваших жалоб и объявления " +
                                 "доступны после входа в аккаунт.",
                             action = {
-                                Button(onClick = { navigator.push(LoginScreen()) }) { Text("Войти") }
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Button(onClick = { navigator.push(LoginScreen()) }) {
+                                        Text("Войти")
+                                    }
+                                    TextButton(onClick = { navigator.push(RegisterScreen()) }) {
+                                        Text("Зарегистрироваться")
+                                    }
+                                }
                             },
                             modifier = Modifier.fillMaxSize(),
                         )

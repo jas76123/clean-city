@@ -24,7 +24,11 @@ import java.io.File
 /** Backend ImageProcessor: 10 MB hard cap. */
 private const val MAX_PHOTO_BYTES = 10L * 1024 * 1024
 
-class PhotoTooLargeException(val sizeBytes: Long) : RuntimeException()
+internal class PhotoTooLargeException(val sizeBytes: Long) : RuntimeException()
+internal class PhotoReadFailedException(message: String) : RuntimeException(message)
+
+private fun bytesToCeilMb(bytes: Long): Int =
+    ((bytes + 1024L * 1024L - 1) / (1024L * 1024L)).toInt()
 
 @Composable
 actual fun rememberPhotoPickerLauncher(
@@ -55,11 +59,12 @@ actual fun rememberPhotoPickerLauncher(
             var tooLargeMb: Int? = null
             for (uri in uris.take(limit)) {
                 try {
-                    readPhotoFromUri(context, uri)?.let { photos.add(it) }
+                    photos.add(readPhotoFromUri(context, uri))
                 } catch (e: PhotoTooLargeException) {
-                    tooLargeMb = (e.sizeBytes / 1024 / 1024).toInt()
-                } catch (_: Throwable) {
-                    // прочие ошибки чтения (broken URI и т.п.) — тихо игнорируем
+                    tooLargeMb = bytesToCeilMb(e.sizeBytes)
+                } catch (e: Throwable) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    // broken URI, SecurityException и т.п. — тихо игнорируем
                 }
             }
             withContext(Dispatchers.Main) {
@@ -80,10 +85,12 @@ actual fun rememberPhotoPickerLauncher(
                 readPhotoFromUri(context, uri)
             } catch (e: PhotoTooLargeException) {
                 withContext(Dispatchers.Main) {
-                    currentTooLarge.value((e.sizeBytes / 1024 / 1024).toInt())
+                    currentTooLarge.value(bytesToCeilMb(e.sizeBytes))
                 }
                 null
-            } catch (_: Throwable) {
+            } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                // broken URI, SecurityException и т.п. — тихо игнорируем
                 null
             }
             if (photo != null) {
@@ -155,9 +162,9 @@ private fun createCameraOutputUri(context: Context): Uri {
     )
 }
 
-private fun readPhotoFromUri(context: Context, uri: Uri): PhotoBytes? {
+private fun readPhotoFromUri(context: Context, uri: Uri): PhotoBytes {
     val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-        ?: return null
+        ?: throw PhotoReadFailedException("Не удалось открыть файл: $uri")
     if (bytes.size > MAX_PHOTO_BYTES) {
         throw PhotoTooLargeException(bytes.size.toLong())
     }

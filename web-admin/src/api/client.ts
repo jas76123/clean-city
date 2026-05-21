@@ -70,6 +70,9 @@ api.interceptors.response.use(
       } catch {
         clearSession()
         if (window.location.pathname !== '/login') {
+          // Hard-redirect intentionally: this interceptor runs outside React/router context.
+          // A full page reload re-runs AuthProvider, which sees no refresh token and
+          // settles on status=unauthenticated, landing the user on the login page cleanly.
           window.location.href = '/login'
         }
         return Promise.reject(error)

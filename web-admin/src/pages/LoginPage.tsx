@@ -28,8 +28,12 @@ export function LoginPage() {
     setBusy(true)
     try {
       const res = await login(email, password)
-      if (res.requires2fa && res.challengeToken) {
-        setChallengeToken(res.challengeToken)
+      if (res.requires2fa) {
+        if (res.challengeToken) {
+          setChallengeToken(res.challengeToken)
+        } else {
+          setError('Не удалось начать двухфакторную проверку. Попробуйте ещё раз.')
+        }
       }
     } catch (err) {
       setError(extractApiError(err).message)

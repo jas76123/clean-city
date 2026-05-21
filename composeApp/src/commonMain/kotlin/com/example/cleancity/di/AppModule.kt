@@ -119,6 +119,7 @@ fun appModule(): Module = module {
         NotificationsScreenModel(
             api = get<NotificationsApiContract>(),
             unreadCountStore = get<UnreadCountStore>(),
+            authRepo = get(),
         )
     }
     factory {

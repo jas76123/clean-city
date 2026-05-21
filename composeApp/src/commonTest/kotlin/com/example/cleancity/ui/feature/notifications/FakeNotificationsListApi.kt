@@ -12,14 +12,18 @@ class FakeNotificationsListApi : NotificationsApiContract {
         Result.success(MarkAllReadResponse(markedCount = 0))
     var markReadShouldThrow: Boolean = false
 
+    var listCalls: Int = 0
+        private set
     val markReadCalls = mutableListOf<Long>()
     var markAllReadCalls: Int = 0
         private set
 
     override suspend fun unreadCount(): UnreadCountResponse = UnreadCountResponse(count = 0)
 
-    override suspend fun list(limit: Int): NotificationListResponse =
-        nextListResult.getOrThrow()
+    override suspend fun list(limit: Int): NotificationListResponse {
+        listCalls += 1
+        return nextListResult.getOrThrow()
+    }
 
     override suspend fun markRead(id: Long) {
         markReadCalls += id

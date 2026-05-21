@@ -19,6 +19,7 @@ sealed interface NotificationsState {
     data class Loaded(
         val items: List<NotificationResponse>,
         val isRefreshing: Boolean = false,
+        val transientError: String? = null,
     ) : NotificationsState {
         val unreadCount: Int get() = items.count { it.readAt == null }
     }
@@ -36,6 +37,7 @@ class NotificationsScreenModel(
 
     /** Грузит список. Вызывается при открытии экрана; повторно — через pull-to-refresh. */
     fun load() {
+        if (_state.value is NotificationsState.Loading) return  // уже загружается — не дублировать запрос
         if (_state.value !is NotificationsState.Loaded) {
             _state.value = NotificationsState.Loading
         }
@@ -80,12 +82,14 @@ class NotificationsScreenModel(
         screenModelScope.launch {
             runCatching { api.markRead(id) }
                 .onFailure {
-                    // откат: возвращаем элемент в непрочитанное
+                    // откат: возвращаем элемент в непрочитанное и восстанавливаем бейдж
+                    unreadCountStore.increment(1)
                     _state.update { s ->
                         val l = s as? NotificationsState.Loaded ?: return@update s
-                        l.copy(items = l.items.map {
-                            if (it.id == id) it.copy(readAt = null) else it
-                        })
+                        l.copy(
+                            items = l.items.map { if (it.id == id) it.copy(readAt = null) else it },
+                            transientError = "Не удалось отметить уведомление прочитанным",
+                        )
                     }
                 }
         }
@@ -104,11 +108,20 @@ class NotificationsScreenModel(
         screenModelScope.launch {
             runCatching { api.markAllRead() }
                 .onFailure {
-                    // откат к снимку до отметки
+                    // откат к снимку до отметки и восстановление бейджа
+                    unreadCountStore.increment(unread)
                     _state.update { s ->
-                        if (s is NotificationsState.Loaded) loaded else s
+                        if (s is NotificationsState.Loaded) {
+                            loaded.copy(transientError = "Не удалось отметить уведомления прочитанными")
+                        } else s
                     }
                 }
+        }
+    }
+
+    fun clearTransientError() {
+        _state.update { s ->
+            if (s is NotificationsState.Loaded) s.copy(transientError = null) else s
         }
     }
 

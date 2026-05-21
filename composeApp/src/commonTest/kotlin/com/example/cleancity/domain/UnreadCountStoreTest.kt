@@ -127,4 +127,18 @@ class UnreadCountStoreTest {
         assertEquals(3, store.state.value)
         store.stop()
     }
+
+    @Test
+    fun `increment increases state`() = runTest {
+        val api = FakeNotificationsApi().apply { nextCount = 2L }
+        val store = newStore(api, this)
+
+        store.start()
+        testScheduler.runCurrent()
+        assertEquals(2, store.state.value)
+
+        store.increment(3)
+        assertEquals(5, store.state.value)
+        store.stop()
+    }
 }

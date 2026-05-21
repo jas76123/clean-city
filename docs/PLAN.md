@@ -381,16 +381,20 @@ Web admin может быть проще (показываем основной 
 
 ### День 15 (22.05) — Web admin scaffold + auth
 
-- [ ] `cleancity-kmp/web-admin/` — `npm create vite@latest -- --template react-ts`
-- [ ] tailwindcss + shadcn/ui (быстрая разработка с готовыми компонентами)
-- [ ] Структура: `src/api/` (axios + типы), `src/pages/`, `src/components/`, `src/hooks/`
-- [ ] API клиент с auto-refresh JWT (axios interceptors)
-- [ ] `LoginPage` — email + password + 2FA-step
-- [ ] `LoginPage` обязательная смена пароля при `must_change_password=true`
-- [ ] Layout (sidebar + topbar) — стиль из `admin-dashboard-v2.html`
-- [ ] Protected route wrapper
+- [x] `cleancity-kmp/web-admin/` — `npm create vite@latest -- --template react-ts`
+- [x] tailwindcss v4 + shadcn/ui (быстрая разработка с готовыми компонентами)
+- [x] Структура: `src/api/` (axios + типы), `src/pages/`, `src/components/`, `src/hooks/`
+- [x] API клиент с auto-refresh JWT (axios interceptors) + single-flight refresh
+- [x] `LoginPage` — email + password + 2FA-step
+- [x] `AcceptInvitePage` — установка пароля по invite-токену (флаг `must_change_password` фронтом не используется — `UserResponse` его не отдаёт; см. дизайн Day 15)
+- [x] `ForgotPasswordPage` + `ResetPasswordPage` (полный auth-флоу)
+- [x] Layout (sidebar + topbar) — стиль из `admin-dashboard-v2.html`
+- [x] Protected route wrapper
+- [x] TanStack Query, заглушки разделов, тесты (Vitest, 20 зелёных)
 
-**Checkpoint:** Логин админа работает, после логина видно пустой dashboard.
+**Checkpoint:** Логин админа работает, после логина видно Layout с сайдбаром и заглушками разделов. ⚠ Ручная проверка с реальным backend — отдельным шагом (нужен seed-админ).
+
+**Дизайн/план:** `docs/superpowers/specs/2026-05-22-day15-web-admin-scaffold-design.md`, `docs/superpowers/plans/2026-05-22-day15-web-admin-scaffold.md`
 
 ---
 

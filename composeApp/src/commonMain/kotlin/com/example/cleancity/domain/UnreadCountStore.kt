@@ -45,4 +45,9 @@ class UnreadCountStore(
     fun decrement(by: Int = 1) {
         _state.value = (_state.value - by).coerceAtLeast(0)
     }
+
+    /** Локально увеличить счётчик (откат отметки прочитанным при ошибке сети). */
+    fun increment(by: Int = 1) {
+        _state.value = _state.value + by
+    }
 }

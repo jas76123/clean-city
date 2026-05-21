@@ -15,6 +15,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class NotificationsScreenModelTest {
@@ -133,6 +134,8 @@ class NotificationsScreenModelTest {
 
         val state = model.state.value as NotificationsState.Loaded
         assertEquals(null, state.items.first { it.id == 1L }.readAt)  // откат — снова непрочитано
+        assertEquals(1, store.state.value)  // бейдж восстановлен: 1 -> 0 -> 1
+        assertNotNull(state.transientError)  // snackbar-ошибка выставлена
         store.stop()
     }
 
@@ -152,6 +155,26 @@ class NotificationsScreenModelTest {
         assertTrue(state.items.all { it.readAt != null })
         assertEquals(1, api.markAllReadCalls)
         assertEquals(0, store.state.value)
+        store.stop()
+    }
+
+    @Test fun `markAllRead rolls back on api failure`() = runTest {
+        val api = FakeNotificationsListApi().apply {
+            nextListResult = Result.success(
+                NotificationListResponse(listOf(notification(1), notification(2)), 2, false)
+            )
+            nextMarkAllResult = Result.failure(RuntimeException("нет сети"))
+        }
+        val store = seededStore(2)
+        val model = NotificationsScreenModel(api, store)
+        model.load()
+
+        model.markAllRead()
+
+        val state = model.state.value as NotificationsState.Loaded
+        assertTrue(state.items.all { it.readAt == null })  // откат — все непрочитаны
+        assertEquals(2, store.state.value)             // бейдж восстановлен
+        assertNotNull(state.transientError)             // snackbar-ошибка выставлена
         store.stop()
     }
 

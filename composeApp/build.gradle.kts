@@ -20,6 +20,11 @@ val apiBaseUrl: String =
         ?: System.getenv("API_BASE_URL")
         ?: "http://10.0.2.2:8080"
 
+val keystorePropsFile = rootProject.file("keystore.properties")
+val keystoreProps = Properties().apply {
+    if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
+}
+
 kotlin {
     androidTarget {
         compilations.all {
@@ -83,13 +88,29 @@ android {
         manifestPlaceholders["YANDEX_MAPS_API_KEY"] = yandexMapsApiKey
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
     }
+    signingConfigs {
+        if (keystorePropsFile.exists()) {
+            create("release") {
+                storeFile = file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
     buildTypes {
         debug {
             buildConfigField("boolean", "IS_DEBUG", "true")
         }
         release {
             buildConfigField("boolean", "IS_DEBUG", "false")
-            isMinifyEnabled = false  // Day 13 включит proguard
+            isMinifyEnabled = true
+            isShrinkResources = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {

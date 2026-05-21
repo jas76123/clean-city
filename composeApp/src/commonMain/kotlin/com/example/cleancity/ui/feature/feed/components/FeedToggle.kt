@@ -36,7 +36,7 @@ fun FeedToggle(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         ToggleChip(
-            text = "🌍 Все жалобы",
+            text = "Все жалобы",
             selected = mode == FeedMode.ALL,
             enabled = true,
             onClick = { onModeChange(FeedMode.ALL) },

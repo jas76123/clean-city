@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Button
@@ -63,7 +62,6 @@ import com.example.cleancity.shared.models.UserResponse
 import org.jetbrains.compose.resources.painterResource
 import com.example.cleancity.ui.feature.auth.LoginScreen
 import com.example.cleancity.ui.feature.auth.RegisterScreen
-import com.example.cleancity.ui.feature.mycomplaints.MyComplaintsScreen
 import com.example.cleancity.ui.theme.Accent
 import com.example.cleancity.ui.theme.AmberLight
 import com.example.cleancity.ui.theme.Blue
@@ -105,7 +103,6 @@ class ProfileScreen : Screen {
                 is ProfileState.Loaded -> LoadedView(
                     user = s.user,
                     stats = s.stats,
-                    onMyComplaintsClick = { navigator.push(MyComplaintsScreen()) },
                     onSettingsClick = {
                         scope.launch {
                             snackbarHost.showSnackbar("Появится в ближайшем обновлении")
@@ -191,7 +188,6 @@ private fun GuestPromptView(onLoginClick: () -> Unit, onRegisterClick: () -> Uni
 private fun LoadedView(
     user: UserResponse,
     stats: ProfileStats,
-    onMyComplaintsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onAboutClick: () -> Unit,
     onLogoutClick: () -> Unit,
@@ -202,7 +198,6 @@ private fun LoadedView(
         ProfileStatsGrid(stats = stats)
         Spacer(Modifier.height(16.dp))
         ProfileMenu(
-            onMyComplaintsClick = onMyComplaintsClick,
             onSettingsClick = onSettingsClick,
             onAboutClick = onAboutClick,
             onLogoutClick = onLogoutClick,
@@ -326,7 +321,6 @@ private fun StatCardView(card: StatCard, modifier: Modifier = Modifier) {
 
 @Composable
 private fun ProfileMenu(
-    onMyComplaintsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onAboutClick: () -> Unit,
     onLogoutClick: () -> Unit,
@@ -337,7 +331,6 @@ private fun ProfileMenu(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        MenuItemRow(icon = Icons.Default.ListAlt, label = "Мои жалобы", onClick = onMyComplaintsClick)
         MenuItemRow(icon = Icons.Default.NotificationsActive, label = "Настройки уведомлений", onClick = onSettingsClick)
         MenuItemRow(icon = Icons.Default.Info, label = "О приложении", onClick = onAboutClick)
         MenuItemRow(

@@ -12,6 +12,7 @@ import com.example.cleancity.shared.requests.auth.ResetPasswordRequest
 import com.example.cleancity.shared.requests.auth.VerifyEmailRequest
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 
@@ -24,6 +25,7 @@ interface AuthApiContract {
     suspend fun logout(refreshToken: String)
     suspend fun forgotPassword(req: ForgotPasswordRequest)
     suspend fun resetPassword(req: ResetPasswordRequest)
+    suspend fun deleteAccount()
 }
 
 class AuthApi(private val client: HttpClient) : AuthApiContract {
@@ -54,5 +56,9 @@ class AuthApi(private val client: HttpClient) : AuthApiContract {
 
     override suspend fun resetPassword(req: ResetPasswordRequest) {
         client.post("/auth/reset-password") { setBody(req) }
+    }
+
+    override suspend fun deleteAccount() {
+        client.delete("/auth/me")
     }
 }

@@ -242,35 +242,35 @@ Web admin может быть проще (показываем основной 
 ### День 10 (17.05) — Mobile лента + детали жалобы + голос + shell-навигация
 
 **Хост-оболочка (перенесено с Day 9 — не было в плане, обнаружено при ревью 2026-05-17):**
-- [ ] `MainShellScreen` с `BottomNav` (4 item: Лента / Карта / Уведомл. / Профиль) и Voyager `TabNavigator` — становится новым root для `Guest` и `Authenticated` в `App.kt`
-- [ ] `MapTab` оборачивает существующий `MapScreen` (минимум переделок). Внутри каждого таба — собственный sub-`Navigator` для nested-переходов
-- [ ] Бейдж на «Уведомл.» — `GET /notifications/unread-count` polling раз в 30с пока shell виден (FCM откладывается до Day 12, см. [[project_cleancity_notifications]])
-- [ ] Guest на `Profile` / `Notifications` видит заглушку «Войдите …» → `LoginScreen`; `Feed`/`Map` работают
+- [x] `MainShellScreen` с `BottomNav` (4 item: Лента / Карта / Уведомл. / Профиль) и Voyager `TabNavigator` — становится новым root для `Guest` и `Authenticated` в `App.kt`
+- [x] `MapTab` оборачивает существующий `MapScreen` (минимум переделок). Внутри каждого таба — собственный sub-`Navigator` для nested-переходов
+- [x] Бейдж на bell в `FeedTopBar` — `UnreadCountStore` (Koin singleton) поллит `GET /notifications/unread-count` раз в 30с; lifecycle через `MainShellScreen.LaunchedEffect(authState)`. Фактически badge живёт на колокольчике в FeedTopBar, а не на NavigationBar item — решение принято при реализации Day 10. Закрыто 2026-05-19.
+- [x] Guest на `Profile` / `Notifications` видит заглушку «Войдите …» → `LoginScreen`; `Feed`/`Map` работают
 
 **Лента:**
-- [ ] `FeedScreen`: горизонтальная карусель объявлений (`GET /announcements?limit=5`) + список жалоб `LazyColumn` (`GET /complaints?sort=date&page=...`)
-- [ ] Фильтр «Все жалобы / Мои» (toggle); «Мои» вызывает `GET /complaints/mine` — для автора включает `REJECTED/DUPLICATE` (SPEC §5.3)
-- [ ] Pull-to-refresh + пагинация (infinite scroll, page=0/1/...)
-- [ ] Empty / loading / error состояния
+- [x] `FeedScreen`: горизонтальная карусель объявлений (`GET /announcements?limit=5`) + список жалоб `LazyColumn` (`GET /complaints?sort=date&page=...`)
+- [x] Фильтр «Все жалобы / Мои» (toggle); «Мои» вызывает `GET /complaints/mine` — для автора включает `REJECTED/DUPLICATE` (SPEC §5.3)
+- [x] Pull-to-refresh + пагинация (infinite scroll, page=0/1/...)
+- [x] Empty / loading / error состояния
 
 **Детали жалобы и голос:**
-- [ ] `ComplaintDetailScreen`: фото-pager (HorizontalPager + indicator), мета (адрес/время/автор), `VoteCard`, описание, история статусов (timeline из `statusHistory`)
-- [ ] `VoteCard`: **одностороннее «Подтверждаю»** (`POST /complaints/{id}/votes` с `value:1`, повторный тап → `DELETE` для отзыва). Мок `mobile-mockup-v3.html` с yes/no — устарел, идём по SPEC §5.3
-- [ ] Для гостей — диалог «Войдите, чтобы поддержать» → `LoginScreen`
+- [x] `ComplaintDetailScreen`: фото-pager (HorizontalPager + indicator), мета (адрес/время/автор), `VoteCard`, описание, история статусов (timeline из `statusHistory`)
+- [x] `VoteCard`: **одностороннее «Подтверждаю»** (`POST /complaints/{id}/votes` с `value:1`, повторный тап → `DELETE` для отзыва). Мок `mobile-mockup-v3.html` с yes/no — устарел, идём по SPEC §5.3
+- [x] Для гостей — диалог «Войдите, чтобы поддержать» → `LoginScreen`
 - [x] Переход из `MarkerPreviewSheet` (карта) → `ComplaintDetailScreen` — на Day 9 был placeholder (перенесено). Реализовано 2026-05-18 + 17 unit-тестов на `ComplaintDetailScreenModel` (всего 59/59 зелёных).
 
 **Map (перенесено с Day 9):**
-- [ ] Map search bar (Yandex Geosuggest): suggest-list по вводу → выбор → `Map.move(camera, point)` на адрес
-- [ ] Smoke #7 (кластер-тап не зумит) — проверить на реальном Android-устройстве. Если воспроизводится — обходной workaround (геометрический hit-test через `MapObjectTapListener` на parent cluster), иначе закрываем
+- [x] Map search bar (Yandex Geosuggest): suggest-list по вводу → выбор → `Map.move(camera, point)` на адрес
+- [x] Smoke #7 (кластер-тап не зумит) — закрыто 2026-05-19: на реальном Samsung A33 5G cluster-tap корректно зумит камеру; AVD-only баг в обёртке Yandex MapKit ↔ Compose, workaround не нужен
 
 **Профиль с реальными данными:**
-- [ ] Header: имя/email/инициалы из `GET /users/me`
-- [ ] 4 stat-карточки («В обработке / В работе / Решено / Подтверждено») — считаются на клиенте из `/complaints/mine` (группировка по status) + `/complaints/voted` (count). Без нового backend-endpoint
-- [ ] Menu «Мои жалобы» → переключает Feed-tab на toggle «Мои»
-- [ ] Menu «О приложении» — статичный экран (версия, контакты, ссылка на GitHub)
-- [ ] Menu «Выйти» — `authRepo.logout()` (clear токены) → SplashScreen
-- [ ] Edit-кнопка профиля **скрыта** (фаза 2 — требует PATCH `/users/me` + экран редактирования)
-- [ ] Menu «Настройки уведомлений» — `flash`-заглушка до Day 12 (когда подключим FCM-токен)
+- [x] Header: имя/email/инициалы из `GET /users/me`
+- [x] 4 stat-карточки («В обработке / В работе / Решено / Подтверждено») — считаются на клиенте из `/complaints/mine` (группировка по status) + `/complaints/voted` (count). Без нового backend-endpoint
+- [x] Menu «Мои жалобы» → переключает Feed-tab на toggle «Мои»
+- [x] Menu «О приложении» — статичный экран (версия, контакты, ссылка на GitHub)
+- [x] Menu «Выйти» — `authRepo.logout()` (clear токены) → SplashScreen
+- [x] Edit-кнопка профиля **скрыта** (фаза 2 — требует PATCH `/users/me` + экран редактирования)
+- [x] Menu «Настройки уведомлений» — snackbar «Появится в ближайшем обновлении» до подключения FCM (Day 12+)
 
 **Checkpoint:** Открыть жалобу из ленты, проголосовать, увидеть обновлённый счётчик. Голос вне аккаунта показывает диалог логина. Bottom-nav переключает 4 вкладки без потери состояния. Профиль показывает реальное имя + цифры. Поиск адреса на карте центрирует камеру на выбранной точке.
 
@@ -295,6 +295,8 @@ Web admin может быть проще (показываем основной 
 **Stage B закрыт 2026-05-19:** address picker (`MapPickerScreen`) + inline suggest в `AddressSection`. `AddressPickerBus` (Koin single) передаёт `PickedAddress` обратно через `tryEmit`. `ReverseGeocodeResult` снапит state.lat/lon на координаты найденного toponym'а от Яндекса — иначе маркер жалобы и дубликат-чек уезжали в сторону от написанного адреса. Дубликат-чек теперь срабатывает и при чисто ручном вводе адреса (по координатам первой подсказки). UX: автоскролл к блоку дубликатов, человеко-читаемое расстояние («тот же адрес» / «N м» / «N.X км»). Backend default duplicate radius поднят 100м → 500м. Полный smoke трёх путей (GPS / Suggest / Picker) на Samsung A33 — частично проверен, остаётся финальный прогон.
 
 **Checkpoint:** На реальном устройстве: сфотографировать → выбрать категорию → отправить → жалоба появляется в ленте и на карте.
+
+**Финальный smoke закрыт 2026-05-20:** ERR-сценарии проверены на Samsung A33 5G. Выявлены и исправлены 2 бага (T7-фиксы, commits `40a88bf`, `1d60c49`, `784b467`): (1) `canSubmit` не требовал Yandex-валидированного адреса — можно было отправить жалобу с координатами, не соответствующими тексту адреса; (2) фото >10MB отбрасывалось без какого-либо feedback. Также: submit при недоступном backend теперь даёт явный AlertDialog «Нет интернета». Ретест — 8/8 сценариев зелёные. Day 10 хвосты закрыты в той же сессии (UnreadCountStore polling + snackbar). Полный отчёт: `docs/superpowers/checklists/2026-05-19-day10-11-tails-smoke.md`, дизайн/план: `docs/superpowers/specs/2026-05-19-day10-11-tails-design.md`.
 
 ---
 

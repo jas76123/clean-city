@@ -50,4 +50,18 @@ class ProfileScreenModelTest {
 
         assertIs<DeleteAccountState.Error>(model.deleteState.value)
     }
+
+    @Test fun `dismissDeleteError resets state to Idle after error`() = runTest {
+        val authApi = FakeAuthApi(
+            deleteAccountResult = Result.failure(ApiException(ApiError("SERVER", "boom"), 500)),
+        )
+        val (model, _) = buildModel(authApi)
+
+        model.deleteAccount()
+        testScheduler.advanceUntilIdle()
+
+        model.dismissDeleteError()
+
+        assertEquals(DeleteAccountState.Idle, model.deleteState.value)
+    }
 }

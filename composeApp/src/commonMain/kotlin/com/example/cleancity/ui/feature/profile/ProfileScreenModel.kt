@@ -97,6 +97,7 @@ class ProfileScreenModel(
     }
 
     fun dismissDeleteError() {
+        if (_deleteState.value !is DeleteAccountState.Error) return
         _deleteState.value = DeleteAccountState.Idle
     }
 }

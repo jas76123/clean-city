@@ -346,12 +346,32 @@ Web admin может быть проще (показываем основной 
 
 ### День 14 (21.05) — Mobile буфер + интеграция
 
-- [ ] Запас на исправление багов из дня 13 (опыт показывает, что на полировке всегда что-то всплывает)
-- [ ] Интеграция фронт↔бэк: проверить что mobile реально работает с production-конфигурацией backend
-- [ ] **FCM SDK + системные push** (отложено из Day 12) — настроить, если останется время. ⚠️ Если FCM не реализуется — привести `backend/.../legal/privacy-policy.md` в соответствие с polling-каналом (убрать заявленный сбор FCM-токена и передачу в Firebase) **до** подачи в RuStore.
-- [ ] Если успели — записать короткое скринкаст-видео мобильного приложения
+> **Закрыт 2026-05-21.** Багов из smoke на A33 нет — буфер не понадобился.
+> Polling-канал уведомлений проверен end-to-end на реальном устройстве через
+> `ops/trigger-status-change.sh` (статусы IN_PROGRESS и REJECTED): бейдж, unread,
+> детали — всё работает. Отчёт: `docs/superpowers/checklists/2026-05-21-day14-polling-smoke.md`.
+> Дизайн+план: `docs/superpowers/specs/2026-05-21-day14-buffer-integration-design.md`,
+> `docs/superpowers/plans/2026-05-21-day14-buffer-integration.md`.
+> FCM/Firebase — решение отложено. privacy-policy и скринкаст перенесены в чек-лист
+> «перед публикацией» (см. ниже).
+
+- [x] Запас на исправление багов из дня 13 (опыт показывает, что на полировке всегда что-то всплывает) — багов нет
+- [x] Интеграция фронт↔бэк: проверить что mobile реально работает с production-конфигурацией backend
+- [ ] **FCM SDK + системные push** (отложено из Day 12) — настроить, если останется время. ⚠️ Если FCM не реализуется — привести `backend/.../legal/privacy-policy.md` в соответствие с polling-каналом (убрать заявленный сбор FCM-токена и передачу в Firebase) **до** подачи в RuStore. — **решение отложено** (брейншторм 2026-05-21)
+- [ ] Если успели — записать короткое скринкаст-видео мобильного приложения — перенесён в чек-лист «перед публикацией»
 
 ⚠ **В backlog (если не успеваем):** UI-tests, Compose Previews для всех экранов, dark mode.
+
+**Аудит интеграции фронт↔бэк (2026-05-21):**
+- `API_BASE_URL` — единственное build-config значение из `secrets.properties`/env,
+  одно на debug и release (нет per-build-type разделения). Per-build-type split
+  решено НЕ делать (YAGNI) — значение меняется вручную перед release-сборкой.
+- `usesCleartextTraffic="true"` оставлен — нужен для локального HTTP через `adb reverse`.
+- Полноценная интеграция против задеплоенного backend невозможна до Day 18 — перенесена туда.
+
+**Чек-лист «перед публикацией» (не привязан к Day 14, обязателен до подачи в RuStore):**
+- [ ] Привести `backend/.../legal/privacy-policy.md` в соответствие с итоговым решением по FCM (если Firebase не делаем — убрать заявленный сбор FCM-токена и передачу в Firebase, привести к polling-формулировке).
+- [ ] Записать короткий скринкаст happy-path на A33: регистрация → создание жалобы → голос → получение уведомления.
 
 **Checkpoint конца недели 2:** Mobile работает end-to-end на реальном Android. Backend локальный или dev-cloud. Готовы к web admin.
 
@@ -419,6 +439,8 @@ Web admin может быть проще (показываем основной 
 
 ### День 18 (25.05) — Деплой на Yandex Cloud
 
+- [ ] Сменить `API_BASE_URL` в `secrets.properties` на боевой HTTPS-URL **до** release-сборки (хвост Day 14).
+- [ ] Ужесточить network security: убрать `usesCleartextTraffic="true"` из `AndroidManifest.xml` либо сузить до конкретного хоста через network-security-config (хвост Day 14).
 - [ ] Создать ВМ в Yandex Cloud (Ubuntu 24.04, 2 vCPU, 4GB RAM, 30GB SSD, public IP)
 - [ ] Настроить SSH по ключу, установить Docker + Docker Compose
 - [ ] Создать Object Storage bucket `cleancity-photos-prod` + сервисный ключ

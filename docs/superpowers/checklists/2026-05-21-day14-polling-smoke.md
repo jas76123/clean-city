@@ -1,0 +1,26 @@
+# Day 14 — Smoke polling-канала (Samsung A33 5G)
+
+**Дата прогона:** 2026-05-21
+**Backend:** локальный, Docker (`cleancity-kmp-backend-1`, healthy), порт 8081, dev-сидка применена
+**БД:** Docker (`cleancity-kmp-db-1`)
+**Устройство:** Samsung A33 5G (serial `RZCW111EQWH`), debug-APK, `adb reverse tcp:8081`
+**Аккаунт на устройстве:** `agababanz07@gmail.com` (user id 11)
+**Триггер:** `ops/trigger-status-change.sh` (логин dev-админом `admin@cleancity.dev`)
+
+| # | Сценарий | Результат | Заметки |
+|---|----------|-----------|---------|
+| 1 | Жалоба автора существует, статус NEW | OK | Жалоба #61 (GREENERY), #57 (PLAYGROUNDS) — обе автора 11 |
+| 2 | PATCH IN_PROGRESS (#61) → HTTP 200 | OK | `statusHistory` содержит переход NEW→IN_PROGRESS |
+| 3 | Бейдж на колокольчике появляется ≤30с | OK | Поллинг `UnreadCountStore` (`/notifications/unread-count`) |
+| 4 | Уведомление в списке с unread-меткой | OK | notification #2 «Ваша жалоба принята в работу» |
+| 5 | Тап → детали жалобы, unread снят | OK | В БД у notification #2 проставился `read_at` |
+| 6 | PATCH REJECTED (#57) → HTTP 200 | OK | notification #3 «Жалоба отклонена» создана |
+| 7 | Блок «Решение администрации» в деталях | OK | Комментарий админа отображается в деталях #57 |
+
+**Вывод:** polling-канал уведомлений работает end-to-end. Смена статуса жалобы
+через backend API создаёт уведомление автору; мобильное приложение опросом
+подхватывает unread-счётчик (бейдж ≤30с), показывает запись в списке с unread-меткой,
+тап открывает детали жалобы и снимает unread; для статуса REJECTED в деталях виден
+блок «Решение администрации» с комментарием администратора.
+
+**Найденные дефекты:** нет.

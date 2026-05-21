@@ -47,8 +47,10 @@ USER app
 EXPOSE 8080
 
 # Healthcheck лезет в /health (без auth, без security headers'ом проверки).
+# Порт берётся из KTOR_PORT (прокидывается через env_file в docker-compose);
+# fallback 8080 — дефолт Ktor, если переменная не задана.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD curl -fsS http://localhost:8080/health || exit 1
+    CMD curl -fsS http://localhost:${KTOR_PORT:-8080}/health || exit 1
 
 # Ktor читает порт из application.conf / ENV; default 8080.
 ENTRYPOINT ["./bin/backend"]

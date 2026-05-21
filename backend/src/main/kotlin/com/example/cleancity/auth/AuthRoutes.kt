@@ -222,6 +222,15 @@ fun Route.authRoutes(
                 else throw NotFoundException("Session not found", ErrorCodes.SESSION_NOT_FOUND)
             }
 
+            delete("/me") {
+                val userId = call.requireUserId()
+                if (call.requireRole() != UserRole.RESIDENT) {
+                    throw ForbiddenException("Сотрудники удаляются администратором")
+                }
+                service.deleteOwnAccount(userId, call.clientIp(), call.userAgentSafe())
+                call.respond(HttpStatusCode.NoContent)
+            }
+
             post("/admin/invite") {
                 val actorId = call.requireUserId()
                 val role = call.requireRole()

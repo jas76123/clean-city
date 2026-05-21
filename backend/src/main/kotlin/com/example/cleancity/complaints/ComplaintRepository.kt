@@ -359,7 +359,14 @@ class ComplaintRepository {
     }
 
     private fun ResultRow.toComplaintRow(): ComplaintRow {
-        val authorName = runCatching { this[Users.fullName] }.getOrNull()
+        // Запрос жалоб делает LEFT JOIN Users, поэтому is_active доступен.
+        // У удалённого (анонимизированного) автора скрываем имя.
+        val authorActive = runCatching { this[Users.isActive] }.getOrNull()
+        val authorName = if (authorActive == false) {
+            "Удалённый пользователь"
+        } else {
+            runCatching { this[Users.fullName] }.getOrNull()
+        }
         return ComplaintRow(
             id = this[Complaints.id],
             authorId = this[Complaints.authorId],

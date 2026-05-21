@@ -272,6 +272,16 @@ class AuthService(
         return ok
     }
 
+    /**
+     * Самостоятельное удаление аккаунта жителем (152-ФЗ): анонимизация
+     * персональных данных + отзыв всех refresh-токенов + запись в audit_log.
+     */
+    fun deleteOwnAccount(userId: Long, ip: String?, userAgent: String?) {
+        users.softDeleteAndAnonymize(userId)
+        tokens.revokeAllUserRefreshTokens(userId)
+        audit.log(AuditAction.ACCOUNT_DELETED, userId, "user", userId.toString(), ip, userAgent)
+    }
+
     // ----- Admin invite -----
 
     /**

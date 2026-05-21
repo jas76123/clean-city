@@ -371,6 +371,7 @@ priority_score = (yes_votes - no_votes) * 1.0
 | `GET`  | `/auth/sessions` | Список активных сессий пользователя. |
 | `DELETE` | `/auth/sessions/{id}` | Отозвать конкретную сессию. |
 | `DELETE` | `/auth/sessions` | Отозвать все сессии (при смене пароля/подозрении). |
+| `DELETE` | `/auth/me` | Удаление собственного аккаунта (152-ФЗ). Только `RESIDENT`. Soft-delete + анонимизация: `is_active=false`, `email='deleted_<id>@cleancity.local'`, `password_hash=''`, `full_name=NULL`. Отзывает все refresh-токены. Жалобы остаются, автор скрыт («Удалённый пользователь»). 204 при успехе. Для не-резидентов — 403. |
 
 **2FA для админов:**
 

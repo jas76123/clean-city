@@ -16,11 +16,13 @@ class FakeAuthApi(
     var verifyResult: Result<AuthResponse>? = null,
     var loginResult: Result<LoginResponse>? = null,
     var refreshResult: Result<AuthResponse>? = null,
+    var deleteAccountResult: Result<Unit> = Result.success(Unit),
 ) {
     val logoutCalls = mutableListOf<String>()
     val resendCalls = mutableListOf<String>()
     val forgotCalls = mutableListOf<String>()
     val resetCalls = mutableListOf<Pair<String, String>>()
+    var deleteAccountCalls = 0
 
     fun asAuthApi(): AuthApiContract = object : AuthApiContract {
         override suspend fun register(req: RegisterRequest): UserResponse =
@@ -38,6 +40,10 @@ class FakeAuthApi(
         override suspend fun forgotPassword(req: ForgotPasswordRequest) { forgotCalls += req.email }
         override suspend fun resetPassword(req: ResetPasswordRequest) {
             resetCalls += req.token to req.newPassword
+        }
+        override suspend fun deleteAccount() {
+            deleteAccountCalls++
+            deleteAccountResult.getOrThrow()
         }
     }
 }

@@ -28,17 +28,18 @@ actual fun LegalWebView(url: String) {
                     error: android.webkit.WebResourceError?,
                 ) {
                     if (request?.isForMainFrame == true) {
-                        view?.loadData(
+                        view?.loadDataWithBaseURL(
+                            null,
                             """
-                            <html><body style="font-family:sans-serif;padding:32px;
-                            color:#4A6055;text-align:center">
+                            <html><body style="font-family:sans-serif;padding:32px;color:#4A6055;text-align:center">
                             <h3>Документ временно недоступен</h3>
                             <p>Не удалось загрузить страницу. Проверьте интернет-соединение
                             и попробуйте позже.</p>
                             </body></html>
                             """.trimIndent(),
-                            "text/html; charset=utf-8",
+                            "text/html",
                             "UTF-8",
+                            null,
                         )
                     }
                 }

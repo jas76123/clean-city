@@ -39,10 +39,10 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import com.example.cleancity.ui.feature.detail.ComplaintDetailScreen
 import com.example.cleancity.ui.components.EmptyState
 import com.example.cleancity.ui.components.ErrorState
 import com.example.cleancity.ui.components.LoadingState
+import com.example.cleancity.ui.feature.detail.ComplaintDetailScreen
 import com.example.cleancity.ui.feature.feed.components.ComplaintCard
 import com.example.cleancity.ui.theme.Gray900
 

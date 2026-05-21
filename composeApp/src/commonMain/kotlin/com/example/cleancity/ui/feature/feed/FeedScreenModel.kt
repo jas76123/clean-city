@@ -9,6 +9,7 @@ import com.example.cleancity.domain.AuthState
 import com.example.cleancity.domain.VoteEventBus
 import com.example.cleancity.shared.models.AnnouncementResponse
 import com.example.cleancity.shared.models.ComplaintResponse
+import com.example.cleancity.ui.util.listErrorMessage
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -83,7 +84,7 @@ class FeedScreenModel(
                     nextPage = 1,
                 )
             } catch (e: Throwable) {
-                _state.value = FeedState.Error(e.message ?: "Не удалось загрузить ленту")
+                _state.value = FeedState.Error(listErrorMessage(e))
             }
         }
     }

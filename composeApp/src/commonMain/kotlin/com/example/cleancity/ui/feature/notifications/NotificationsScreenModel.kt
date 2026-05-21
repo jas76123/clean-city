@@ -5,6 +5,7 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import com.example.cleancity.data.network.NotificationsApiContract
 import com.example.cleancity.domain.UnreadCountStore
 import com.example.cleancity.shared.models.NotificationResponse
+import com.example.cleancity.ui.util.listErrorMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,9 +53,7 @@ class NotificationsScreenModel(
                 }
                 .onFailure { e ->
                     if (_state.value !is NotificationsState.Loaded) {
-                        _state.value = NotificationsState.Error(
-                            e.message ?: "Не удалось загрузить уведомления"
-                        )
+                        _state.value = NotificationsState.Error(listErrorMessage(e))
                     } else {
                         _state.update { s ->
                             (s as? NotificationsState.Loaded)?.copy(isRefreshing = false) ?: s

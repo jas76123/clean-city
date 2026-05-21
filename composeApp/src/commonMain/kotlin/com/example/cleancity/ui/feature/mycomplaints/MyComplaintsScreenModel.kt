@@ -4,6 +4,7 @@ import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.example.cleancity.data.network.ComplaintsApiContract
 import com.example.cleancity.shared.models.ComplaintResponse
+import com.example.cleancity.ui.util.listErrorMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -50,9 +51,7 @@ class MyComplaintsScreenModel(
                     }
                 }
                 .onFailure { e ->
-                    _state.value = MyComplaintsState.Error(
-                        e.message ?: "Не удалось загрузить ваши жалобы"
-                    )
+                    _state.value = MyComplaintsState.Error(listErrorMessage(e))
                 }
         }
     }

@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -21,13 +20,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -39,11 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
@@ -51,15 +42,15 @@ import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.example.cleancity.shared.models.AnnouncementResponse
-import com.example.cleancity.shared.models.ComplaintResponse
-import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.ui.feature.detail.ComplaintDetailScreen
 import com.example.cleancity.ui.feature.feed.components.AnnouncementCard
 import com.example.cleancity.ui.feature.feed.components.ComplaintCard
 import com.example.cleancity.ui.feature.feed.components.FeedToggle
 import com.example.cleancity.ui.feature.feed.components.FeedTopBar
+import com.example.cleancity.ui.components.EmptyState
+import com.example.cleancity.ui.components.ErrorState
+import com.example.cleancity.ui.components.LoadingState
 import com.example.cleancity.ui.theme.Gray500
-import com.example.cleancity.ui.theme.Gray600
 
 class FeedScreen : Screen {
 
@@ -76,8 +67,12 @@ class FeedScreen : Screen {
             FeedTopBar(modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars))
 
             when (val s = state) {
-                FeedState.Initial, FeedState.Loading -> LoadingState()
-                is FeedState.Error -> ErrorState(message = s.message, onRetry = { model.loadInitial() })
+                FeedState.Initial, FeedState.Loading -> LoadingState(Modifier.fillMaxSize())
+                is FeedState.Error -> ErrorState(
+                    message = s.message,
+                    onRetry = { model.loadInitial() },
+                    modifier = Modifier.fillMaxSize(),
+                )
                 is FeedState.Loaded -> FeedLoadedContent(
                     loaded = s,
                     onRefresh = model::refresh,
@@ -138,7 +133,26 @@ private fun FeedLoadedContent(
                 )
             }
             if (loaded.complaints.isEmpty()) {
-                item { EmptyFeedRow(mode = loaded.mode, isGuest = loaded.isGuest) }
+                item {
+                    val title = when {
+                        loaded.mode == FeedMode.MINE && loaded.isGuest -> "Войдите в аккаунт"
+                        loaded.mode == FeedMode.MINE -> "У вас пока нет жалоб"
+                        else -> "Пока нет жалоб поблизости"
+                    }
+                    val subtitle = when {
+                        loaded.mode == FeedMode.MINE && loaded.isGuest ->
+                            "Чтобы видеть свои жалобы, войдите в аккаунт."
+                        loaded.mode == FeedMode.MINE ->
+                            "Создайте первую — нажмите ➕ на карте."
+                        else -> "Станьте первым — нажмите ➕ на карте."
+                    }
+                    EmptyState(
+                        emoji = "📋",
+                        title = title,
+                        subtitle = subtitle,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                    )
+                }
             } else {
                 items(items = loaded.complaints, key = { it.id }) { complaint ->
                     ComplaintCard(
@@ -196,47 +210,3 @@ private fun AnnouncementsSection(announcements: List<AnnouncementResponse>) {
     }
 }
 
-@Composable
-private fun LoadingState() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
-    }
-}
-
-@Composable
-private fun ErrorState(message: String, onRetry: () -> Unit) {
-    Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyLarge,
-                color = Gray600,
-                textAlign = TextAlign.Center,
-            )
-            Button(onClick = onRetry) { Text("Повторить") }
-        }
-    }
-}
-
-@Composable
-private fun EmptyFeedRow(mode: FeedMode, isGuest: Boolean) {
-    val text = when {
-        mode == FeedMode.MINE && isGuest -> "Войдите, чтобы видеть свои жалобы"
-        mode == FeedMode.MINE -> "У вас пока нет жалоб. Создайте первую через ➕ на карте."
-        else -> "Пока нет жалоб в Сочи. Стать первым — нажмите ➕ на карте."
-    }
-    Box(
-        Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 48.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Gray500,
-            textAlign = TextAlign.Center,
-        )
-    }
-}

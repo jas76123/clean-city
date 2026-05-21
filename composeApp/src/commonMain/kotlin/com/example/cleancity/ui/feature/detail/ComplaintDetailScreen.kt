@@ -86,6 +86,7 @@ class ComplaintDetailScreen(private val complaintId: Long) : Screen {
         val navigator = LocalNavigator.currentOrThrow
         val snackbarHost = remember { SnackbarHostState() }
         var showLoginPrompt by remember { mutableStateOf(false) }
+        var showOwnComplaintDialog by remember { mutableStateOf(false) }
 
         LaunchedEffect(Unit) { model.load() }
         LaunchedEffect(state) {
@@ -109,8 +110,11 @@ class ComplaintDetailScreen(private val complaintId: Long) : Screen {
                     is DetailState.Loaded -> LoadedContent(
                         loaded = s,
                         onVoteClick = {
-                            if (s.isGuest) showLoginPrompt = true
-                            else model.toggleVote()
+                            when {
+                                s.isGuest -> showLoginPrompt = true
+                                s.isOwnComplaint -> showOwnComplaintDialog = true
+                                else -> model.toggleVote()
+                            }
                         },
                     )
                 }
@@ -130,6 +134,17 @@ class ComplaintDetailScreen(private val complaintId: Long) : Screen {
                 },
                 dismissButton = {
                     TextButton(onClick = { showLoginPrompt = false }) { Text("Отмена") }
+                },
+            )
+        }
+
+        if (showOwnComplaintDialog) {
+            AlertDialog(
+                onDismissRequest = { showOwnComplaintDialog = false },
+                title = { Text("Это ваша жалоба") },
+                text = { Text("Вы автор этой жалобы — отозвать своё подтверждение нельзя. Удалить жалобу можно в разделе «Мои жалобы» личного кабинета.") },
+                confirmButton = {
+                    TextButton(onClick = { showOwnComplaintDialog = false }) { Text("Понятно") }
                 },
             )
         }
@@ -176,6 +191,7 @@ private fun LoadedContent(
                 c = c,
                 isVoting = loaded.isVoting,
                 isGuest = loaded.isGuest,
+                isOwnComplaint = loaded.isOwnComplaint,
                 onClick = onVoteClick,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
@@ -318,6 +334,7 @@ private fun VoteCard(
     c: ComplaintResponse,
     isVoting: Boolean,
     isGuest: Boolean,
+    isOwnComplaint: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -326,6 +343,7 @@ private fun VoteCard(
         c.status == ComplaintStatus.RESOLVED
     val buttonLabel = when {
         isGuest -> "Войти, чтобы поддержать"
+        isOwnComplaint -> "Ваша жалоба"
         !canVote -> "Голосование закрыто"
         c.userVoted -> "Отозвать подтверждение"
         else -> "Подтверждаю"
@@ -361,8 +379,8 @@ private fun VoteCard(
             enabled = canVote && !isVoting,
             modifier = Modifier.fillMaxWidth().height(48.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (c.userVoted && !isGuest) Gray200 else Accent,
-                contentColor = if (c.userVoted && !isGuest) Gray700 else Green900,
+                containerColor = if ((c.userVoted || isOwnComplaint) && !isGuest) Gray200 else Accent,
+                contentColor = if ((c.userVoted || isOwnComplaint) && !isGuest) Gray700 else Green900,
             ),
         ) {
             if (isVoting) {

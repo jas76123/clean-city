@@ -21,6 +21,7 @@ sealed interface DetailState {
     data class Loaded(
         val complaint: ComplaintResponse,
         val isGuest: Boolean,
+        val isOwnComplaint: Boolean = false,
         val isVoting: Boolean = false,
         val transientError: String? = null,
     ) : DetailState
@@ -41,9 +42,11 @@ class ComplaintDetailScreenModel(
         screenModelScope.launch {
             runCatching { complaintsApi.getById(complaintId) }
                 .onSuccess { c ->
+                    val auth = authRepo.state.value as? AuthState.Authenticated
                     _state.value = DetailState.Loaded(
                         complaint = c,
-                        isGuest = authRepo.state.value !is AuthState.Authenticated,
+                        isGuest = auth == null,
+                        isOwnComplaint = auth?.user?.id == c.authorId,
                     )
                 }
                 .onFailure { e ->
@@ -58,10 +61,16 @@ class ComplaintDetailScreenModel(
                 .onSuccess { c ->
                     _state.update { current ->
                         val loaded = current as? DetailState.Loaded
-                        loaded?.copy(complaint = c) ?: DetailState.Loaded(
-                            complaint = c,
-                            isGuest = authRepo.state.value !is AuthState.Authenticated,
-                        )
+                        if (loaded != null) {
+                            loaded.copy(complaint = c)
+                        } else {
+                            val auth = authRepo.state.value as? AuthState.Authenticated
+                            DetailState.Loaded(
+                                complaint = c,
+                                isGuest = auth == null,
+                                isOwnComplaint = auth?.user?.id == c.authorId,
+                            )
+                        }
                     }
                 }
         }

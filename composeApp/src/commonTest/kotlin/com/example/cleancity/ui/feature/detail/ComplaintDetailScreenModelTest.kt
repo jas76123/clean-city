@@ -87,6 +87,28 @@ class ComplaintDetailScreenModelTest {
         assertEquals("Не удалось загрузить жалобу", state.message)
     }
 
+    @Test fun `load sets isOwnComplaint=true when complaint authorId matches authenticated user id`() = runTest {
+        // Authenticated user has id=1 (set inside authenticatedRepo())
+        api.nextGetByIdResult = Result.success(complaint(id = 5, authorId = 1))
+        val model = ComplaintDetailScreenModel(5L, api, authenticatedRepo())
+
+        model.load()
+
+        val state = model.state.value as DetailState.Loaded
+        assertEquals(true, state.isOwnComplaint)
+    }
+
+    @Test fun `load sets isOwnComplaint=false when complaint authorId differs from authenticated user id`() = runTest {
+        // Authenticated user has id=1; complaint belongs to user 99
+        api.nextGetByIdResult = Result.success(complaint(id = 6, authorId = 99))
+        val model = ComplaintDetailScreenModel(6L, api, authenticatedRepo())
+
+        model.load()
+
+        val state = model.state.value as DetailState.Loaded
+        assertEquals(false, state.isOwnComplaint)
+    }
+
     @Test fun `load does not re-fetch when already Loaded`() = runTest {
         api.nextGetByIdResult = Result.success(complaint(id = 1))
         val model = ComplaintDetailScreenModel(1L, api, guestRepo())
@@ -277,9 +299,10 @@ class ComplaintDetailScreenModelTest {
         id: Long = 1,
         votes: Int = 0,
         voted: Boolean = false,
+        authorId: Long = 99,
     ): ComplaintResponse = ComplaintResponse(
         id = id,
-        authorId = 99,
+        authorId = authorId,
         authorName = "Тест",
         category = ProblemCategory.GARBAGE,
         title = "Тестовая жалоба",

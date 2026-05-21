@@ -52,6 +52,10 @@ echo "✓ Токен получен"
 
 # 2. Тело запроса PATCH (duplicateOfId — только если передан)
 if [ -n "$DUPLICATE_OF_ID" ]; then
+  if ! [[ "$DUPLICATE_OF_ID" =~ ^[0-9]+$ ]]; then
+    echo "✗ DUPLICATE_OF_ID должен быть целым числом, получено: '$DUPLICATE_OF_ID'" >&2
+    exit 1
+  fi
   BODY="$(jq -n --arg s "$TO_STATUS" --arg c "$COMMENT" --argjson d "$DUPLICATE_OF_ID" \
     '{toStatus:$s,comment:$c,duplicateOfId:$d}')"
 else

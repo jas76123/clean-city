@@ -40,4 +40,9 @@ class UnreadCountStore(
         job = null
         _state.value = 0
     }
+
+    /** Локально уменьшить счётчик (при отметке прочитанным). Не уходит ниже нуля. */
+    fun decrement(by: Int = 1) {
+        _state.value = (_state.value - by).coerceAtLeast(0)
+    }
 }

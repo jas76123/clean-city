@@ -302,7 +302,7 @@ Web admin может быть проще (показываем основной 
 
 ### День 12 (19.05) — Mobile уведомления + мои/поддержанные
 
-> **Закрыт 2026-05-21 (polling-версия).** Брейншторм пересмотрел scope: канал доставки — polling (решение от 2026-05-11), FCM и системные push отложены в Day 14-буфер; `VotedComplaintsScreen` исключён (отклонение поддержанной жалобы видно через уведомление → детали). Дизайн+план: `docs/superpowers/specs/2026-05-21-day12-notifications-my-complaints-design.md`, `docs/superpowers/plans/2026-05-21-day12-notifications-my-complaints.md`. Полный suite 143 теста зелёные, debug-APK собирается. Smoke на Samsung A33 5G — отдельный ручной прогон.
+> **Закрыт 2026-05-21 (polling-версия).** Брейншторм пересмотрел scope: канал доставки — polling (решение от 2026-05-11), FCM и системные push отложены в Day 14-буфер; `VotedComplaintsScreen` исключён (отклонение поддержанной жалобы видно через уведомление → детали). Дизайн+план: `docs/superpowers/specs/2026-05-21-day12-notifications-my-complaints-design.md`, `docs/superpowers/plans/2026-05-21-day12-notifications-my-complaints.md`. Полный suite 145 тестов зелёные, debug-APK собирается. Smoke на Samsung A33 5G — отдельный ручной прогон.
 
 - [ ] FCM SDK setup, регистрация токена через `POST /users/me/push-token` после логина — **отложено в Day 14-буфер**
 - [x] `NotificationsScreen` использует серверный API:

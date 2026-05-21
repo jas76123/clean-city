@@ -4,7 +4,7 @@
 **Backend:** локальный, Docker (`cleancity-kmp-backend-1`, healthy), порт 8081, dev-сидка применена
 **БД:** Docker (`cleancity-kmp-db-1`)
 **Устройство:** Samsung A33 5G (serial `RZCW111EQWH`), debug-APK, `adb reverse tcp:8081`
-**Аккаунт на устройстве:** `agababanz07@gmail.com` (user id 11)
+**Аккаунт на устройстве:** тестовый аккаунт жителя (user id 11)
 **Триггер:** `ops/trigger-status-change.sh` (логин dev-админом `admin@cleancity.dev`)
 
 | # | Сценарий | Результат | Заметки |

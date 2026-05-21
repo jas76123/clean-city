@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -97,16 +98,25 @@ class AboutScreen : Screen {
                     onClick = { navigator.push(LegalScreen(LegalKind.Terms)) },
                 )
                 Spacer(Modifier.height(16.dp))
-                Text(
-                    text = "Карты и геокодирование © Яндекс. Использование сервиса " +
-                        "регулируется условиями Яндекс Карт.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Gray500,
-                    textAlign = TextAlign.Center,
-                )
+                YandexAttribution()
             }
         }
     }
+}
+
+@Composable
+private fun YandexAttribution() {
+    val uriHandler = LocalUriHandler.current
+    Text(
+        text = "Карты © Яндекс. Открыть условия использования Яндекс Карт.",
+        style = MaterialTheme.typography.bodySmall,
+        color = Green600,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { uriHandler.openUri("https://yandex.ru/legal/maps_api/") }
+            .padding(vertical = 8.dp),
+    )
 }
 
 @Composable

@@ -92,6 +92,17 @@ class AuthRepository(
         _state.value = AuthState.Anonymous
     }
 
+    /**
+     * Удаление аккаунта (152-ФЗ). При успехе локально завершает сессию так же,
+     * как logout. При ошибке сессия НЕ трогается — аккаунт всё ещё существует.
+     */
+    suspend fun deleteAccount(): Result<Unit> = runCatching {
+        authApi.deleteAccount()
+        storage.clear()
+        tokenInvalidator.invalidate()
+        _state.value = AuthState.Anonymous
+    }
+
     internal fun forceAnonymous() {
         tokenInvalidator.invalidate()
         _state.value = AuthState.Anonymous

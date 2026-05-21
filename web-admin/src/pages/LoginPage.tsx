@@ -109,6 +109,13 @@ export function LoginPage() {
             <Button type="submit" disabled={busy}>
               {busy ? 'Проверка…' : 'Подтвердить'}
             </Button>
+            <button
+              type="button"
+              className="text-center text-sm text-slate-500 hover:underline"
+              onClick={() => { setChallengeToken(null); setCode(''); setError(null) }}
+            >
+              ← Назад
+            </button>
           </form>
         )}
       </Card>

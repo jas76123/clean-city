@@ -81,25 +81,32 @@ auth-роутами.
 - **`UserRepository.softDeleteAndAnonymize(userId: Long)`** — в одной транзакции:
   - `is_active = false`
   - `email = 'deleted_<id>@cleancity.local'`
-  - `password_hash = NULL`
+  - `password_hash = ''` (пустая строка)
   - `full_name = NULL`
+  - **Отклонение от первоначального замысла:** колонка `password_hash` в схеме
+    `NOT NULL` (`database/tables/Users.kt`). Перевод её в nullable — это
+    Flyway-миграция плюс правки во всей цепочке логина
+    (`UserRow.passwordHash: String`, `PasswordHasher.verify`). За 7 дней до
+    защиты это лишний риск. Пустая строка даёт тот же эффект: ни один пароль не
+    верифицируется против пустого хеша, а смена email + `is_active=false` и так
+    делают вход невозможным.
 - **`AuthService.deleteOwnAccount(userId: Long, ip: String?, userAgent: String?)`:**
   1. Анонимизация пользователя (`softDeleteAndAnonymize`).
-  2. Отзыв всех refresh-токенов пользователя. Нужен метод
-     `TokenRepository.revokeAllForUser(userId)` — при реализации проверить,
-     есть ли уже подходящий метод; если нет — добавить.
-  3. Запись в `audit_log` (тип события — удаление аккаунта) для бумажного следа
-     по 152-ФЗ.
+  2. Отзыв всех refresh-токенов пользователя через существующий
+     `TokenRepository.revokeAllUserRefreshTokens(userId)`.
+  3. Запись в `audit_log` новым событием `AuditAction.ACCOUNT_DELETED` для
+     бумажного следа по 152-ФЗ.
 
 ### Жалобы удалённого пользователя
 
 Жалобы **остаются** в системе (прозрачность — `SPEC.md:657`), но автор скрыт.
-В `ComplaintService` при формировании ответа с автором: если пользователь
-анонимизирован (`is_active = false` и/или email начинается с `deleted_`) —
-отдавать имя автора как «Удалённый пользователь».
-
-> При реализации проверить, как сейчас рендерится автор жалобы (включается ли
-> имя автора в ответ детали жалобы), и добавить подмену там.
+Имя автора подменяется на уровне `ComplaintRepository.toComplaintRow()`: запрос
+жалоб делает `LEFT JOIN Users`, поэтому в строке доступен `Users.isActive` —
+если автор `is_active = false`, отдаём `authorName = "Удалённый пользователь"`
+вместо `full_name` (который у удалённого уже `NULL`). Это покрывает и ленту, и
+детальный экран. Мобильный клиент изменений не требует — он показывает
+`authorName` как есть (фолбэк `?: "Аноним"` остаётся для пользователей без
+имени).
 
 ### Нюанс JWT
 
@@ -113,7 +120,7 @@ TTL access-токен формально валиден. Для MVP приемл
 
 > `DELETE` | `/auth/me` | Резидент | Удаление собственного аккаунта: soft-delete
 > + анонимизация (`is_active=false`, `email='deleted_<id>@cleancity.local'`,
-> `password_hash=NULL`, `full_name=NULL`), отзыв всех refresh-токенов. Жалобы
+> `password_hash=''`, `full_name=NULL`), отзыв всех refresh-токенов. Жалобы
 > остаются, автор скрыт. Для не-резидентов — 403.
 
 ---

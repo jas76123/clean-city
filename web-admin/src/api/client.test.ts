@@ -89,6 +89,7 @@ describe('token store', () => {
   it('api: 401 → рефреш → повтор запроса с новым токеном', async () => {
     setSession(fakeAuth('access-stale'))
     let calls = 0
+    let lastAuth: string | null = null
     server.use(
       http.get(`${BASE}/ping`, ({ request }) => {
         calls++
@@ -96,6 +97,7 @@ describe('token store', () => {
         if (auth === 'Bearer access-stale') {
           return new HttpResponse(JSON.stringify({ code: 'X', message: 'x' }), { status: 401 })
         }
+        lastAuth = auth
         return HttpResponse.json({ ok: true })
       }),
     )
@@ -104,5 +106,6 @@ describe('token store', () => {
     expect(res.data).toEqual({ ok: true })
     expect(calls).toBe(2)
     expect(refreshHits).toBe(1)
+    expect(lastAuth).toBe('Bearer access-new')
   })
 })

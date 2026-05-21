@@ -27,6 +27,10 @@ Layout определён мокапом `docs/mockups/admin-dashboard-v2.html` 
    «JavaScript API и HTTP Геокодер», которого пока нет).
 4. **Сортировка** — три backend-варианта `DATE / VOTES / PRIORITY`. Отдельной
    сортировки «по времени SLA» из мокапа не делаем — SLA остаётся фильтром.
+5. **Чип SLA** — часть той же single-select группы, что и чипы статуса (мокап:
+   один ряд «Все / … / ⚠ SLA»). Выбор «⚠ SLA» = `slaBreached=true` без `status`;
+   выбор статуса сбрасывает `slaBreached`; «Все» сбрасывает оба. Backend при этом
+   поддерживает оба параметра независимо — ограничение чисто на уровне UI.
 
 ## 1. Backend-контракт
 
@@ -95,8 +99,8 @@ lib/
 pages/
   ComplaintsPage.tsx ← оркестратор: состояние фильтров, выбранный id, layout
 components/complaints/
-  ComplaintFilters.tsx     ← чипы статуса (со счётчиками) + SLA-чип +
-                              селекты категории/района/сортировки
+  ComplaintFilters.tsx     ← single-select группа чипов (статусы + ⚠ SLA, со
+                              счётчиками) + селекты категории/района/сортировки
   ComplaintsTable.tsx      ← таблица; клик по строке → выбор
   ComplaintsPagination.tsx ← prev/next + «стр. N из M» (page/size, size=20)
   ComplaintDetailPanel.tsx ← правая панель

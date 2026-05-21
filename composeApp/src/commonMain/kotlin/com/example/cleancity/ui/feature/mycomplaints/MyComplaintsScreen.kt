@@ -2,7 +2,6 @@ package com.example.cleancity.ui.feature.mycomplaints
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,7 +17,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -37,16 +34,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.example.cleancity.ui.feature.detail.ComplaintDetailScreen
+import com.example.cleancity.ui.components.EmptyState
+import com.example.cleancity.ui.components.ErrorState
+import com.example.cleancity.ui.components.LoadingState
 import com.example.cleancity.ui.feature.feed.components.ComplaintCard
-import com.example.cleancity.ui.theme.Gray500
-import com.example.cleancity.ui.theme.Gray600
 import com.example.cleancity.ui.theme.Gray900
 
 class MyComplaintsScreen : Screen {
@@ -66,9 +63,17 @@ class MyComplaintsScreen : Screen {
                 modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
             )
             when (val s = state) {
-                MyComplaintsState.Initial, MyComplaintsState.Loading -> CenteredSpinner()
-                MyComplaintsState.Empty -> EmptyState()
-                is MyComplaintsState.Error -> ErrorState(s.message) { model.load() }
+                MyComplaintsState.Initial, MyComplaintsState.Loading ->
+                    LoadingState(Modifier.fillMaxSize())
+                MyComplaintsState.Empty ->
+                    EmptyState(
+                        emoji = "📋",
+                        title = "Вы пока не создавали жалоб",
+                        subtitle = "Заметили проблему — нажмите ➕ на карте.",
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                is MyComplaintsState.Error ->
+                    ErrorState(s.message, onRetry = { model.load() }, modifier = Modifier.fillMaxSize())
                 is MyComplaintsState.Loaded -> LoadedList(
                     loaded = s,
                     onRefresh = model::refresh,
@@ -150,34 +155,3 @@ private fun LoadedList(
     }
 }
 
-@Composable
-private fun CenteredSpinner() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
-    }
-}
-
-@Composable
-private fun EmptyState() {
-    Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-        Text(
-            "Вы пока не создавали жалоб",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Gray500,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-@Composable
-private fun ErrorState(message: String, onRetry: () -> Unit) {
-    Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(message, color = Gray600, textAlign = TextAlign.Center)
-            Button(onClick = onRetry) { Text("Повторить") }
-        }
-    }
-}

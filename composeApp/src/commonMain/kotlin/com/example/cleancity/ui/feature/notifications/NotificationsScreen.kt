@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
@@ -33,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
@@ -44,8 +41,9 @@ import com.example.cleancity.shared.models.NotificationResponse
 import com.example.cleancity.ui.feature.detail.ComplaintDetailScreen
 import com.example.cleancity.ui.feature.notifications.components.NotificationCard
 import com.example.cleancity.ui.feature.shell.tabs.FeedTab
-import com.example.cleancity.ui.theme.Gray500
-import com.example.cleancity.ui.theme.Gray600
+import com.example.cleancity.ui.components.EmptyState
+import com.example.cleancity.ui.components.ErrorState
+import com.example.cleancity.ui.components.LoadingState
 import com.example.cleancity.ui.theme.Gray900
 import com.example.cleancity.ui.theme.Green700
 
@@ -85,11 +83,16 @@ class NotificationsScreen : Screen {
                 )
                 when (val s = state) {
                     NotificationsState.Initial, NotificationsState.Loading ->
-                        CenteredSpinner()
+                        LoadingState(Modifier.fillMaxSize())
                     NotificationsState.Empty ->
-                        EmptyState()
+                        EmptyState(
+                            emoji = "🔔",
+                            title = "Пока нет уведомлений",
+                            subtitle = "Здесь появятся ответы администрации и объявления.",
+                            modifier = Modifier.fillMaxSize(),
+                        )
                     is NotificationsState.Error ->
-                        ErrorState(s.message) { model.load() }
+                        ErrorState(s.message, onRetry = { model.load() }, modifier = Modifier.fillMaxSize())
                     is NotificationsState.Loaded ->
                         NotificationsList(
                             loaded = s,
@@ -157,34 +160,3 @@ private fun NotificationsList(
     }
 }
 
-@Composable
-private fun CenteredSpinner() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator()
-    }
-}
-
-@Composable
-private fun EmptyState() {
-    Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-        Text(
-            "У вас пока нет уведомлений",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Gray500,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-@Composable
-private fun ErrorState(message: String, onRetry: () -> Unit) {
-    Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(message, color = Gray600, textAlign = TextAlign.Center)
-            Button(onClick = onRetry) { Text("Повторить") }
-        }
-    }
-}

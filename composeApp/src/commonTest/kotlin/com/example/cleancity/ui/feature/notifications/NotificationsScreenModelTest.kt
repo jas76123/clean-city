@@ -1,10 +1,17 @@
 package com.example.cleancity.ui.feature.notifications
 
+import com.example.cleancity.data.network.FakeAuthApi
 import com.example.cleancity.data.network.FakeNotificationsApi
+import com.example.cleancity.data.network.FakeUserApi
+import com.example.cleancity.data.repository.AuthRepository
+import com.example.cleancity.data.storage.FakeTokenStorage
+import com.example.cleancity.data.storage.Tokens
 import com.example.cleancity.domain.UnreadCountStore
 import com.example.cleancity.shared.models.NotificationKind
 import com.example.cleancity.shared.models.NotificationListResponse
 import com.example.cleancity.shared.models.NotificationResponse
+import com.example.cleancity.shared.models.UserResponse
+import com.example.cleancity.shared.models.UserRole
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -47,11 +54,29 @@ class NotificationsScreenModelTest {
         return store
     }
 
+    private suspend fun authedRepo(): AuthRepository {
+        val user = UserResponse(
+            id = 1, email = "u@x.com", role = UserRole.RESIDENT,
+            fullName = "U", emailVerified = true, createdAt = "2026-05-21T00:00:00Z",
+        )
+        return AuthRepository(
+            FakeAuthApi().asAuthApi(),
+            FakeUserApi(meResult = Result.success(user)).asUserApi(),
+            FakeTokenStorage().apply { preset(Tokens("acc", "ref")) },
+        ).apply { init() }
+    }
+
+    private fun guestRepo(): AuthRepository = AuthRepository(
+        FakeAuthApi().asAuthApi(),
+        FakeUserApi().asUserApi(),
+        FakeTokenStorage(),
+    ).apply { continueAsGuest() }
+
     @Test fun `load with empty list yields Empty`() = runTest {
         val api = FakeNotificationsListApi().apply {
             nextListResult = Result.success(NotificationListResponse(emptyList(), 0, false))
         }
-        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()))
+        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()), authedRepo())
 
         model.load()
 
@@ -64,7 +89,7 @@ class NotificationsScreenModelTest {
                 NotificationListResponse(listOf(notification(1), notification(2)), 2, false)
             )
         }
-        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()))
+        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()), authedRepo())
 
         model.load()
 
@@ -76,7 +101,7 @@ class NotificationsScreenModelTest {
         val api = FakeNotificationsListApi().apply {
             nextListResult = Result.failure(RuntimeException("нет сети"))
         }
-        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()))
+        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()), authedRepo())
 
         model.load()
 
@@ -90,7 +115,7 @@ class NotificationsScreenModelTest {
             )
         }
         val store = seededStore(2)
-        val model = NotificationsScreenModel(api, store)
+        val model = NotificationsScreenModel(api, store, authedRepo())
         model.load()
 
         model.markRead(1L)
@@ -109,7 +134,7 @@ class NotificationsScreenModelTest {
             )
         }
         val store = seededStore(3)
-        val model = NotificationsScreenModel(api, store)
+        val model = NotificationsScreenModel(api, store, authedRepo())
         model.load()
 
         model.markRead(1L)
@@ -127,7 +152,7 @@ class NotificationsScreenModelTest {
             markReadShouldThrow = true
         }
         val store = seededStore(1)
-        val model = NotificationsScreenModel(api, store)
+        val model = NotificationsScreenModel(api, store, authedRepo())
         model.load()
 
         model.markRead(1L)
@@ -146,7 +171,7 @@ class NotificationsScreenModelTest {
             )
         }
         val store = seededStore(2)
-        val model = NotificationsScreenModel(api, store)
+        val model = NotificationsScreenModel(api, store, authedRepo())
         model.load()
 
         model.markAllRead()
@@ -166,7 +191,7 @@ class NotificationsScreenModelTest {
             nextMarkAllResult = Result.failure(RuntimeException("нет сети"))
         }
         val store = seededStore(2)
-        val model = NotificationsScreenModel(api, store)
+        val model = NotificationsScreenModel(api, store, authedRepo())
         model.load()
 
         model.markAllRead()
@@ -186,10 +211,32 @@ class NotificationsScreenModelTest {
                 )
             )
         }
-        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()))
+        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()), authedRepo())
         model.load()
 
         val state = model.state.value as NotificationsState.Loaded
         assertEquals(2, state.unreadCount)
+    }
+
+    @Test fun `load as guest yields GuestPrompt and never calls api`() = runTest {
+        val api = FakeNotificationsListApi()
+        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()), guestRepo())
+
+        model.load()
+
+        assertEquals(NotificationsState.GuestPrompt, model.state.value)
+        assertEquals(0, api.listCalls)
+    }
+
+    @Test fun `load as authenticated user calls api`() = runTest {
+        val api = FakeNotificationsListApi().apply {
+            nextListResult = Result.success(NotificationListResponse(emptyList(), 0, false))
+        }
+        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()), authedRepo())
+
+        model.load()
+
+        assertEquals(1, api.listCalls)
+        assertEquals(NotificationsState.Empty, model.state.value)
     }
 }

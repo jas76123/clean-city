@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
@@ -41,6 +42,7 @@ import com.example.cleancity.shared.models.NotificationResponse
 import com.example.cleancity.ui.components.EmptyState
 import com.example.cleancity.ui.components.ErrorState
 import com.example.cleancity.ui.components.LoadingState
+import com.example.cleancity.ui.feature.auth.LoginScreen
 import com.example.cleancity.ui.feature.detail.ComplaintDetailScreen
 import com.example.cleancity.ui.feature.notifications.components.NotificationCard
 import com.example.cleancity.ui.feature.shell.tabs.FeedTab
@@ -84,6 +86,17 @@ class NotificationsScreen : Screen {
                 when (val s = state) {
                     NotificationsState.Initial, NotificationsState.Loading ->
                         LoadingState(Modifier.fillMaxSize())
+                    NotificationsState.GuestPrompt ->
+                        EmptyState(
+                            emoji = "🔔",
+                            title = "Войдите, чтобы видеть уведомления",
+                            subtitle = "Уведомления о статусе ваших жалоб и объявления " +
+                                "доступны после входа в аккаунт.",
+                            action = {
+                                Button(onClick = { navigator.push(LoginScreen()) }) { Text("Войти") }
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                        )
                     NotificationsState.Empty ->
                         EmptyState(
                             emoji = "🔔",

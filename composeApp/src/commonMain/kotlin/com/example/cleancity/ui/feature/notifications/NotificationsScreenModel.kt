@@ -3,6 +3,8 @@ package com.example.cleancity.ui.feature.notifications
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import com.example.cleancity.data.network.NotificationsApiContract
+import com.example.cleancity.data.repository.AuthRepository
+import com.example.cleancity.domain.AuthState
 import com.example.cleancity.domain.UnreadCountStore
 import com.example.cleancity.shared.models.NotificationResponse
 import com.example.cleancity.ui.util.listErrorMessage
@@ -15,6 +17,7 @@ import kotlinx.coroutines.launch
 sealed interface NotificationsState {
     data object Initial : NotificationsState
     data object Loading : NotificationsState
+    data object GuestPrompt : NotificationsState
     data object Empty : NotificationsState
     data class Error(val message: String) : NotificationsState
     data class Loaded(
@@ -31,6 +34,7 @@ private const val LIST_LIMIT = 50
 class NotificationsScreenModel(
     private val api: NotificationsApiContract,
     private val unreadCountStore: UnreadCountStore,
+    private val authRepo: AuthRepository,
 ) : ScreenModel {
 
     private val _state = MutableStateFlow<NotificationsState>(NotificationsState.Initial)
@@ -38,6 +42,10 @@ class NotificationsScreenModel(
 
     /** Грузит список. Вызывается при открытии экрана; повторно — через pull-to-refresh. */
     fun load() {
+        if (authRepo.state.value !is AuthState.Authenticated) {
+            _state.value = NotificationsState.GuestPrompt
+            return
+        }
         if (_state.value is NotificationsState.Loading) return  // уже загружается — не дублировать запрос
         if (_state.value !is NotificationsState.Loaded) {
             _state.value = NotificationsState.Loading

@@ -58,7 +58,8 @@ import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.StatusChangeResponse
 import com.example.cleancity.ui.components.SectionTopBar
 import com.example.cleancity.ui.feature.auth.LoginScreen
-import com.example.cleancity.ui.feature.map.components.emoji
+import com.example.cleancity.ui.components.CategoryIcon
+import com.example.cleancity.ui.components.emoji
 import com.example.cleancity.ui.theme.Accent
 import com.example.cleancity.ui.theme.Amber
 import com.example.cleancity.ui.theme.Blue
@@ -252,11 +253,7 @@ private fun PhotoPager(complaint: ComplaintResponse) {
                     Modifier.fillMaxSize().background(gradient),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = complaint.category.emoji(),
-                        style = MaterialTheme.typography.displayLarge,
-                        color = Color.White.copy(alpha = 0.6f),
-                    )
+                    CategoryIcon(category = complaint.category, size = 44.dp)
                 }
             }
         }

@@ -1,4 +1,4 @@
-package com.example.cleancity.ui.feature.map.components
+package com.example.cleancity.ui.components
 
 import com.example.cleancity.shared.models.ProblemCategory
 
@@ -20,5 +20,5 @@ fun ProblemCategory.emoji(): String = when (this) {
     ProblemCategory.ECOLOGY -> "🌱"
     ProblemCategory.ACCESSIBILITY -> "♿"
     ProblemCategory.TRADE -> "🏪"
-    ProblemCategory.OTHER -> "…"
+    ProblemCategory.OTHER -> "📌"
 }

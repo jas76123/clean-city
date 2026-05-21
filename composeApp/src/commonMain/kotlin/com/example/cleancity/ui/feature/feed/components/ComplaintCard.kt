@@ -29,7 +29,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.cleancity.shared.models.ComplaintResponse
 import com.example.cleancity.shared.models.ComplaintStatus
-import com.example.cleancity.ui.feature.map.components.emoji
+import com.example.cleancity.ui.components.CategoryIcon
+import com.example.cleancity.ui.components.emoji
 import com.example.cleancity.ui.theme.Accent
 import com.example.cleancity.ui.theme.Amber
 import com.example.cleancity.ui.theme.Blue
@@ -89,13 +90,8 @@ private fun PhotoPlaceholder(complaint: ComplaintResponse) {
                 ComplaintStatus.IN_PROGRESS -> Brush.linearGradient(listOf(Blue, Green700))
                 else -> Brush.linearGradient(listOf(Green700, Green900))
             }
-            Box(modifier = Modifier.fillMaxSize().background(gradient)) {
-                Text(
-                    text = complaint.category.emoji(),
-                    modifier = Modifier.align(Alignment.Center),
-                    style = MaterialTheme.typography.displaySmall,
-                    color = Color.White.copy(alpha = 0.4f),
-                )
+            Box(modifier = Modifier.fillMaxSize().background(gradient), contentAlignment = Alignment.Center) {
+                CategoryIcon(category = complaint.category, size = 40.dp)
             }
         }
         Row(

@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.cleancity.shared.models.ProblemCategory
+import com.example.cleancity.ui.components.emoji
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -66,7 +66,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -79,7 +78,7 @@ import com.example.cleancity.shared.models.ProblemCategory
 import com.example.cleancity.ui.feature.detail.ComplaintDetailScreen
 import com.example.cleancity.ui.feature.map.MapSuggestion
 import com.example.cleancity.ui.feature.map.components.AddressSuggestionList
-import com.example.cleancity.ui.feature.map.components.emoji
+import com.example.cleancity.ui.components.CategoryIcon
 import com.example.cleancity.ui.feature.map.picker.MapPickerScreen
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -497,14 +496,7 @@ private fun DuplicateRow(item: DuplicateCandidateResponse, onVote: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(item.category.emoji(), fontSize = 22.sp)
-            }
+            CategoryIcon(category = item.category, size = 40.dp)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     item.title,
@@ -637,7 +629,7 @@ private fun CategoryCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(category.emoji(), fontSize = 22.sp)
+            CategoryIcon(category = category, size = 40.dp)
             Text(
                 category.localizedLabel,
                 style = MaterialTheme.typography.labelSmall,

@@ -39,8 +39,8 @@
 - `composeApp/src/commonMain/kotlin/com/example/cleancity/ui/feature/detail/ComplaintDetailScreen.kt` — блок «Решение администрации».
 
 **Команды:**
-- Тесты (по одному классу): `./gradlew composeApp:commonTest --tests "<FQN>"`
-- Весь suite: `./gradlew composeApp:commonTest`
+- Тесты (по одному классу): `./gradlew composeApp:testDebugUnitTest --tests "<FQN>"`
+- Весь suite: `./gradlew composeApp:testDebugUnitTest`
 - Компиляция (проверка UI-изменений): `./gradlew composeApp:compileDebugKotlinAndroid`
 
 ---
@@ -135,7 +135,7 @@ class RelativeTimeTest {
 
 - [ ] **Step 2: Запустить тест — убедиться, что падает**
 
-Run: `./gradlew composeApp:commonTest --tests "com.example.cleancity.ui.util.RelativeTimeTest"`
+Run: `./gradlew composeApp:testDebugUnitTest --tests "com.example.cleancity.ui.util.RelativeTimeTest"`
 Expected: FAIL — `RelativeTime.kt` ещё не существует, не компилируется.
 
 - [ ] **Step 3: Реализовать утилиту**
@@ -173,7 +173,7 @@ fun relativeTime(iso: String, now: Instant = Clock.System.now()): String {
 
 - [ ] **Step 4: Запустить тест — убедиться, что проходит**
 
-Run: `./gradlew composeApp:commonTest --tests "com.example.cleancity.ui.util.RelativeTimeTest"`
+Run: `./gradlew composeApp:testDebugUnitTest --tests "com.example.cleancity.ui.util.RelativeTimeTest"`
 Expected: PASS — 7 тестов.
 
 - [ ] **Step 5: Commit**
@@ -291,7 +291,7 @@ class NotificationsApiTest {
 
 - [ ] **Step 2: Запустить тест — убедиться, что падает**
 
-Run: `./gradlew composeApp:commonTest --tests "com.example.cleancity.data.network.NotificationsApiTest"`
+Run: `./gradlew composeApp:testDebugUnitTest --tests "com.example.cleancity.data.network.NotificationsApiTest"`
 Expected: FAIL — методов `list`/`markRead`/`markAllRead` нет, не компилируется.
 
 - [ ] **Step 3: Расширить контракт и реализацию**
@@ -385,12 +385,12 @@ class FakeNotificationsApi : NotificationsApiContract {
 
 - [ ] **Step 5: Запустить тест — убедиться, что проходит**
 
-Run: `./gradlew composeApp:commonTest --tests "com.example.cleancity.data.network.NotificationsApiTest"`
+Run: `./gradlew composeApp:testDebugUnitTest --tests "com.example.cleancity.data.network.NotificationsApiTest"`
 Expected: PASS — 3 теста.
 
 - [ ] **Step 6: Прогнать существующий suite уведомлений (не сломали `FakeNotificationsApi`)**
 
-Run: `./gradlew composeApp:commonTest --tests "com.example.cleancity.domain.UnreadCountStoreTest"`
+Run: `./gradlew composeApp:testDebugUnitTest --tests "com.example.cleancity.domain.UnreadCountStoreTest"`
 Expected: PASS — 5 тестов.
 
 - [ ] **Step 7: Commit**
@@ -448,7 +448,7 @@ git commit -m "feat: NotificationsApi — список, markRead, markAllRead"
 
 - [ ] **Step 2: Запустить тест — убедиться, что падает**
 
-Run: `./gradlew composeApp:commonTest --tests "com.example.cleancity.domain.UnreadCountStoreTest"`
+Run: `./gradlew composeApp:testDebugUnitTest --tests "com.example.cleancity.domain.UnreadCountStoreTest"`
 Expected: FAIL — метода `decrement` нет.
 
 - [ ] **Step 3: Добавить метод `decrement`**
@@ -464,7 +464,7 @@ Expected: FAIL — метода `decrement` нет.
 
 - [ ] **Step 4: Запустить тест — убедиться, что проходит**
 
-Run: `./gradlew composeApp:commonTest --tests "com.example.cleancity.domain.UnreadCountStoreTest"`
+Run: `./gradlew composeApp:testDebugUnitTest --tests "com.example.cleancity.domain.UnreadCountStoreTest"`
 Expected: PASS — 7 тестов.
 
 - [ ] **Step 5: Commit**
@@ -706,7 +706,7 @@ class NotificationsScreenModelTest {
 
 - [ ] **Step 3: Запустить тест — убедиться, что падает**
 
-Run: `./gradlew composeApp:commonTest --tests "com.example.cleancity.ui.feature.notifications.NotificationsScreenModelTest"`
+Run: `./gradlew composeApp:testDebugUnitTest --tests "com.example.cleancity.ui.feature.notifications.NotificationsScreenModelTest"`
 Expected: FAIL — `NotificationsScreenModel` и `NotificationsState` не существуют.
 
 - [ ] **Step 4: Реализовать модель**
@@ -839,7 +839,7 @@ class NotificationsScreenModel(
 
 - [ ] **Step 5: Запустить тест — убедиться, что проходит**
 
-Run: `./gradlew composeApp:commonTest --tests "com.example.cleancity.ui.feature.notifications.NotificationsScreenModelTest"`
+Run: `./gradlew composeApp:testDebugUnitTest --tests "com.example.cleancity.ui.feature.notifications.NotificationsScreenModelTest"`
 Expected: PASS — 8 тестов.
 
 - [ ] **Step 6: Зарегистрировать модель в DI**
@@ -1174,7 +1174,7 @@ Expected: BUILD SUCCESSFUL
 
 - [ ] **Step 4: Прогнать весь suite**
 
-Run: `./gradlew composeApp:commonTest`
+Run: `./gradlew composeApp:testDebugUnitTest`
 Expected: PASS — все тесты (прежние + новые из Task 2–5).
 
 - [ ] **Step 5: Commit**
@@ -1348,7 +1348,7 @@ class MyComplaintsScreenModelTest {
 
 - [ ] **Step 3: Запустить тест — убедиться, что падает**
 
-Run: `./gradlew composeApp:commonTest --tests "com.example.cleancity.ui.feature.mycomplaints.MyComplaintsScreenModelTest"`
+Run: `./gradlew composeApp:testDebugUnitTest --tests "com.example.cleancity.ui.feature.mycomplaints.MyComplaintsScreenModelTest"`
 Expected: FAIL — `MyComplaintsScreenModel`/`MyComplaintsState` не существуют.
 
 - [ ] **Step 4: Реализовать модель**
@@ -1463,7 +1463,7 @@ class MyComplaintsScreenModel(
 
 - [ ] **Step 5: Запустить тест — убедиться, что проходит**
 
-Run: `./gradlew composeApp:commonTest --tests "com.example.cleancity.ui.feature.mycomplaints.MyComplaintsScreenModelTest"`
+Run: `./gradlew composeApp:testDebugUnitTest --tests "com.example.cleancity.ui.feature.mycomplaints.MyComplaintsScreenModelTest"`
 Expected: PASS — 4 теста.
 
 - [ ] **Step 6: Зарегистрировать модель в DI**
@@ -1718,7 +1718,7 @@ Expected: BUILD SUCCESSFUL
 
 - [ ] **Step 4: Прогнать весь suite**
 
-Run: `./gradlew composeApp:commonTest`
+Run: `./gradlew composeApp:testDebugUnitTest`
 Expected: PASS — все тесты.
 
 - [ ] **Step 5: Commit**
@@ -1789,7 +1789,7 @@ class ResolutionTest {
 
 - [ ] **Step 2: Запустить тест — убедиться, что падает**
 
-Run: `./gradlew composeApp:commonTest --tests "com.example.cleancity.ui.feature.detail.ResolutionTest"`
+Run: `./gradlew composeApp:testDebugUnitTest --tests "com.example.cleancity.ui.feature.detail.ResolutionTest"`
 Expected: FAIL — функции `resolutionComment` нет.
 
 - [ ] **Step 3: Реализовать функцию**
@@ -1817,7 +1817,7 @@ fun resolutionComment(
 
 - [ ] **Step 4: Запустить тест — убедиться, что проходит**
 
-Run: `./gradlew composeApp:commonTest --tests "com.example.cleancity.ui.feature.detail.ResolutionTest"`
+Run: `./gradlew composeApp:testDebugUnitTest --tests "com.example.cleancity.ui.feature.detail.ResolutionTest"`
 Expected: PASS — 5 тестов.
 
 - [ ] **Step 5: Добавить callout-блок в `ComplaintDetailScreen`**
@@ -1884,7 +1884,7 @@ Expected: BUILD SUCCESSFUL
 
 - [ ] **Step 7: Прогнать весь suite**
 
-Run: `./gradlew composeApp:commonTest`
+Run: `./gradlew composeApp:testDebugUnitTest`
 Expected: PASS — все тесты (ожидаемо ~82 прежних + новые этого плана).
 
 - [ ] **Step 8: Commit**
@@ -1900,7 +1900,7 @@ git commit -m "feat: блок «Решение администрации» в �
 
 - [ ] **Step 1: Полный прогон тестов и сборка APK**
 
-Run: `./gradlew composeApp:commonTest`
+Run: `./gradlew composeApp:testDebugUnitTest`
 Expected: PASS — весь suite зелёный.
 
 Run: `./gradlew composeApp:assembleDebug`

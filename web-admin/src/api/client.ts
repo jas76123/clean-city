@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { InternalAxiosRequestConfig } from 'axios'
 import type { AuthResponse } from './types'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string
@@ -46,3 +47,34 @@ export function refreshAccessToken(): Promise<AuthResponse> {
     })
   return refreshPromise
 }
+
+export const api = axios.create({ baseURL: API_BASE })
+
+api.interceptors.request.use((config) => {
+  const t = getAccessToken()
+  if (t) config.headers.Authorization = `Bearer ${t}`
+  return config
+})
+
+api.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined
+    const status = error.response?.status
+    if (status === 401 && original && !original._retry) {
+      original._retry = true
+      try {
+        const auth = await refreshAccessToken()
+        original.headers.Authorization = `Bearer ${auth.accessToken}`
+        return api(original)
+      } catch {
+        clearSession()
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login'
+        }
+        return Promise.reject(error)
+      }
+    }
+    return Promise.reject(error)
+  },
+)

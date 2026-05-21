@@ -20,6 +20,11 @@ let refreshHits = 0
 const server = setupServer(
   http.post(`${BASE}/auth/refresh`, async () => {
     refreshHits++
+    // REQUIRED for the single-flight test: the 20 ms delay ensures that all 3
+    // concurrent refreshAccessToken() calls are in-flight simultaneously before
+    // any of them resolves. Without this delay the second and third calls would
+    // arrive after the first has already settled, so refreshPromise would already
+    // be null and each call would issue its own request — defeating the test.
     await new Promise((r) => setTimeout(r, 20))
     return HttpResponse.json(fakeAuth('access-new'))
   }),
@@ -63,5 +68,21 @@ describe('token store', () => {
 
   it('refreshAccessToken без refresh-токена бросает ошибку', async () => {
     await expect(refreshAccessToken()).rejects.toThrow()
+  })
+
+  it('после неудачного refresh следующий вызов делает новый запрос', async () => {
+    setSession(fakeAuth('access-1'))
+    // Override: first refresh fails with 401
+    server.use(
+      http.post(`${BASE}/auth/refresh`, () =>
+        new HttpResponse(JSON.stringify({ code: 'X', message: 'x' }), { status: 401 }),
+      ),
+    )
+    await expect(refreshAccessToken()).rejects.toBeDefined()
+    // Restore default success handler so the second call can succeed.
+    // This proves refreshPromise was reset (.finally) and does not stay locked.
+    server.resetHandlers()
+    const auth = await refreshAccessToken()
+    expect(auth.accessToken).toBe('access-new')
   })
 })

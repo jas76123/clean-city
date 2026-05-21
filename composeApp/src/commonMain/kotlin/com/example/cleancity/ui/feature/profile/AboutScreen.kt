@@ -36,7 +36,7 @@ import com.example.cleancity.ui.theme.Accent
 import com.example.cleancity.ui.theme.Gray500
 import com.example.cleancity.ui.theme.Gray700
 import com.example.cleancity.ui.theme.Gray900
-import com.example.cleancity.ui.theme.Green400
+import com.example.cleancity.ui.theme.Green600
 import org.jetbrains.compose.resources.painterResource
 
 class AboutScreen : Screen {
@@ -130,7 +130,7 @@ private fun LegalLinkRow(text: String, onClick: () -> Unit) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-        color = Green400,
+        color = Green600,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)

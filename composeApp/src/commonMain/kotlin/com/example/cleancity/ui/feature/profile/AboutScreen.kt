@@ -65,7 +65,7 @@ class AboutScreen : Screen {
                     color = Gray900,
                 )
                 Text(
-                    "Версия 1.0 · MVP для Сочи",
+                    "Версия 1.0 · MVP для города",
                     style = MaterialTheme.typography.bodySmall,
                     color = Gray500,
                 )
@@ -80,10 +80,10 @@ class AboutScreen : Screen {
                     textAlign = TextAlign.Center,
                 )
                 Spacer(Modifier.height(24.dp))
-                InfoRow(label = "Дипломный проект", value = "ИТ-факультет, 2026")
+                InfoRow(label = "Дипломный проект", value = "Сочи, 2026")
                 InfoRow(label = "Backend", value = "Kotlin · Ktor · PostgreSQL + PostGIS")
                 InfoRow(label = "Mobile", value = "Compose Multiplatform · Yandex MapKit")
-                InfoRow(label = "Поддержка", value = "support@cleancity.local")
+                InfoRow(label = "Поддержка", value = "a.ja5m@yandex.ru")
             }
         }
     }

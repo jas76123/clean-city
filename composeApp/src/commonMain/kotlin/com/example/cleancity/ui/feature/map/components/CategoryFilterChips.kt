@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.cleancity.shared.models.ProblemCategory
+import com.example.cleancity.ui.components.emoji
 import com.example.cleancity.ui.theme.Gray700
 import com.example.cleancity.ui.theme.Green700
 

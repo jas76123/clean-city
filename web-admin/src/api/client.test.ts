@@ -85,4 +85,24 @@ describe('token store', () => {
     const auth = await refreshAccessToken()
     expect(auth.accessToken).toBe('access-new')
   })
+
+  it('api: 401 → рефреш → повтор запроса с новым токеном', async () => {
+    setSession(fakeAuth('access-stale'))
+    let calls = 0
+    server.use(
+      http.get(`${BASE}/ping`, ({ request }) => {
+        calls++
+        const auth = request.headers.get('Authorization')
+        if (auth === 'Bearer access-stale') {
+          return new HttpResponse(JSON.stringify({ code: 'X', message: 'x' }), { status: 401 })
+        }
+        return HttpResponse.json({ ok: true })
+      }),
+    )
+    const { api } = await import('./client')
+    const res = await api.get('/ping')
+    expect(res.data).toEqual({ ok: true })
+    expect(calls).toBe(2)
+    expect(refreshHits).toBe(1)
+  })
 })

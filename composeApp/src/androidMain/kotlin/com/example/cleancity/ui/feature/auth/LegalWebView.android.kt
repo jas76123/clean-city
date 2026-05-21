@@ -21,6 +21,27 @@ actual fun LegalWebView(url: String) {
                     val host = request?.url?.host ?: return true
                     return host != allowedHost
                 }
+
+                override fun onReceivedError(
+                    view: WebView?,
+                    request: WebResourceRequest?,
+                    error: android.webkit.WebResourceError?,
+                ) {
+                    if (request?.isForMainFrame == true) {
+                        view?.loadData(
+                            """
+                            <html><body style="font-family:sans-serif;padding:32px;
+                            color:#4A6055;text-align:center">
+                            <h3>Документ временно недоступен</h3>
+                            <p>Не удалось загрузить страницу. Проверьте интернет-соединение
+                            и попробуйте позже.</p>
+                            </body></html>
+                            """.trimIndent(),
+                            "text/html; charset=utf-8",
+                            "UTF-8",
+                        )
+                    }
+                }
             }
             loadUrl(url)
         }

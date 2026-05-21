@@ -2,6 +2,7 @@ package com.example.cleancity.ui.feature.profile
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +30,8 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cleancity.composeapp.generated.resources.Res
 import cleancity.composeapp.generated.resources.app_logo
 import com.example.cleancity.ui.components.SectionTopBar
+import com.example.cleancity.ui.feature.auth.LegalKind
+import com.example.cleancity.ui.feature.auth.LegalScreen
 import com.example.cleancity.ui.theme.Accent
 import com.example.cleancity.ui.theme.Gray500
 import com.example.cleancity.ui.theme.Gray700
@@ -84,6 +87,23 @@ class AboutScreen : Screen {
                 InfoRow(label = "Backend", value = "Kotlin · Ktor · PostgreSQL + PostGIS")
                 InfoRow(label = "Mobile", value = "Compose Multiplatform · Yandex MapKit")
                 InfoRow(label = "Поддержка", value = "a.ja5m@yandex.ru")
+                Spacer(Modifier.height(24.dp))
+                LegalLinkRow(
+                    text = "Политика обработки данных",
+                    onClick = { navigator.push(LegalScreen(LegalKind.Privacy)) },
+                )
+                LegalLinkRow(
+                    text = "Условия использования",
+                    onClick = { navigator.push(LegalScreen(LegalKind.Terms)) },
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "Карты и геокодирование © Яндекс. Использование сервиса " +
+                        "регулируется условиями Яндекс Карт.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Gray500,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
     }
@@ -103,4 +123,18 @@ private fun InfoRow(label: String, value: String) {
         )
         Text(value, style = MaterialTheme.typography.bodyMedium, color = Gray700)
     }
+}
+
+@Composable
+private fun LegalLinkRow(text: String, onClick: () -> Unit) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+        color = Green400,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        textAlign = TextAlign.Center,
+    )
 }

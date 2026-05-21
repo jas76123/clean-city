@@ -199,6 +199,15 @@ private fun LoadedContent(
         item {
             DescriptionSection(c.description, modifier = Modifier.padding(16.dp))
         }
+        resolutionComment(c.status, c.statusHistory)?.let { comment ->
+            item {
+                ResolutionBlock(
+                    comment = comment,
+                    duplicateOfId = c.duplicateOfId.takeIf { c.status == ComplaintStatus.DUPLICATE },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+        }
         if (c.statusHistory.isNotEmpty()) {
             item {
                 Text(
@@ -421,6 +430,41 @@ private fun DescriptionSection(text: String, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodyMedium,
             color = Gray700,
         )
+    }
+}
+
+@Composable
+private fun ResolutionBlock(
+    comment: String,
+    duplicateOfId: Long?,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Red.copy(alpha = 0.08f))
+            .border(1.dp, Red.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            "Решение администрации",
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+            color = Red,
+        )
+        Text(
+            comment,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Gray700,
+        )
+        if (duplicateOfId != null) {
+            Text(
+                "Дубликат жалобы #$duplicateOfId",
+                style = MaterialTheme.typography.bodySmall,
+                color = Gray500,
+            )
+        }
     }
 }
 

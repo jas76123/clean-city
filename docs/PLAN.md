@@ -302,19 +302,21 @@ Web admin может быть проще (показываем основной 
 
 ### День 12 (19.05) — Mobile уведомления + мои/поддержанные
 
-- [ ] FCM SDK setup, регистрация токена через `POST /users/me/push-token` после логина
-- [ ] `NotificationsScreen` использует серверный API:
-  - [ ] `GET /notifications?limit=50` при открытии экрана
-  - [ ] Бейдж на иконке нижней навигации = `GET /notifications/unread-count` (опрос при возврате в foreground)
-  - [ ] Тап по элементу → `PATCH /notifications/{id}/read` + переход в детали (complaint_id или announcement_id)
-  - [ ] Кнопка «Прочитать все» → `PATCH /notifications/read-all`
-  - [ ] Empty state «У вас пока нет уведомлений»
-- [ ] `MyComplaintsScreen` (`/complaints/mine`)
-- [ ] `VotedComplaintsScreen` (`/complaints/voted`) — обязательно показывает закрытые REJECTED/DUPLICATE с пояснением админа
-- [ ] Дисплей комментария админа в детали закрытой жалобы — выделенным блоком («Решение администрации: <текст>»)
-- [ ] Push-уведомления — обработка в Foreground (показ снэкбара) и Background (системная нотификация). При тапе по системному пушу — deeplink в нужный экран **и** инкремент unread-count обновляется.
+> **Закрыт 2026-05-21 (polling-версия).** Брейншторм пересмотрел scope: канал доставки — polling (решение от 2026-05-11), FCM и системные push отложены в Day 14-буфер; `VotedComplaintsScreen` исключён (отклонение поддержанной жалобы видно через уведомление → детали). Дизайн+план: `docs/superpowers/specs/2026-05-21-day12-notifications-my-complaints-design.md`, `docs/superpowers/plans/2026-05-21-day12-notifications-my-complaints.md`. Полный suite 145 тестов зелёные, debug-APK собирается. Smoke на Samsung A33 5G — отдельный ручной прогон.
 
-**Checkpoint:** На реальном устройстве получить push при изменении статуса (создаю жалобу → меняю статус через web/Postman → приходит уведомление в системный шторку **и** появляется в `NotificationsScreen` с unread-меткой → тап открывает деталь жалобы и снимает unread).
+- [ ] FCM SDK setup, регистрация токена через `POST /users/me/push-token` после логина — **отложено в Day 14-буфер**
+- [x] `NotificationsScreen` использует серверный API:
+  - [x] `GET /notifications?limit=50` при открытии экрана
+  - [x] Бейдж на иконке нижней навигации = `GET /notifications/unread-count` (`UnreadCountStore` polling, Day 10; декремент при локальной отметке)
+  - [x] Тап по элементу → `PATCH /notifications/{id}/read` + переход в детали (COMPLAINT_STATUS → детали жалобы; ANNOUNCEMENT → вкладка «Лента»)
+  - [x] Кнопка «Прочитать все» → `PATCH /notifications/read-all`
+  - [x] Empty state «У вас пока нет уведомлений»
+- [x] `MyComplaintsScreen` (`/complaints/mine`) — вход из меню профиля, пагинация load-more
+- [ ] ~~`VotedComplaintsScreen` (`/complaints/voted`)~~ — **исключён из scope** (брейншторм 2026-05-21)
+- [x] Дисплей комментария админа в детали закрытой жалобы — выделенным блоком «Решение администрации» (REJECTED/DUPLICATE)
+- [ ] Push-уведомления — обработка в Foreground/Background, deeplink — **отложено в Day 14-буфер вместе с FCM**
+
+**Checkpoint:** На реальном устройстве получить push при изменении статуса (создаю жалобу → меняю статус через web/Postman → приходит уведомление в системный шторку **и** появляется в `NotificationsScreen` с unread-меткой → тап открывает деталь жалобы и снимает unread). *Polling-часть чекпоинта (уведомление в `NotificationsScreen` + unread) проверяется в Day 12; системная шторка — после Day 14-буфера.*
 
 ---
 

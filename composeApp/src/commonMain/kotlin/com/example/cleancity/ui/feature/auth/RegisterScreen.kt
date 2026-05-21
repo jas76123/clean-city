@@ -39,7 +39,7 @@ class RegisterScreen : Screen {
             AuthScaffold(onBack = { nav.pop() }) {
                 AuthTag("Создание аккаунта")
                 AuthTitle("Присоединяйтесь к\nчистому городу")
-                AuthSub("За 30 секунд — и вы можете влиять на состояние Сочи.")
+                AuthSub("За 30 секунд — и вы можете влиять на состояние города.")
                 FormField("ИМЯ", state.fullName, model::setFullName, error = state.nameError)
                 FormField("EMAIL", state.email, model::setEmail, keyboardType = KeyboardType.Email, error = state.emailError)
                 FormField(

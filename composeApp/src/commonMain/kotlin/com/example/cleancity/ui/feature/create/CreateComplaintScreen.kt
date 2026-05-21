@@ -513,10 +513,10 @@ private fun DuplicateRow(item: DuplicateCandidateResponse, onVote: () -> Unit) {
                     maxLines = 1,
                 )
                 Text(
-                    "${item.votesCount} голосов · ${formatDistance(item.distanceMeters)} · ${item.status.label()}",
+                    "${item.votesCount} ${pluralVotes(item.votesCount)} · ${formatDistance(item.distanceMeters)} · ${item.status.label()}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.outline,
-                    maxLines = 1,
+                    maxLines = 2,
                 )
             }
             Button(
@@ -544,6 +544,16 @@ private fun formatDistance(meters: Int): String = when {
     meters < 1000 -> "$meters м"
     meters % 1000 == 0 -> "${meters / 1000} км"
     else -> "${meters / 1000}.${(meters % 1000) / 100} км"
+}
+
+private fun pluralVotes(n: Int): String {
+    val mod10 = n % 10
+    val mod100 = n % 100
+    return when {
+        mod10 == 1 && mod100 != 11 -> "голос"
+        mod10 in 2..4 && mod100 !in 12..14 -> "голоса"
+        else -> "голосов"
+    }
 }
 
 // ---------- Category section ----------

@@ -31,6 +31,12 @@ Layout определён мокапом `docs/mockups/admin-dashboard-v2.html` 
    один ряд «Все / … / ⚠ SLA»). Выбор «⚠ SLA» = `slaBreached=true` без `status`;
    выбор статуса сбрасывает `slaBreached`; «Все» сбрасывает оба. Backend при этом
    поддерживает оба параметра независимо — ограничение чисто на уровне UI.
+6. **Фильтр района** — `complaints.district` хранится как свободный текст от
+   геокодера. Решение: нормализуем район **при создании жалобы** к одному из 4
+   `District` (храним каноничный label, напр. «Центральный»), плюс одноразовая
+   Flyway-миграция приводит уже существующие строки. После этого фильтр района —
+   точное совпадение по label, `buildCondition` менять не нужно. Это расширяет
+   scope Day 16 backend-частью (нормализация + миграция).
 
 ## 1. Backend-контракт
 
@@ -71,6 +77,26 @@ Layout определён мокапом `docs/mockups/admin-dashboard-v2.html` 
   для RESOLVED/REJECTED/DUPLICATE → `false`. `slaDeadline` вычисляется всегда
   (для админа).
 - Новые поля с дефолтами → backward-compatible для mobile-клиента.
+
+### Нормализация района
+
+`complaints.district` хранится как свободный текст геокодера (`MapSearchProvider`),
+поэтому точный фильтр по 4 каноничным районам почти ничего не находит. Чиним:
+
+- `District.fromGeocoderText(raw: String?): District?` (новый метод в
+  `shared/.../District.kt`) — keyword-матчинг подстрокой, регистронезависимо:
+  `центральн` → CENTRAL, `адлер` → ADLER, `хост` → KHOSTA, `лазаревск` →
+  LAZAREVSKOE, иначе `null`.
+- `ComplaintService.create()` нормализует входящий `req.district` через
+  `fromGeocoderText` и сохраняет `District.localizedLabel` (напр. «Центральный»)
+  либо `null`, если район не распознан. Mobile показывает `district` как текст —
+  каноничный label читается корректно.
+- Flyway-миграция `V8__normalize_complaint_districts.sql` — одноразово приводит
+  существующие строки через `UPDATE … SET district = CASE WHEN district ILIKE
+  '%центральн%' THEN 'Центральный' … END`. Идемпотентна (повторный прогон на уже
+  нормализованных данных — no-op).
+- Фильтр района в `buildCondition` остаётся точным совпадением — после
+  нормализации он работает корректно, менять не нужно.
 
 ### Не трогаем
 
@@ -224,6 +250,10 @@ Backend всё равно валидирует переход (409 на недо
     `null`/`false`.
 - Routes-тест `ComplaintRoutesTest` (создаём, его пока нет): `?status=INVALID` → 400;
   `?status=NEW` → 200 и только NEW; `?slaBreached=true` → 200.
+- `DistrictTest`: `fromGeocoderText` распознаёт «Центральный район», «Адлерский
+  внутригородской район», регистр; нераспознанное → `null`.
+- `ComplaintService.create()` сохраняет нормализованный label; нераспознанный
+  район → `null`; фильтр `district=Центральный` находит нормализованную жалобу.
 
 **Web (Vitest + Testing Library + MSW — паттерн Day 15):**
 

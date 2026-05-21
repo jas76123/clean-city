@@ -1,6 +1,7 @@
 package com.example.cleancity.plugins
 
 import io.ktor.server.application.createApplicationPlugin
+import io.ktor.server.request.path
 import io.ktor.server.response.header
 
 /**
@@ -13,6 +14,9 @@ import io.ktor.server.response.header
  */
 val SecurityHeaders = createApplicationPlugin(name = "SecurityHeaders") {
     onCall { call ->
+        // /legal/* страницы содержат inline <style> — app-wide CSP там задаётся в маршруте.
+        if (call.request.path().startsWith("/legal/")) return@onCall
+
         with(call.response) {
             header("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
             header(

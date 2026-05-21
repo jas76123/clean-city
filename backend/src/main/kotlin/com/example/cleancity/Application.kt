@@ -22,6 +22,7 @@ import com.example.cleancity.config.configureDatabase
 import com.example.cleancity.email.EmailService
 import com.example.cleancity.email.LoggingEmailService
 import com.example.cleancity.email.SmtpEmailService
+import com.example.cleancity.legal.legalRoutes
 import com.example.cleancity.notifications.DbNotificationService
 import com.example.cleancity.notifications.NotificationRepository
 import com.example.cleancity.notifications.notificationRoutes
@@ -37,7 +38,6 @@ import com.example.cleancity.storage.S3StorageService
 import com.example.cleancity.storage.StorageService
 import com.example.cleancity.storage.photoRoutes
 import com.example.cleancity.users.userRoutes
-import com.example.cleancity.legal.legalRoutes
 import com.example.cleancity.votes.VoteRepository
 import com.example.cleancity.votes.VoteService
 import com.example.cleancity.votes.voteRoutes

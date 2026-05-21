@@ -19,6 +19,7 @@ import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import kotlin.test.BeforeTest
@@ -246,5 +247,27 @@ class ComplaintVisibilityTest {
         val author = seedUser("a@x.ru")
         val rejectedId = seedComplaint(author, ComplaintStatus.REJECTED, "ул. Гостевая")
         assertNull(service.getById(rejectedId, Viewer.Guest))
+    }
+
+    @Test
+    fun `list shows Удалённый пользователь only for deleted authors`() {
+        val activeAuthor = seedUser("active@x.ru")
+        val deletedAuthor = seedUser("gone@x.ru")
+        seedComplaint(activeAuthor, ComplaintStatus.NEW, "ул. Живая")
+        seedComplaint(deletedAuthor, ComplaintStatus.NEW, "ул. Тихая")
+
+        // имитируем softDeleteAndAnonymize для автора
+        transaction {
+            Users.update({ Users.id eq deletedAuthor }) {
+                it[Users.isActive] = false
+                it[Users.fullName] = null
+                it[Users.email] = "deleted_${deletedAuthor}@cleancity.local"
+            }
+        }
+
+        val resp = service.list(Viewer.Guest, PublicListFilter())
+        val byAddress = resp.items.associateBy { it.address }
+        assertEquals("Удалённый пользователь", byAddress["ул. Тихая"]!!.authorName)
+        assertNull(byAddress["ул. Живая"]!!.authorName)
     }
 }

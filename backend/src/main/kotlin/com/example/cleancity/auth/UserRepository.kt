@@ -140,6 +140,21 @@ class UserRepository {
         Users.update({ Users.id eq userId }) { it[Users.totpEnabled] = true }
     }
 
+    /**
+     * Soft-delete + анонимизация аккаунта (152-ФЗ). Email заменяется на
+     * deleted_<id>@cleancity.local, пароль и имя обнуляются, is_active=false.
+     * password_hash ставится в пустую строку (колонка NOT NULL) — этого
+     * достаточно: ни один пароль не верифицируется против пустого хеша.
+     */
+    fun softDeleteAndAnonymize(userId: Long) = transaction {
+        Users.update({ Users.id eq userId }) {
+            it[Users.isActive] = false
+            it[Users.email] = "deleted_${userId}@cleancity.local"
+            it[Users.passwordHash] = ""
+            it[Users.fullName] = null
+        }
+    }
+
     private fun ResultRow.toUserRow() = UserRow(
         id = this[Users.id],
         email = this[Users.email],

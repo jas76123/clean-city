@@ -23,11 +23,12 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,12 +38,15 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,7 +67,6 @@ import com.example.cleancity.shared.models.UserResponse
 import org.jetbrains.compose.resources.painterResource
 import com.example.cleancity.ui.feature.auth.LoginScreen
 import com.example.cleancity.ui.feature.auth.RegisterScreen
-import com.example.cleancity.ui.feature.mycomplaints.MyComplaintsScreen
 import com.example.cleancity.ui.theme.Accent
 import com.example.cleancity.ui.theme.AmberLight
 import com.example.cleancity.ui.theme.Blue
@@ -91,6 +94,16 @@ class ProfileScreen : Screen {
         val navigator = LocalNavigator.currentOrThrow
         val snackbarHost = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
+        val deleteState by model.deleteState.collectAsState()
+        var showDeleteDialog by remember { mutableStateOf(false) }
+
+        LaunchedEffect(deleteState) {
+            val s = deleteState
+            if (s is DeleteAccountState.Error) {
+                snackbarHost.showSnackbar(s.message)
+                model.dismissDeleteError()
+            }
+        }
 
         LaunchedEffect(Unit) { model.load() }
 
@@ -105,7 +118,6 @@ class ProfileScreen : Screen {
                 is ProfileState.Loaded -> LoadedView(
                     user = s.user,
                     stats = s.stats,
-                    onMyComplaintsClick = { navigator.push(MyComplaintsScreen()) },
                     onSettingsClick = {
                         scope.launch {
                             snackbarHost.showSnackbar("Появится в ближайшем обновлении")
@@ -113,12 +125,44 @@ class ProfileScreen : Screen {
                     },
                     onAboutClick = { navigator.push(AboutScreen()) },
                     onLogoutClick = { model.logout() },
+                    onDeleteAccountClick = { showDeleteDialog = true },
                 )
             }
             SnackbarHost(
                 hostState = snackbarHost,
                 modifier = Modifier.align(Alignment.BottomCenter),
             ) { data -> Snackbar(snackbarData = data) }
+            if (showDeleteDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteDialog = false },
+                    title = { Text("Удалить профиль?") },
+                    text = {
+                        Text(
+                            "Действие необратимо. Ваши жалобы останутся в системе, " +
+                                "но без указания автора."
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showDeleteDialog = false
+                                model.deleteAccount()
+                            }
+                        ) { Text("Удалить", color = Red) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteDialog = false }) { Text("Отмена") }
+                    },
+                )
+            }
+            if (deleteState is DeleteAccountState.InProgress) {
+                Box(
+                    Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
         }
     }
 }
@@ -191,10 +235,10 @@ private fun GuestPromptView(onLoginClick: () -> Unit, onRegisterClick: () -> Uni
 private fun LoadedView(
     user: UserResponse,
     stats: ProfileStats,
-    onMyComplaintsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onAboutClick: () -> Unit,
     onLogoutClick: () -> Unit,
+    onDeleteAccountClick: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         ProfileHeader(user = user)
@@ -202,10 +246,10 @@ private fun LoadedView(
         ProfileStatsGrid(stats = stats)
         Spacer(Modifier.height(16.dp))
         ProfileMenu(
-            onMyComplaintsClick = onMyComplaintsClick,
             onSettingsClick = onSettingsClick,
             onAboutClick = onAboutClick,
             onLogoutClick = onLogoutClick,
+            onDeleteAccountClick = onDeleteAccountClick,
         )
     }
 }
@@ -326,10 +370,10 @@ private fun StatCardView(card: StatCard, modifier: Modifier = Modifier) {
 
 @Composable
 private fun ProfileMenu(
-    onMyComplaintsClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onAboutClick: () -> Unit,
     onLogoutClick: () -> Unit,
+    onDeleteAccountClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -337,7 +381,6 @@ private fun ProfileMenu(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        MenuItemRow(icon = Icons.Default.ListAlt, label = "Мои жалобы", onClick = onMyComplaintsClick)
         MenuItemRow(icon = Icons.Default.NotificationsActive, label = "Настройки уведомлений", onClick = onSettingsClick)
         MenuItemRow(icon = Icons.Default.Info, label = "О приложении", onClick = onAboutClick)
         MenuItemRow(
@@ -346,6 +389,13 @@ private fun ProfileMenu(
             tint = Red,
             iconBg = RedLight,
             onClick = onLogoutClick,
+        )
+        MenuItemRow(
+            icon = Icons.Default.DeleteForever,
+            label = "Удалить профиль",
+            tint = Red,
+            iconBg = RedLight,
+            onClick = onDeleteAccountClick,
         )
     }
 }

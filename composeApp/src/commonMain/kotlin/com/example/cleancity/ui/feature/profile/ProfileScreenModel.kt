@@ -20,6 +20,12 @@ data class ProfileStats(
     val confirmed: Int = 0,    // count /complaints/voted
 )
 
+sealed interface DeleteAccountState {
+    data object Idle : DeleteAccountState
+    data object InProgress : DeleteAccountState
+    data class Error(val message: String) : DeleteAccountState
+}
+
 sealed interface ProfileState {
     data object Loading : ProfileState
     data object GuestPrompt : ProfileState
@@ -39,6 +45,9 @@ class ProfileScreenModel(
 
     private val _state = MutableStateFlow<ProfileState>(ProfileState.Loading)
     val state: StateFlow<ProfileState> = _state.asStateFlow()
+
+    private val _deleteState = MutableStateFlow<DeleteAccountState>(DeleteAccountState.Idle)
+    val deleteState: StateFlow<DeleteAccountState> = _deleteState.asStateFlow()
 
     fun load() {
         val auth = authRepo.state.value
@@ -71,5 +80,24 @@ class ProfileScreenModel(
             runCatching { authRepo.logout() }
             // App.kt observe AuthState и сам поменяет root
         }
+    }
+
+    fun deleteAccount() {
+        if (_deleteState.value == DeleteAccountState.InProgress) return
+        _deleteState.value = DeleteAccountState.InProgress
+        screenModelScope.launch {
+            authRepo.deleteAccount().onFailure {
+                _deleteState.value = DeleteAccountState.Error(
+                    it.message ?: "Не удалось удалить профиль"
+                )
+            }
+            // При успехе AuthState → Anonymous, App.kt пересоберёт root и снимет
+            // этот экран — отдельное Success-состояние не нужно.
+        }
+    }
+
+    fun dismissDeleteError() {
+        if (_deleteState.value !is DeleteAccountState.Error) return
+        _deleteState.value = DeleteAccountState.Idle
     }
 }

@@ -27,7 +27,6 @@ import com.example.cleancity.ui.feature.detail.ComplaintDetailScreenModel
 import com.example.cleancity.ui.feature.feed.FeedScreenModel
 import com.example.cleancity.ui.feature.map.MapScreenModel
 import com.example.cleancity.ui.feature.map.MapSearchProvider
-import com.example.cleancity.ui.feature.mycomplaints.MyComplaintsScreenModel
 import com.example.cleancity.ui.feature.notifications.NotificationsScreenModel
 import com.example.cleancity.ui.feature.profile.ProfileScreenModel
 import io.ktor.client.HttpClient
@@ -121,9 +120,6 @@ fun appModule(): Module = module {
             unreadCountStore = get<UnreadCountStore>(),
             authRepo = get(),
         )
-    }
-    factory {
-        MyComplaintsScreenModel(complaintsApi = get<ComplaintsApiContract>())
     }
     factory {
         CreateComplaintScreenModel(

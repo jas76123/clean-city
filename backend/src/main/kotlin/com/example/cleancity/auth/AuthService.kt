@@ -10,9 +10,6 @@ import com.example.cleancity.shared.models.UserRole
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
-private const val MIN_PASSWORD_LENGTH_RESIDENT = 8
-private const val MIN_PASSWORD_LENGTH_ADMIN = 12
-
 private const val VERIFY_TOKEN_TTL_SECONDS = 24L * 60 * 60         // 24 часа
 private const val RESET_TOKEN_TTL_SECONDS = 60L * 60                // 1 час
 private const val INVITE_TOKEN_TTL_SECONDS = 7L * 24 * 60 * 60       // 7 дней
@@ -376,17 +373,8 @@ class AuthService(
         if (!EMAIL_REGEX.matches(email)) throw InvalidEmailException()
     }
 
-    private fun validatePassword(password: String, role: UserRole) {
-        val minLen = if (role == UserRole.RESIDENT) MIN_PASSWORD_LENGTH_RESIDENT else MIN_PASSWORD_LENGTH_ADMIN
-        if (password.length < minLen) {
-            throw WeakPasswordException("Password must be at least $minLen characters long")
-        }
-        if (role != UserRole.RESIDENT) {
-            require(password.any { it.isDigit() }) { throw WeakPasswordException("Password must contain a digit") }
-            require(password.any { it.isUpperCase() }) { throw WeakPasswordException("Password must contain an uppercase letter") }
-            require(password.any { !it.isLetterOrDigit() }) { throw WeakPasswordException("Password must contain a special character") }
-        }
-    }
+    private fun validatePassword(password: String, role: UserRole) =
+        PasswordPolicy.validate(password, role)
 
     fun getUserById(userId: Long): UserResponse? =
         users.findById(userId)?.toResponse()

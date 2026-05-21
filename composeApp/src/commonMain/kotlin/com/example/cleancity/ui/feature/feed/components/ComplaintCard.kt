@@ -25,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.cleancity.shared.models.ComplaintResponse
 import com.example.cleancity.shared.models.ComplaintStatus
@@ -170,19 +171,30 @@ private fun AddressRow(address: String, district: String?) {
 @Composable
 private fun MetaRow(complaint: ComplaintResponse) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = relativeTime(complaint.createdAt),
-            style = MaterialTheme.typography.labelSmall,
-            color = Gray500,
-        )
-        complaint.authorName?.takeIf { it.isNotBlank() }?.let { name ->
+        // Дата + автор слева. Группа взвешена, имя автора ужимается в «…»,
+        // чтобы длинное «Удалённый пользователь» не распирало карточку.
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
-                text = " · 👤 $name",
+                text = relativeTime(complaint.createdAt),
                 style = MaterialTheme.typography.labelSmall,
                 color = Gray500,
+                maxLines = 1,
             )
+            complaint.authorName?.takeIf { it.isNotBlank() }?.let { name ->
+                Text(
+                    text = " · 👤 $name",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Gray500,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+            }
         }
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.padding(start = 8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Default.ThumbUp,

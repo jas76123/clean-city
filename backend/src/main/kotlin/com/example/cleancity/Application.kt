@@ -37,6 +37,7 @@ import com.example.cleancity.storage.S3StorageService
 import com.example.cleancity.storage.StorageService
 import com.example.cleancity.storage.photoRoutes
 import com.example.cleancity.users.userRoutes
+import com.example.cleancity.legal.legalRoutes
 import com.example.cleancity.votes.VoteRepository
 import com.example.cleancity.votes.VoteService
 import com.example.cleancity.votes.voteRoutes
@@ -168,6 +169,7 @@ fun Application.module() {
             val items = District.entries.map { DistrictMeta(code = it, label = it.localizedLabel) }
             call.respond(items)
         }
+        legalRoutes()
         authRoutes(authService, rateLimiter)
         userRoutes(authService)
         complaintRoutes(complaintService)

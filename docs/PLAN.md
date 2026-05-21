@@ -322,14 +322,17 @@ Web admin может быть проще (показываем основной 
 
 ### День 13 (20.05) — Mobile полировка + APK
 
-- [ ] Empty states на всех списках
-- [ ] Loading states (skeleton или spinner)
-- [ ] Error states (нет сети, сервер недоступен) — простой алерт «Нет соединения, попробуйте позже». Полноценный offline-mode — Phase 2.
-- [ ] Иконки 18 категорий — единообразно (взять из мокапа эмодзи)
-- [ ] App icon (можно взять иконку из презентации) + splash
-- [ ] ProGuard / R8 конфиг
-- [ ] **Release-keystore** — генерируем `keystore.jks`, сохраняем пароль в зашифрованном виде (Yandex Lockbox или 1Password), бэкапим на флешку. Подписываем release-сборку.
-- [ ] Release-сборка APK через `./gradlew composeApp:assembleRelease` — подписанный release-keystore.
+> **Код-часть закрыта 2026-05-21** (брейншторм + subagent-driven execution). Дизайн+план: `docs/superpowers/specs/2026-05-21-day13-polish-release-design.md`, `docs/superpowers/plans/2026-05-21-day13-polish-release.md`. 150 unit-тестов зелёные, debug- и release-APK (R8 без обфускации) собираются. Осталось ручное: генерация release-keystore, подписанная release-сборка, smoke на Samsung A33. Подача в RuStore — отдельный чеклист после готовности веб-админки.
+
+- [x] Empty states на всех списках — общий `EmptyState` (эмодзи+заголовок+подзаголовок)
+- [x] Loading states — общий `LoadingState` (spinner; skeleton — backlog)
+- [x] Error states (нет сети, сервер недоступен) — `listErrorMessage` + общий `ErrorState` с «Повторить». Offline-mode — Phase 2.
+- [x] Иконки 18 категорий — общий `CategoryIcon` (эмодзи в круге), починен `OTHER`
+- [x] App icon — adaptive launcher-иконка из логотипа + тёмный сплэш-фон (нет белой вспышки)
+- [x] ProGuard / R8 конфиг — `minifyEnabled=true` + `-dontobfuscate`, `proguard-rules.pro`
+- [x] Legal — ссылки на политику/условия в AboutScreen, fallback WebView, кликабельная атрибуция Яндекс Карт, единый контакт в legal-документах
+- [ ] **Release-keystore** — генерируем `keystore.jks`, пароли в `keystore.properties` (в `.gitignore`), бэкап на флешку. Конфиг подписи в `build.gradle.kts` уже готов (degrade gracefully без keystore).
+- [ ] Release-сборка APK через `./gradlew composeApp:assembleRelease` — подписанная release-keystore (сейчас собирается unsigned).
 - [ ] **Подача в RuStore:**
   - [ ] Регистрация разработчика на partner.rustore.ru (паспорт + ИНН), бесплатно.
   - [ ] Загрузить APK + 4 скриншота + иконку 512×512 + описание (200 слов: «Жалобы по экологии и инфраструктуре Сочи; голосование жителей повышает приоритет; уведомления о статусе»).

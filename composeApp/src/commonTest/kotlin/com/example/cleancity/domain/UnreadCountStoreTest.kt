@@ -97,4 +97,34 @@ class UnreadCountStoreTest {
         assertEquals(1, api.callCount)  // only one fetch, not two
         store.stop()
     }
+
+    @Test
+    fun `decrement reduces state and clamps at zero`() = runTest {
+        val api = FakeNotificationsApi().apply { nextCount = 5L }
+        val store = newStore(api, this)
+
+        store.start()
+        testScheduler.runCurrent()
+        assertEquals(5, store.state.value)
+
+        store.decrement(2)
+        assertEquals(3, store.state.value)
+
+        store.decrement(10)   // не уходит в минус
+        assertEquals(0, store.state.value)
+        store.stop()
+    }
+
+    @Test
+    fun `decrement defaults to one`() = runTest {
+        val api = FakeNotificationsApi().apply { nextCount = 4L }
+        val store = newStore(api, this)
+
+        store.start()
+        testScheduler.runCurrent()
+
+        store.decrement()
+        assertEquals(3, store.state.value)
+        store.stop()
+    }
 }

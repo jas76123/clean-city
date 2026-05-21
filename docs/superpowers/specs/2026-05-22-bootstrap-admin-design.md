@@ -135,15 +135,26 @@
 Backend-тесты прогоняются `./gradlew :backend:test` (это отдельный gradle-модуль
 `:backend`, не common — таска `composeApp:testDebugUnitTest` к нему не относится).
 
+## Взаимодействие с DEV-сидом (важно)
+
+В DEV Flyway дополнительно применяет `backend/.../db/seed-dev/V99__seed_dev.sql`
+(см. `DatabaseConfig` — `db/seed-dev` добавляется в `locations` при `stage == "DEV"`).
+V99 создаёт `admin@cleancity.dev` + 5 резидентов + 50 жалоб и отрабатывает
+в составе `configureDatabase()`, то есть **до** `bootstrapAdmin()`.
+
+Следствие: **в DEV bootstrap всегда видит существующего сид-админа и корректно
+пропускается** — это ожидаемое поведение, не баг. Реальная ценность bootstrap —
+PROD: там `db/seed-dev` не на classpath, V99 не применяется, и bootstrap создаёт
+первого админа из `INITIAL_ADMIN_*`.
+
 ## Ручной чекпоинт
 
-Текущая dev-БД уже содержит тест-админа (id 16) → bootstrap там пропустится.
-Чтобы проверить работу:
-
-1. `docker compose down -v` — снести том БД.
-2. `docker compose up -d` — backend применит миграции и выполнит bootstrap.
-3. В логах backend — `Bootstrap-админ создан: admin@cleancity.local`.
-4. Логин этим админом из web-admin (`:5173`) работает.
+- **DEV:** `docker compose down -v && docker compose up -d --build` → в логах
+  backend `Админ уже существует — bootstrap пропущен`, backend стартует без
+  ошибок. Логин сид-админом `admin@cleancity.dev` / `Admin12345!` → HTTP 200.
+- **Путь создания и PROD fail-fast** покрыты юнит-тестами `AdminBootstrapTest`
+  (H2, stage DEV/PROD без сида): создание на пустой БД, пропуск при наличии
+  админа, `WeakPasswordException` на слабом пароле в PROD.
 
 ## Что НЕ входит (YAGNI)
 

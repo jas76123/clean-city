@@ -9,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class UserRepositoryTest {
 
@@ -41,6 +42,23 @@ class UserRepositoryTest {
         assertEquals("", after.passwordHash)
         assertNull(after.fullName)
         assertFalse(after.isActive)
+    }
+
+    @Test
+    fun `hasAnyAdmin is false on empty db and with only residents`() {
+        initDb()
+        val repo = UserRepository()
+        assertFalse(repo.hasAnyAdmin())
+        repo.create(email = "r@cleancity.local", passwordHash = "h", role = UserRole.RESIDENT)
+        assertFalse(repo.hasAnyAdmin())
+    }
+
+    @Test
+    fun `hasAnyAdmin is true when an admin-role user exists`() {
+        initDb()
+        val repo = UserRepository()
+        repo.create(email = "a@cleancity.local", passwordHash = "h", role = UserRole.ADMIN)
+        assertTrue(repo.hasAnyAdmin())
     }
 
     @Test

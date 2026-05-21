@@ -9,6 +9,7 @@ import com.example.cleancity.auth.TokenRepository
 import com.example.cleancity.auth.TotpService
 import com.example.cleancity.auth.UserRepository
 import com.example.cleancity.auth.authRoutes
+import com.example.cleancity.auth.bootstrapInitialAdmin
 import com.example.cleancity.analytics.AnalyticsRepository
 import com.example.cleancity.analytics.AnalyticsService
 import com.example.cleancity.analytics.analyticsRoutes
@@ -61,6 +62,7 @@ fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
 fun Application.module() {
     configureDatabase()
+    bootstrapAdmin()
 
     install(SecurityHeaders)
 
@@ -223,6 +225,13 @@ private fun Application.buildStorage(baseUrl: String): StorageService {
         ?: "./uploads"
     environment.log.info("Storage: Local (path=$storagePath)")
     return LocalStorageService(storagePath, baseUrl)
+}
+
+private fun Application.bootstrapAdmin() {
+    val email = environment.config.propertyOrNull("app.initial_admin.email")?.getString()
+    val password = environment.config.propertyOrNull("app.initial_admin.password")?.getString()
+    val stage = environment.config.propertyOrNull("app.stage")?.getString()?.uppercase() ?: "DEV"
+    bootstrapInitialAdmin(UserRepository(), email, password, stage, environment.log)
 }
 
 private fun Application.buildEmailService(): EmailService {

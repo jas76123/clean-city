@@ -4,6 +4,7 @@ import com.example.cleancity.database.tables.Users
 import com.example.cleancity.shared.models.UserRole
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
@@ -34,6 +35,18 @@ class UserRepository {
 
     fun findById(id: Long): UserRow? = transaction {
         Users.selectAll().where { Users.id eq id }.firstOrNull()?.toUserRow()
+    }
+
+    /**
+     * true, если в системе есть хотя бы один пользователь с админ-ролью
+     * (ADMIN / OPERATOR / INSPECTOR), независимо от is_active.
+     */
+    fun hasAnyAdmin(): Boolean = transaction {
+        !Users.selectAll().where {
+            (Users.role eq UserRole.ADMIN.name) or
+                (Users.role eq UserRole.OPERATOR.name) or
+                (Users.role eq UserRole.INSPECTOR.name)
+        }.empty()
     }
 
     fun create(

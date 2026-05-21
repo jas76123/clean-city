@@ -22,16 +22,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.NotificationsNone
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -56,7 +50,6 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import com.example.cleancity.domain.UnreadCountStore
 import com.example.cleancity.shared.models.AnnouncementResponse
 import com.example.cleancity.shared.models.ComplaintResponse
 import com.example.cleancity.shared.models.ComplaintStatus
@@ -67,7 +60,6 @@ import com.example.cleancity.ui.feature.feed.components.FeedToggle
 import com.example.cleancity.ui.feature.feed.components.FeedTopBar
 import com.example.cleancity.ui.theme.Gray500
 import com.example.cleancity.ui.theme.Gray600
-import org.koin.compose.koinInject
 
 class FeedScreen : Screen {
 
@@ -76,18 +68,12 @@ class FeedScreen : Screen {
     override fun Content() {
         val model: FeedScreenModel = koinScreenModel()
         val state by model.state.collectAsState()
-        val unreadStore: UnreadCountStore = koinInject()
-        val unreadCount by unreadStore.state.collectAsState()
         val navigator = LocalNavigator.currentOrThrow
 
         LaunchedEffect(Unit) { model.loadInitial() }
 
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-            FeedTopBar(
-                modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
-                unreadCount = unreadCount,
-                onBellClick = { /* no-op; уведомления — отдельный таб */ },
-            )
+            FeedTopBar(modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars))
 
             when (val s = state) {
                 FeedState.Initial, FeedState.Loading -> LoadingState()

@@ -5,11 +5,14 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -41,6 +44,7 @@ class MainShellScreen : Screen {
         val store: UnreadCountStore = koinInject()
         val authRepo: AuthRepository = koinInject()
         val authState by authRepo.state.collectAsState()
+        val unreadCount by store.state.collectAsState()
 
         LaunchedEffect(authState) {
             if (authState is AuthState.Authenticated) store.start() else store.stop()
@@ -64,7 +68,7 @@ class MainShellScreen : Screen {
                     ) {
                         TabNavigationItem(FeedTab)
                         TabNavigationItem(MapTab)
-                        TabNavigationItem(NotificationsTab)
+                        TabNavigationItem(NotificationsTab, badgeCount = unreadCount)
                         TabNavigationItem(ProfileTab)
                     }
                 },
@@ -74,17 +78,30 @@ class MainShellScreen : Screen {
 }
 
 @Composable
-private fun RowScope.TabNavigationItem(tab: Tab) {
+private fun RowScope.TabNavigationItem(tab: Tab, badgeCount: Int = 0) {
     val tabNavigator = LocalTabNavigator.current
     val selected = tabNavigator.current.key == tab.key
     NavigationBarItem(
         selected = selected,
         onClick = { tabNavigator.current = tab },
         icon = {
-            Icon(
-                painter = tab.options.icon!!,
-                contentDescription = tab.options.title,
-            )
+            if (badgeCount > 0) {
+                BadgedBox(
+                    badge = {
+                        Badge { Text(if (badgeCount > 99) "99+" else badgeCount.toString()) }
+                    },
+                ) {
+                    Icon(
+                        painter = tab.options.icon!!,
+                        contentDescription = tab.options.title,
+                    )
+                }
+            } else {
+                Icon(
+                    painter = tab.options.icon!!,
+                    contentDescription = tab.options.title,
+                )
+            }
         },
         colors = NavigationBarItemDefaults.colors(
             selectedIconColor = Green900,

@@ -116,4 +116,64 @@ class ComplaintFilterTest {
         val item = service.list(a, PublicListFilter()).items.single()
         assertFalse(item.slaBreached, "терминальные статусы не горят по SLA")
     }
+
+    @Test
+    fun `фильтр по статусу возвращает только этот статус`() {
+        val a = admin()
+        seedComplaint(a.userId, ComplaintStatus.NEW)
+        seedComplaint(a.userId, ComplaintStatus.IN_PROGRESS)
+        seedComplaint(a.userId, ComplaintStatus.RESOLVED)
+        val resp = service.list(a, PublicListFilter(status = ComplaintStatus.IN_PROGRESS))
+        assertEquals(1, resp.items.size)
+        assertEquals(ComplaintStatus.IN_PROGRESS, resp.items.single().status)
+    }
+
+    @Test
+    fun `резидент с фильтром REJECTED получает пусто`() {
+        val a = admin()
+        seedComplaint(a.userId, ComplaintStatus.REJECTED)
+        val resident = Viewer.Authenticated(seedUser("r@x.ru"), UserRole.RESIDENT)
+        val resp = service.list(resident, PublicListFilter(status = ComplaintStatus.REJECTED))
+        assertEquals(0, resp.items.size, "REJECTED не входит в visibleStatuses резидента")
+    }
+
+    @Test
+    fun `админ с фильтром REJECTED видит REJECTED`() {
+        val a = admin()
+        seedComplaint(a.userId, ComplaintStatus.REJECTED)
+        seedComplaint(a.userId, ComplaintStatus.NEW)
+        val resp = service.list(a, PublicListFilter(status = ComplaintStatus.REJECTED))
+        assertEquals(1, resp.items.size)
+        assertEquals(ComplaintStatus.REJECTED, resp.items.single().status)
+    }
+
+    @Test
+    fun `slaBreached фильтрует только просроченные активные`() {
+        val a = admin()
+        seedComplaint(a.userId, ComplaintStatus.NEW, ProblemCategory.ROADS, ageHours = 100)
+        seedComplaint(a.userId, ComplaintStatus.NEW, ProblemCategory.ROADS, ageHours = 1)
+        seedComplaint(a.userId, ComplaintStatus.RESOLVED, ProblemCategory.ROADS, ageHours = 500)
+        val resp = service.list(a, PublicListFilter(slaBreached = true))
+        assertEquals(1, resp.items.size, "только просроченная активная жалоба")
+        assertTrue(resp.items.single().slaBreached)
+    }
+
+    @Test
+    fun `slaBreached учитывает норматив категории`() {
+        val a = admin()
+        seedComplaint(a.userId, ComplaintStatus.NEW, ProblemCategory.GARBAGE, ageHours = 30)
+        seedComplaint(a.userId, ComplaintStatus.NEW, ProblemCategory.OTHER, ageHours = 30)
+        val resp = service.list(a, PublicListFilter(slaBreached = true))
+        assertEquals(1, resp.items.size)
+        assertEquals(ProblemCategory.GARBAGE, resp.items.single().category)
+    }
+
+    @Test
+    fun `фильтр по нормализованному району находит жалобу`() {
+        val a = admin()
+        seedComplaint(a.userId, ComplaintStatus.NEW, district = "Центральный")
+        seedComplaint(a.userId, ComplaintStatus.NEW, district = "Адлерский")
+        val resp = service.list(a, PublicListFilter(district = "Центральный"))
+        assertEquals(1, resp.items.size)
+    }
 }

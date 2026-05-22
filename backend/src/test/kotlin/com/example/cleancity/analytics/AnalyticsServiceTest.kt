@@ -267,7 +267,14 @@ class AnalyticsServiceTest {
         assertEquals(now.toLocalDate().toString(), today.date)
         assertEquals(2, today.created, "2 жалобы созданы сегодня")
         assertEquals(1, today.resolved, "1 жалоба решена сегодня")
-        assertTrue(t.days.all { it.created >= 0 && it.resolved >= 0 })
+        assertEquals(
+            t.days.map { it.date }.sorted(), t.days.map { it.date },
+            "дни идут в хронологическом порядке",
+        )
+        assertTrue(
+            t.days.dropLast(1).all { it.created == 0 },
+            "жалобы вне 30-дневного окна не должны попасть в ряд",
+        )
     }
 
     @Test

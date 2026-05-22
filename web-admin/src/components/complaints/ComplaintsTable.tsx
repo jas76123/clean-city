@@ -6,17 +6,29 @@ interface Props {
   items: Complaint[]
   selectedId: number | null
   onSelect: (id: number) => void
+  onResetFilters?: () => void
 }
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
 }
 
-export function ComplaintsTable({ items, selectedId, onSelect }: Props) {
+export function ComplaintsTable({ items, selectedId, onSelect, onResetFilters }: Props) {
   if (items.length === 0) {
     return (
       <div className="py-12 text-center text-sm text-slate-400">
         Под выбранные фильтры ничего не нашлось
+        {onResetFilters && (
+          <div>
+            <button
+              type="button"
+              onClick={onResetFilters}
+              className="mt-2 text-sm text-blue-600 underline"
+            >
+              Сбросить фильтры
+            </button>
+          </div>
+        )}
       </div>
     )
   }

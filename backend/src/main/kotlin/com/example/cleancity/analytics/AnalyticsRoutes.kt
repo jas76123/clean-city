@@ -39,6 +39,10 @@ fun Route.analyticsRoutes(service: AnalyticsService) {
                 call.requireAdmin()
                 call.respond(service.votesImpact(call.period()))
             }
+            get("/trends") {
+                call.requireAdmin()
+                call.respond(service.trends())
+            }
         }
     }
 }

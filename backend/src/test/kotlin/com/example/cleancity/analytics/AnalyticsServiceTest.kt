@@ -248,4 +248,32 @@ class AnalyticsServiceTest {
         assertNull(k.avgResolutionHours)
         assertEquals(0.0, k.resolvedWithin7dPct)
     }
+
+    @Test
+    fun `trends returns 30 daily points with created and resolved counts`() {
+        val author = seedUser()
+        // 2 жалобы созданы сегодня, 1 решена сегодня
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now)
+        seedComplaint(
+            author, ProblemCategory.ROADS, ComplaintStatus.RESOLVED,
+            now, resolvedAt = now,
+        )
+        // 1 жалоба создана 100 дней назад — вне окна 30 дней
+        seedComplaint(author, ProblemCategory.OTHER, ComplaintStatus.NEW, now.minusDays(100))
+
+        val t = service.trends(now)
+        assertEquals(30, t.days.size, "ряд за 30 дней")
+        val today = t.days.last()
+        assertEquals(now.toLocalDate().toString(), today.date)
+        assertEquals(2, today.created, "2 жалобы созданы сегодня")
+        assertEquals(1, today.resolved, "1 жалоба решена сегодня")
+        assertTrue(t.days.all { it.created >= 0 && it.resolved >= 0 })
+    }
+
+    @Test
+    fun `trends on empty dataset returns 30 zero points`() {
+        val t = service.trends(now)
+        assertEquals(30, t.days.size)
+        assertTrue(t.days.all { it.created == 0 && it.resolved == 0 })
+    }
 }

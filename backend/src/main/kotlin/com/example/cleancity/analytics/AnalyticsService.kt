@@ -5,11 +5,13 @@ import com.example.cleancity.shared.models.AnalyticsPeriod
 import com.example.cleancity.shared.models.CategorySla
 import com.example.cleancity.shared.models.CategoryStat
 import com.example.cleancity.shared.models.ComplaintStatus
+import com.example.cleancity.shared.models.DailyPoint
 import com.example.cleancity.shared.models.District
 import com.example.cleancity.shared.models.DistrictStat
 import com.example.cleancity.shared.models.MonthlyKpis
 import com.example.cleancity.shared.models.ProblemCategory
 import com.example.cleancity.shared.models.SlaStat
+import com.example.cleancity.shared.models.TrendsResponse
 import com.example.cleancity.shared.models.VotesBucket
 import java.time.Duration
 import java.time.OffsetDateTime
@@ -118,6 +120,21 @@ class AnalyticsService(private val repo: AnalyticsRepository) {
                 avgResolutionHours = avgResolutionHours(rs)
             )
         }
+    }
+
+    /** Дневной ряд за последние 30 дней: создано/решено по датам (UTC). */
+    fun trends(now: OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)): TrendsResponse {
+        val rows = repo.loadComplaints(periodStart = null)
+        val today = now.toLocalDate()
+        val days = (29 downTo 0).map { offset ->
+            val day = today.minusDays(offset.toLong())
+            DailyPoint(
+                date = day.toString(),
+                created = rows.count { it.createdAt.toLocalDate() == day },
+                resolved = rows.count { it.resolvedAt != null && it.resolvedAt.toLocalDate() == day },
+            )
+        }
+        return TrendsResponse(days)
     }
 
     private fun periodStart(period: AnalyticsPeriod): OffsetDateTime? {

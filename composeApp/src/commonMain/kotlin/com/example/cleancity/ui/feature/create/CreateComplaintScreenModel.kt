@@ -212,12 +212,19 @@ class CreateComplaintScreenModel(
         screenModelScope.launch {
             locationProvider.getLastKnownLocation()
                 .onSuccess { loc ->
+                    // High-accuracy GPS-фикс может считаться десятки секунд. Если за это
+                    // время пользователь уже выбрал адрес сам (карта/подсказка/ручной ввод),
+                    // GPS не должен затирать его координаты — лишь гасим статус ожидания.
+                    if (_state.value.addressSource != AddressSource.None) {
+                        _state.update { it.copy(locationStatus = LocationStatus.Ready) }
+                        return@onSuccess
+                    }
                     _state.update {
                         it.copy(
                             latitude = loc.latitude,
                             longitude = loc.longitude,
                             locationStatus = LocationStatus.Ready,
-                            addressSource = if (it.addressSource == AddressSource.None) AddressSource.Gps else it.addressSource,
+                            addressSource = AddressSource.Gps,
                         )
                     }
                     reverseGeocode(loc.latitude, loc.longitude)

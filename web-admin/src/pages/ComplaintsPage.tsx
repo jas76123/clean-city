@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
 import { toast } from 'sonner'
 import type { ChangeStatusRequest, ComplaintFilter, ComplaintStatus } from '@/api/types'
 import {
@@ -20,6 +22,7 @@ const INITIAL_FILTER: ComplaintFilter = {
 const PAGE_SIZE = 20
 
 export function ComplaintsPage() {
+  const queryClient = useQueryClient()
   const [filter, setFilter] = useState<ComplaintFilter>(INITIAL_FILTER)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [actionStatus, setActionStatus] = useState<ComplaintStatus | null>(null)
@@ -41,7 +44,19 @@ export function ComplaintsPage() {
         onError: (err) => {
           const { code, message } = extractApiError(err)
           toast.error(message)
-          if (code !== 'UNKNOWN') setActionStatus(null)
+          const status = err instanceof AxiosError ? err.response?.status : undefined
+          if (status === 404) {
+            setActionStatus(null)
+            setSelectedId(null)
+            queryClient.invalidateQueries({ queryKey: ['complaints'] })
+          } else if (status === 409) {
+            setActionStatus(null)
+            if (selectedId != null) {
+              queryClient.invalidateQueries({ queryKey: ['complaint', selectedId] })
+            }
+          } else {
+            if (code !== 'UNKNOWN') setActionStatus(null)
+          }
         },
       },
     )
@@ -66,6 +81,7 @@ export function ComplaintsPage() {
               items={list.data?.items ?? []}
               selectedId={selectedId}
               onSelect={setSelectedId}
+              onResetFilters={() => setFilter(INITIAL_FILTER)}
             />
           )}
         </div>

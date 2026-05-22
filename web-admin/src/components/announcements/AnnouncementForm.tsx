@@ -6,14 +6,7 @@ import { Label } from '@/components/ui/label'
 import { DISTRICTS } from '@/lib/complaintMeta'
 import { ICON_STYLE_META, ICON_STYLE_ORDER } from '@/lib/announcementMeta'
 import type { CreateAnnouncementRequest, IconStyle } from '@/api/types'
-
-// Сочи — UTC+3 без перехода на летнее время.
-const SOCHI_OFFSET = '+03:00'
-
-/** date-инпут (YYYY-MM-DD) → ISO-8601 на конец дня с offset Сочи. */
-export function toEndOfDayIso(date: string): string {
-  return `${date}T23:59:59${SOCHI_OFFSET}`
-}
+import { toEndOfDayIso } from '@/lib/dateUtils'
 
 interface Props {
   submitting: boolean

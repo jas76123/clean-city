@@ -429,7 +429,7 @@ Web admin может быть проще (показываем основной 
 > docs/superpowers/plans/2026-05-24-day17a-dashboard.md.
 > Осталось по Дню 17: 17B (объявления), 17C (настройки/команда), 17D (PDF-отчёт).
 
-- [ ] `AnnouncementsPage` — список + форма создания (title, body, icon, category, districts, expires_at)
+- [x] `AnnouncementsPage` — форма создания (title, body, icon, districts, expires_at) + список + снятие с публикации. Без редактирования и без поля category — см. docs/superpowers/specs/2026-05-24-day17b-announcements-design.md.
 - [ ] При публикации → push на mobile
 - [x] `OverviewPage` (главный экран после логина):
   - [x] Карточки KPI (total, NEW, IN_PROGRESS, RESOLVED, today, week, SLA breach)

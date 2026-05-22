@@ -7,6 +7,7 @@ import com.example.cleancity.shared.models.CategoryStat
 import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.District
 import com.example.cleancity.shared.models.DistrictStat
+import com.example.cleancity.shared.models.MonthlyKpis
 import com.example.cleancity.shared.models.ProblemCategory
 import com.example.cleancity.shared.models.SlaStat
 import com.example.cleancity.shared.models.VotesBucket
@@ -30,6 +31,8 @@ class AnalyticsService(private val repo: AnalyticsRepository) {
             ageHours > CategorySla.hoursFor(row.category)
         }
 
+        val monthly = monthlyKpis(rows, now)
+
         return AnalyticsOverview(
             total = rows.size,
             new = byStatus[ComplaintStatus.NEW] ?: 0,
@@ -39,7 +42,8 @@ class AnalyticsService(private val repo: AnalyticsRepository) {
             duplicate = byStatus[ComplaintStatus.DUPLICATE] ?: 0,
             today = rows.count { it.createdAt >= todayStart },
             week = rows.count { it.createdAt >= weekStart },
-            slaBreachCount = slaBreachCount
+            slaBreachCount = slaBreachCount,
+            monthlyKpis = monthly
         )
     }
 
@@ -132,6 +136,37 @@ class AnalyticsService(private val repo: AnalyticsRepository) {
         }
         if (hours.isEmpty()) return null
         return round1(hours.average())
+    }
+
+    /** KPI за текущие 30 дней и предыдущие 30 дней — для дельт на дашборде. */
+    private fun monthlyKpis(rows: List<AnalyticsRepository.Row>, now: OffsetDateTime): MonthlyKpis {
+        val curStart = now.minusDays(30)
+        val prevStart = now.minusDays(60)
+
+        fun window(from: OffsetDateTime, to: OffsetDateTime): Triple<Int, Double?, Double> {
+            val created = rows.count { it.createdAt >= from && it.createdAt < to }
+            val resolvedInWindow = rows.filter {
+                it.status == ComplaintStatus.RESOLVED && it.resolvedAt != null &&
+                    it.resolvedAt >= from && it.resolvedAt < to
+            }
+            val within7d = resolvedInWindow.count {
+                Duration.between(it.createdAt, it.resolvedAt!!).toHours() <= 7 * 24
+            }
+            val pct = if (resolvedInWindow.isEmpty()) 0.0
+            else round1(within7d * 100.0 / resolvedInWindow.size)
+            return Triple(created, avgResolutionHours(resolvedInWindow), pct)
+        }
+
+        val (curTotal, curAvg, curPct) = window(curStart, now)
+        val (prevTotal, prevAvg, prevPct) = window(prevStart, curStart)
+        return MonthlyKpis(
+            total = curTotal,
+            prevTotal = prevTotal,
+            avgResolutionHours = curAvg,
+            prevAvgResolutionHours = prevAvg,
+            resolvedWithin7dPct = curPct,
+            prevResolvedWithin7dPct = prevPct,
+        )
     }
 
     private fun bucketFor(votes: Int): String = when {

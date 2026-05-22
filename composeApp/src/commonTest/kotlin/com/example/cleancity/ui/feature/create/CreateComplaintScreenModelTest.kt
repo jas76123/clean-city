@@ -479,6 +479,61 @@ class CreateComplaintScreenModelTest {
         assertEquals(AddressSource.None, st.addressSource)
     }
 
+    // --- GPS race with user-chosen address -----------------------------------
+
+    @Test fun `late GPS fix does not overwrite address picked on map`() = runTest {
+        // Медленный high-accuracy GPS-фикс резолвится уже ПОСЛЕ того, как
+        // пользователь выбрал точку на карте. GPS не должен затирать выбор.
+        location.nextResult = Result.success(Location(11.111, 22.222)) // координаты GPS
+        search.nextReverseResult = Result.success(
+            ReverseGeocodeResult("GPS-адрес", "GPS-район"),
+        )
+        val model = newModel()
+        testScheduler.advanceUntilIdle() // init подписался на bus
+
+        bus.publish(
+            com.example.cleancity.ui.feature.map.picker.PickedAddress(
+                latitude = 43.42, longitude = 39.92,
+                address = "ул. Ленина, 100", district = "Адлерский",
+            ),
+        )
+        testScheduler.advanceUntilIdle()
+
+        model.onLocationPermissionGranted()
+        testScheduler.advanceUntilIdle()
+
+        val st = model.state.value
+        assertEquals(43.42, st.latitude, "GPS не должен затирать выбранную на карте точку")
+        assertEquals(39.92, st.longitude)
+        assertEquals("ул. Ленина, 100", st.address)
+        assertEquals("Адлерский", st.district)
+        assertEquals(AddressSource.Picker, st.addressSource)
+    }
+
+    @Test fun `late GPS fix does not overwrite address chosen from suggestion`() = runTest {
+        location.nextResult = Result.success(Location(11.111, 22.222))
+        search.nextReverseResult = Result.success(
+            ReverseGeocodeResult("Курортный проспект, 1", "Центральный"),
+        )
+        val model = newModel()
+
+        model.onSuggestionTapped(
+            com.example.cleancity.ui.feature.map.MapSuggestion(
+                id = "1", title = "Курортный проспект, 1", subtitle = null,
+                latitude = 43.6, longitude = 39.7,
+            ),
+        )
+        testScheduler.advanceUntilIdle()
+
+        model.onLocationPermissionGranted()
+        testScheduler.advanceUntilIdle()
+
+        val st = model.state.value
+        assertEquals(43.6, st.latitude, "GPS не должен затирать координаты из подсказки")
+        assertEquals(39.7, st.longitude)
+        assertEquals(AddressSource.Suggest, st.addressSource)
+    }
+
     // --- helpers ----------------------------------------------------------------
 
     private fun readyButMissing(mutator: (CreateComplaintUiState) -> CreateComplaintUiState) = runTest {

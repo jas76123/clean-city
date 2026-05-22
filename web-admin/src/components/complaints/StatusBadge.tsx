@@ -1,7 +1,7 @@
 import type { ComplaintStatus } from '@/api/types'
 import { STATUS_META } from '@/lib/complaintMeta'
 
-const BASE = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium'
+const BASE = 'inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium'
 
 export function StatusBadge({ status, slaBreached }: { status: ComplaintStatus; slaBreached?: boolean }) {
   if (slaBreached) {

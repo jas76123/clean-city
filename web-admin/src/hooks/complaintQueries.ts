@@ -3,11 +3,16 @@ import { listComplaints, getComplaint, changeStatus, findDuplicates } from '@/ap
 import { getOverview } from '@/api/analytics'
 import type { ChangeStatusRequest, ComplaintFilter, ProblemCategory } from '@/api/types'
 
+// Таблица жалоб автообновляется раз в минуту, чтобы админ видел новые
+// и переведённые жалобы без ручного F5. keepPreviousData ниже гасит мигание.
+const COMPLAINTS_REFETCH_MS = 60_000
+
 export function useComplaintsQuery(filter: ComplaintFilter) {
   return useQuery({
     queryKey: ['complaints', filter],
     queryFn: () => listComplaints(filter),
     placeholderData: keepPreviousData,
+    refetchInterval: COMPLAINTS_REFETCH_MS,
   })
 }
 
@@ -23,6 +28,8 @@ export function useOverviewQuery() {
   return useQuery({
     queryKey: ['analytics', 'overview'],
     queryFn: getOverview,
+    // Счётчики статусов обновляются вместе с таблицей, чтобы не разъезжаться.
+    refetchInterval: COMPLAINTS_REFETCH_MS,
   })
 }
 

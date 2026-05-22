@@ -150,6 +150,10 @@ export function AnnouncementForm({ submitting, onSubmit }: Props) {
               )}
             </div>
           </div>
+
+          <p className="text-xs text-muted-foreground">
+            После публикации жителям выбранных районов придёт push-уведомление.
+          </p>
         </CardContent>
       </Card>
     </form>

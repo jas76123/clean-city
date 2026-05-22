@@ -6,6 +6,7 @@ import com.example.cleancity.NotFoundException
 import com.example.cleancity.UnauthorizedException
 import com.example.cleancity.auth.clientIp
 import com.example.cleancity.auth.userAgentSafe
+import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.ProblemCategory
 import com.example.cleancity.shared.models.UserRole
 import com.example.cleancity.shared.requests.ChangeStatusRequest
@@ -196,5 +197,7 @@ private fun ApplicationCall.parsePublicFilter(): PublicListFilter {
     val district = request.queryParameters["district"]?.takeIf { it.isNotBlank() }
     val page = (queryInt("page") ?: 0).coerceAtLeast(0)
     val size = (queryInt("size") ?: 20).coerceIn(1, MAX_PAGE_SIZE)
-    return PublicListFilter(category, district, sort, page, size)
+    val status = queryEnum<ComplaintStatus>("status")
+    val slaBreached = request.queryParameters["slaBreached"]?.toBoolean() ?: false
+    return PublicListFilter(category, district, sort, page, size, status, slaBreached)
 }

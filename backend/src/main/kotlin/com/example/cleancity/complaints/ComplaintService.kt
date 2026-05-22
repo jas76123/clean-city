@@ -153,7 +153,9 @@ class ComplaintService(
                 district = filter.district,
                 sort = filter.sort,
                 page = filter.page,
-                size = filter.size
+                size = filter.size,
+                status = filter.status,
+                slaBreached = filter.slaBreached
             )
         )
         return enrichList(rows, viewer, filter.page, filter.size, total)
@@ -474,5 +476,7 @@ data class PublicListFilter(
     val district: String? = null,
     val sort: ComplaintSort = ComplaintSort.DATE,
     val page: Int = 0,
-    val size: Int = 20
+    val size: Int = 20,
+    val status: ComplaintStatus? = null,
+    val slaBreached: Boolean = false
 )

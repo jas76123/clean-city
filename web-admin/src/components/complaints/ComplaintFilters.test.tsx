@@ -11,6 +11,7 @@ const baseFilter: ComplaintFilter = {
 const overview: AnalyticsOverview = {
   total: 247, new: 47, inProgress: 63, resolved: 137, rejected: 8, duplicate: 4,
   today: 5, week: 30, slaBreachCount: 8,
+  monthlyKpis: { total: 0, prevTotal: 0, avgResolutionHours: null, prevAvgResolutionHours: null, resolvedWithin7dPct: 0, prevResolvedWithin7dPct: 0 },
 }
 
 describe('ComplaintFilters', () => {

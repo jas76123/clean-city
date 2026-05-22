@@ -105,6 +105,15 @@ export interface DuplicateCandidatesResponse {
   items: DuplicateCandidate[]
 }
 
+export interface MonthlyKpis {
+  total: number
+  prevTotal: number
+  avgResolutionHours: number | null
+  prevAvgResolutionHours: number | null
+  resolvedWithin7dPct: number
+  prevResolvedWithin7dPct: number
+}
+
 export interface AnalyticsOverview {
   total: number
   new: number
@@ -115,6 +124,50 @@ export interface AnalyticsOverview {
   today: number
   week: number
   slaBreachCount: number
+  monthlyKpis: MonthlyKpis
+}
+
+export type AnalyticsPeriod = 'WEEK' | 'MONTH' | 'ALL'
+
+export interface DailyPoint {
+  date: string
+  created: number
+  resolved: number
+}
+
+export interface TrendsResponse {
+  days: DailyPoint[]
+}
+
+export interface CategoryStat {
+  category: ProblemCategory
+  label: string
+  count: number
+  sharePct: number
+  avgResolutionHours: number | null
+}
+
+export interface DistrictStat {
+  district: string
+  label: string
+  count: number
+  newCount: number
+  resolvedCount: number
+}
+
+export interface SlaStat {
+  category: ProblemCategory
+  label: string
+  slaHours: number
+  avgResolutionHours: number | null
+  breachPct: number
+  resolvedCount: number
+}
+
+export interface VotesBucket {
+  bucket: string
+  count: number
+  avgResolutionHours: number | null
 }
 
 export interface ChangeStatusRequest {

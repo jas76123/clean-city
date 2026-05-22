@@ -184,3 +184,32 @@ export interface ComplaintFilter {
   sort: ComplaintSort
   page: number
 }
+
+// --- Объявления (Day 17B) ---
+
+export type IconStyle = 'INFO' | 'SUCCESS' | 'WARNING'
+
+export interface Announcement {
+  id: number
+  title: string
+  body: string
+  iconStyle: IconStyle
+  category: ProblemCategory | null
+  districts: string[]
+  authorId: number
+  publishedAt: string
+  expiresAt: string | null
+}
+
+export interface AnnouncementsListResponse {
+  items: Announcement[]
+  total: number
+}
+
+export interface CreateAnnouncementRequest {
+  title: string
+  body: string
+  iconStyle: IconStyle
+  districts: string[]
+  expiresAt?: string
+}

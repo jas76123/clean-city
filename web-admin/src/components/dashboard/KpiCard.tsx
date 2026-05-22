@@ -13,8 +13,13 @@ export function KpiCard({ label, value, current, previous, lowerIsBetter }: KpiC
     current != null && previous != null && previous !== 0
       ? Math.round(((current - previous) / previous) * 100)
       : null
-  const good = delta == null ? false : lowerIsBetter ? delta < 0 : delta > 0
-  const deltaClass = good ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+  const good = delta == null || delta === 0 ? false : lowerIsBetter ? delta < 0 : delta > 0
+  const deltaClass =
+    delta === 0
+      ? 'bg-slate-100 text-slate-500'
+      : good
+        ? 'bg-emerald-100 text-emerald-700'
+        : 'bg-red-100 text-red-700'
 
   return (
     <div className="rounded-xl border bg-white p-4">

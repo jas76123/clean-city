@@ -71,7 +71,7 @@ BEGIN
             (ARRAY[
                 'GARBAGE','ROADS','SIDEWALKS','LIGHTING','GREENERY','LANDSCAPING',
                 'PLAYGROUNDS','PARKS','BEACHES','SAFETY','VANDALISM','WATER_SUPPLY',
-                'SEWERAGE','ELECTRICITY','POLLUTION','ACCESSIBILITY','ILLEGAL_TRADE','OTHER'
+                'SEWAGE','ELECTRICITY','ECOLOGY','ACCESSIBILITY','TRADE','OTHER'
             ])[((i - 1) % 18) + 1],
             'Жалоба #' || i,
             'Описание тестовой жалобы №' || i || '. Подробности заполнены автоматически в dev seed.',

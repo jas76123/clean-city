@@ -5,6 +5,7 @@ import com.example.cleancity.database.tables.Complaints
 import com.example.cleancity.database.tables.StatusChanges
 import com.example.cleancity.database.tables.Users
 import com.example.cleancity.database.tables.Votes
+import com.example.cleancity.shared.models.CategorySla
 import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.ProblemCategory
 import org.jetbrains.exposed.sql.Expression
@@ -17,6 +18,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.batchInsert
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -95,7 +97,9 @@ data class ComplaintFilter(
     val sort: ComplaintSort = ComplaintSort.DATE,
     val page: Int = 0,
     val size: Int = 20,
-    val authorId: Long? = null
+    val authorId: Long? = null,
+    val status: ComplaintStatus? = null,
+    val slaBreached: Boolean = false
 )
 
 class ComplaintRepository {
@@ -355,7 +359,29 @@ class ComplaintRepository {
         if (filter.category != null) op = op and (Complaints.category eq filter.category.name)
         if (filter.district != null) op = op and (Complaints.district eq filter.district)
         if (filter.authorId != null) op = op and (Complaints.authorId eq filter.authorId)
+        if (filter.status != null) op = op and (Complaints.status eq filter.status.name)
+        if (filter.slaBreached) op = op and slaBreachedCondition()
         op
+    }
+
+    /**
+     * Просроченные активные жалобы: статус NEW/IN_PROGRESS и created_at раньше
+     * норматива §4.8. Пороги времени считаем в Kotlin (не raw SQL INTERVAL/EXTRACT) —
+     * портабельно к H2-PostgreSQL-mode в тестах.
+     */
+    private fun slaBreachedCondition(): Op<Boolean> = with(SqlExpressionBuilder) {
+        val now = OffsetDateTime.now(ZoneOffset.UTC)
+        val active: Op<Boolean> = Complaints.status inList
+            listOf(ComplaintStatus.NEW.name, ComplaintStatus.IN_PROGRESS.name)
+        var overdue: Op<Boolean> = Op.FALSE
+        ProblemCategory.entries.groupBy { CategorySla.hoursFor(it) }.forEach { (hours, cats) ->
+            val cutoff = now.minusHours(hours.toLong())
+            overdue = overdue or (
+                (Complaints.category inList cats.map { it.name }) and
+                    (Complaints.createdAt less cutoff)
+                )
+        }
+        active and overdue
     }
 
     private fun ResultRow.toComplaintRow(): ComplaintRow {

@@ -26,7 +26,9 @@ data class ComplaintResponse(
     val createdAt: String,
     val updatedAt: String,
     val resolvedAt: String? = null,
-    val statusHistory: List<StatusChangeResponse> = emptyList()
+    val statusHistory: List<StatusChangeResponse> = emptyList(),
+    val slaDeadline: String? = null,
+    val slaBreached: Boolean = false
 )
 
 @Serializable

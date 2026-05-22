@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { AnnouncementForm, toEndOfDayIso } from './AnnouncementForm'
+import { AnnouncementForm } from './AnnouncementForm'
+import { toEndOfDayIso } from '@/lib/dateUtils'
 
 describe('AnnouncementForm', () => {
   it('кнопка «Опубликовать» заблокирована при пустых полях', () => {

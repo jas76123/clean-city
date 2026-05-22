@@ -151,11 +151,16 @@ class ComplaintFilterTest {
     fun `slaBreached фильтрует только просроченные активные`() {
         val a = admin()
         seedComplaint(a.userId, ComplaintStatus.NEW, ProblemCategory.ROADS, ageHours = 100)
+        seedComplaint(a.userId, ComplaintStatus.IN_PROGRESS, ProblemCategory.ROADS, ageHours = 100)
         seedComplaint(a.userId, ComplaintStatus.NEW, ProblemCategory.ROADS, ageHours = 1)
         seedComplaint(a.userId, ComplaintStatus.RESOLVED, ProblemCategory.ROADS, ageHours = 500)
         val resp = service.list(a, PublicListFilter(slaBreached = true))
-        assertEquals(1, resp.items.size, "только просроченная активная жалоба")
-        assertTrue(resp.items.single().slaBreached)
+        assertEquals(2, resp.items.size, "просроченные активные жалобы (NEW и IN_PROGRESS)")
+        assertTrue(resp.items.all { it.slaBreached })
+        assertEquals(
+            setOf(ComplaintStatus.NEW, ComplaintStatus.IN_PROGRESS),
+            resp.items.map { it.status }.toSet()
+        )
     }
 
     @Test
@@ -169,7 +174,7 @@ class ComplaintFilterTest {
     }
 
     @Test
-    fun `фильтр по нормализованному району находит жалобу`() {
+    fun `фильтр по району возвращает только совпадающий район`() {
         val a = admin()
         seedComplaint(a.userId, ComplaintStatus.NEW, district = "Центральный")
         seedComplaint(a.userId, ComplaintStatus.NEW, district = "Адлерский")

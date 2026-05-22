@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { AnnouncementForm } from './AnnouncementForm'
+import { AnnouncementForm, toEndOfDayIso } from './AnnouncementForm'
 
 describe('AnnouncementForm', () => {
   it('кнопка «Опубликовать» заблокирована при пустых полях', () => {
@@ -38,5 +38,11 @@ describe('AnnouncementForm', () => {
       iconStyle: 'INFO',
       districts: [],
     })
+  })
+})
+
+describe('toEndOfDayIso', () => {
+  it('конвертирует дату в конец дня с offset Сочи', () => {
+    expect(toEndOfDayIso('2026-05-25')).toBe('2026-05-25T23:59:59+03:00')
   })
 })

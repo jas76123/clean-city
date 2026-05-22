@@ -11,7 +11,7 @@ import type { CreateAnnouncementRequest, IconStyle } from '@/api/types'
 const SOCHI_OFFSET = '+03:00'
 
 /** date-инпут (YYYY-MM-DD) → ISO-8601 на конец дня с offset Сочи. */
-function toEndOfDayIso(date: string): string {
+export function toEndOfDayIso(date: string): string {
   return `${date}T23:59:59${SOCHI_OFFSET}`
 }
 
@@ -89,13 +89,14 @@ export function AnnouncementForm({ submitting, onSubmit }: Props) {
 
           <div className="flex flex-col gap-1.5">
             <Label>Тип</Label>
-            <div className="flex gap-2">
+            <div className="flex gap-2" role="group" aria-label="Тип">
               {ICON_STYLE_ORDER.map((style) => (
                 <Button
                   key={style}
                   type="button"
                   size="sm"
                   variant={iconStyle === style ? 'default' : 'outline'}
+                  aria-pressed={iconStyle === style}
                   onClick={() => setIconStyle(style)}
                 >
                   {ICON_STYLE_META[style].label}

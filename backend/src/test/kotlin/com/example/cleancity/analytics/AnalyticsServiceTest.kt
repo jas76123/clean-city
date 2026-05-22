@@ -215,4 +215,37 @@ class AnalyticsServiceTest {
         assertEquals(4, buckets.size)
         assertTrue(buckets.all { it.count == 0 })
     }
+
+    @Test
+    fun `overview monthlyKpis compares current 30d window with previous`() {
+        val author = seedUser()
+        // Текущее окно (0-30 дней назад): 2 создано, 1 решена за 5 дней (в пределах 7д)
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(3))
+        seedComplaint(
+            author, ProblemCategory.ROADS, ComplaintStatus.RESOLVED,
+            now.minusDays(10), resolvedAt = now.minusDays(5),
+        )
+        // Предыдущее окно (30-60 дней назад): 1 создано, 1 решена за 20 дней (вне 7д)
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(50), resolvedAt = now.minusDays(40),
+        )
+
+        val k = service.overview(now).monthlyKpis
+        assertEquals(2, k.total, "в текущем окне создано 2")
+        assertEquals(1, k.prevTotal, "в предыдущем окне создано 1")
+        assertEquals(100.0, k.resolvedWithin7dPct, "1 из 1 решена в пределах 7д")
+        assertEquals(0.0, k.prevResolvedWithin7dPct, "решена за 20д — вне 7д")
+        assertNotNull(k.avgResolutionHours)
+        assertEquals(120.0, k.avgResolutionHours!!, 1.0, "5 суток = 120ч")
+    }
+
+    @Test
+    fun `overview monthlyKpis on empty dataset returns zeros and nulls`() {
+        val k = service.overview(now).monthlyKpis
+        assertEquals(0, k.total)
+        assertEquals(0, k.prevTotal)
+        assertNull(k.avgResolutionHours)
+        assertEquals(0.0, k.resolvedWithin7dPct)
+    }
 }

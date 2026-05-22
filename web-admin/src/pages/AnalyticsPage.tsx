@@ -14,6 +14,20 @@ export function AnalyticsPage() {
   const sla = useSlaQuery(period)
   const votes = useVotesImpactQuery(period)
 
+  if (overview.isError) {
+    return (
+      <div className="p-6 text-center text-sm text-red-600">
+        Не удалось загрузить аналитику.{' '}
+        <button onClick={() => overview.refetch()} className="underline">
+          Повторить
+        </button>
+      </div>
+    )
+  }
+  if (overview.isLoading || !overview.data) {
+    return <div className="p-6 text-center text-sm text-slate-400">Загрузка…</div>
+  }
+
   const k = overview.data?.monthlyKpis
   const created = trends.data?.days.map((d) => d.created) ?? []
   const resolved = trends.data?.days.map((d) => d.resolved) ?? []
@@ -29,6 +43,7 @@ export function AnalyticsPage() {
         <div className="flex items-center gap-3">
           <PeriodSwitcher value={period} onChange={setPeriod} />
           <button
+            type="button"
             disabled
             title="Скоро — экспорт PDF появится отдельно"
             className="cursor-not-allowed rounded-lg border bg-white px-3 py-1.5 text-xs font-medium text-slate-300"
@@ -52,7 +67,7 @@ export function AnalyticsPage() {
         />
         <TrendCard
           title="Жалоб создано"
-          value={String(createdSum)}
+          value={trends.data == null ? '—' : String(createdSum)}
           sub="за последние 30 дней"
           series={created}
         />

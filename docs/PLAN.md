@@ -423,17 +423,23 @@ Web admin может быть проще (показываем основной 
 
 ### День 17 (24.05) — Web: объявления + аналитика + настройки
 
+> **17A (Дашборд) закрыт.** OverviewPage + AnalyticsPage реализованы.
+> Бэкенд: monthlyKpis в /analytics/overview + новый GET /analytics/trends.
+> Дизайн/план: docs/superpowers/specs/2026-05-24-day17a-dashboard-design.md,
+> docs/superpowers/plans/2026-05-24-day17a-dashboard.md.
+> Осталось по Дню 17: 17B (объявления), 17C (настройки/команда), 17D (PDF-отчёт).
+
 - [ ] `AnnouncementsPage` — список + форма создания (title, body, icon, category, districts, expires_at)
 - [ ] При публикации → push на mobile
-- [ ] `OverviewPage` (главный экран после логина):
-  - [ ] Карточки KPI (total, NEW, IN_PROGRESS, RESOLVED, today, week, SLA breach)
-  - [ ] **SLA-алерт-баннер** наверху если `sla_breach_count > 0` — текст из `/analytics/overview` (см. мокап `admin-dashboard-v2.html`).
-  - [ ] График по дням (recharts)
-  - [ ] Топ районов
-  - [ ] SLA по категориям
-  - [ ] Топ-5 по голосам жителей (см. мокап)
-  - [ ] Карта с pins всех активных жалоб
-- [ ] `AnalyticsPage` — расширенная аналитика, экспорт в Excel через CSV download.
+- [x] `OverviewPage` (главный экран после логина):
+  - [x] Карточки KPI (total, NEW, IN_PROGRESS, RESOLVED, today, week, SLA breach)
+  - [x] **SLA-алерт-баннер** наверху если `sla_breach_count > 0` — текст из `/analytics/overview` (см. мокап `admin-dashboard-v2.html`).
+  - [x] График по дням (CSS, без recharts)
+  - [x] Топ районов
+  - [x] SLA по категориям
+  - [x] Топ-5 по голосам жителей (см. мокап)
+  - [ ] Карта с pins всех активных жалоб — отложено (нужен ключ Yandex JS API)
+- [x] `AnalyticsPage` — trend-карты + SLA + влияние голосов + переключатель периода.
 - [ ] **PDF «Сводный отчёт за месяц»** (один реальный из 4 в мокапе):
   - [ ] Бэкенд: `GET /analytics/export/monthly-report.pdf` — генерация через OpenPDF (`com.github.librepdf:openpdf:1.3.30`, Apache 2.0). Шаблон: KPI + графики (можно как картинки из data-URL) + топ районов + SLA-таблица.
   - [ ] Фронт: 1-я карточка в Settings → Export — кликабельная, скачивает PDF.

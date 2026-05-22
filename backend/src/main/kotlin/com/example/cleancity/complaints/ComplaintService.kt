@@ -114,9 +114,11 @@ class ComplaintService(
                 latitude = req.latitude,
                 longitude = req.longitude,
                 address = address,
-                // Нормализуем район геокодера к одному из 4 District (храним каноничный
-                // label) — иначе фильтр по району в веб-админке не находит совпадений.
-                district = District.fromGeocoderText(req.district)?.localizedLabel
+                // Район: сперва пробуем распознать в тексте геокодера; если там нет
+                // узнаваемого района (напр. название села) — определяем по координатам.
+                // Так district заполнен всегда.
+                district = (District.fromGeocoderText(req.district)
+                    ?: District.fromCoordinates(req.latitude, req.longitude)).localizedLabel
             )
             val rows = repo.savePhotos(newId, processed)
             voteRepo.insertAuthorVote(newId, authorId)

@@ -46,5 +46,27 @@ enum class District {
                 else -> null
             }
         }
+
+        /**
+         * Определяет район по координатам жалобы — ближайший из 4 центров районов
+         * (Евклидово расстояние). Всегда возвращает один из 4 районов: используется
+         * как запасной вариант, когда [fromGeocoderText] не распознал район в тексте
+         * геокодера. Центры — приблизительные, граница между районами размыта.
+         */
+        fun fromCoordinates(latitude: Double, longitude: Double): District {
+            // (район to (центр.широта, центр.долгота))
+            val centers = listOf(
+                ADLER to (43.46 to 39.95),
+                KHOSTA to (43.52 to 39.85),
+                CENTRAL to (43.60 to 39.73),
+                LAZAREVSKOE to (43.85 to 39.42),
+            )
+            return centers.minBy { (_, c) ->
+                val (cLat, cLon) = c
+                val dLat = latitude - cLat
+                val dLon = longitude - cLon
+                dLat * dLat + dLon * dLon
+            }.first
+        }
     }
 }

@@ -58,7 +58,7 @@ export function AnalyticsPage() {
           title="Решено за 7 дней"
           value={k ? `${Math.round(k.resolvedWithin7dPct)}%` : '—'}
           sub="доля жалоб, решённых в течение недели"
-          series={resolved}
+          series={resolved.slice(-7)}
         />
         <TrendCard
           title="Среднее время решения"
@@ -69,7 +69,7 @@ export function AnalyticsPage() {
           title="Жалоб создано"
           value={trends.data == null ? '—' : String(createdSum)}
           sub="за последние 30 дней"
-          series={created}
+          series={created.slice(-7)}
         />
       </div>
 

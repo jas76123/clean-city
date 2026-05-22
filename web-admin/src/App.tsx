@@ -7,6 +7,7 @@ import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { SectionPlaceholder } from '@/pages/placeholders/SectionPlaceholder'
 import { ComplaintsPage } from '@/pages/ComplaintsPage'
+import { OverviewPage } from '@/pages/OverviewPage'
 
 export default function App() {
   return (
@@ -19,7 +20,7 @@ export default function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<Navigate to="/overview" replace />} />
-            <Route path="/overview" element={<SectionPlaceholder title="Обзор" />} />
+            <Route path="/overview" element={<OverviewPage />} />
             <Route path="/complaints" element={<ComplaintsPage />} />
             <Route path="/announcements" element={<SectionPlaceholder title="Объявления" />} />
             <Route path="/analytics" element={<SectionPlaceholder title="Аналитика" />} />

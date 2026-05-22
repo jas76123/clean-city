@@ -29,5 +29,22 @@ enum class District {
             if (label.isNullOrBlank()) return null
             return entries.firstOrNull { it.localizedLabel.equals(label.trim(), ignoreCase = true) }
         }
+
+        /**
+         * Нормализует свободный текст геокодера к одному из 4 районов по подстроке.
+         * Геокодер отдаёт строки вроде «Адлерский внутригородской район» — точное
+         * сравнение по label их не ловит, поэтому матчим по корню слова.
+         */
+        fun fromGeocoderText(raw: String?): District? {
+            if (raw.isNullOrBlank()) return null
+            val s = raw.lowercase()
+            return when {
+                "центральн" in s -> CENTRAL
+                "адлер" in s -> ADLER
+                "хост" in s -> KHOSTA
+                "лазаревск" in s -> LAZAREVSKOE
+                else -> null
+            }
+        }
     }
 }

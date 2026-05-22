@@ -9,6 +9,7 @@ interface HBarProps {
 }
 
 export function HBar({ label, fraction, value, colorClass = 'bg-emerald-500' }: HBarProps) {
+  // Минимум 2% — чтобы полоса оставалась видимой даже при fraction≈0.
   const pct = Math.max(2, Math.min(100, fraction * 100))
   return (
     <div className="flex items-center gap-3 py-1">

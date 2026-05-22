@@ -4,6 +4,7 @@ interface SparklineProps {
 }
 
 export function Sparkline({ values }: SparklineProps) {
+  if (values.length === 0) return null
   const max = Math.max(1, ...values)
   return (
     <div className="mt-2 flex h-10 items-end gap-1">

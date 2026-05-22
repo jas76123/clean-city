@@ -1,9 +1,8 @@
 import { useOverviewQuery } from '@/hooks/complaintQueries'
-import { useTrendsQuery, useTopVotedQuery, useByDistrictQuery } from '@/hooks/dashboardQueries'
+import { useTopVotedQuery, useByDistrictQuery } from '@/hooks/dashboardQueries'
 import { KpiCard } from '@/components/dashboard/KpiCard'
 import { SlaAlertBanner } from './overview/SlaAlertBanner'
 import { StatusPipeline } from './overview/StatusPipeline'
-import { DailyBarChart } from './overview/DailyBarChart'
 import { TopDistricts } from './overview/TopDistricts'
 import { TopVotedComplaints } from './overview/TopVotedComplaints'
 
@@ -13,7 +12,6 @@ function fmtHours(h: number | null): string {
 
 export function OverviewPage() {
   const overview = useOverviewQuery()
-  const trends = useTrendsQuery()
   const topVoted = useTopVotedQuery()
   const districts = useByDistrictQuery('MONTH')
 
@@ -57,8 +55,6 @@ export function OverviewPage() {
       </div>
 
       <StatusPipeline newCount={o.new} inProgress={o.inProgress} resolved={o.resolved} />
-
-      <DailyBarChart days={trends.data?.days ?? []} />
 
       <div className="grid grid-cols-2 gap-4">
         <TopDistricts stats={districts.data ?? []} />

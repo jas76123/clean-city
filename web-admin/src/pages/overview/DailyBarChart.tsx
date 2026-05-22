@@ -25,7 +25,11 @@ export function DailyBarChart({ days }: DailyBarChartProps) {
       ) : (
         <div className="flex h-32 items-end gap-[3px]">
           {days.map((d) => (
-            <div key={d.date} className="flex flex-1 items-end justify-center gap-[1px]" title={d.date}>
+            <div
+              key={d.date}
+              className="flex h-full flex-1 items-end justify-center gap-[1px]"
+              title={d.date}
+            >
               <div
                 className="w-1/2 rounded-sm bg-sky-400"
                 style={{ height: `${(d.created / max) * 100}%` }}

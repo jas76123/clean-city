@@ -22,7 +22,6 @@ function overview(slaBreachCount: number): AnalyticsOverview {
 function server(slaBreachCount: number) {
   return setupServer(
     http.get(`${BASE}/analytics/overview`, () => HttpResponse.json(overview(slaBreachCount))),
-    http.get(`${BASE}/analytics/trends`, () => HttpResponse.json({ days: [] })),
     http.get(`${BASE}/analytics/by-district`, () => HttpResponse.json([])),
     http.get(`${BASE}/complaints`, () =>
       HttpResponse.json({ items: [], page: 0, size: 20, total: 0 }),

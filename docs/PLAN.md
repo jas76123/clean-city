@@ -434,7 +434,7 @@ Web admin может быть проще (показываем основной 
 - [x] `OverviewPage` (главный экран после логина):
   - [x] Карточки KPI (total, NEW, IN_PROGRESS, RESOLVED, today, week, SLA breach)
   - [x] **SLA-алерт-баннер** наверху если `sla_breach_count > 0` — текст из `/analytics/overview` (см. мокап `admin-dashboard-v2.html`).
-  - [x] График по дням (CSS, без recharts)
+  - [~] График по дням — убран с Overview по решению (динамика создано/решено остаётся на AnalyticsPage в trend-картах со спарклайнами)
   - [x] Топ районов
   - [x] SLA по категориям
   - [x] Топ-5 по голосам жителей (см. мокап)

@@ -12,6 +12,7 @@ import com.example.cleancity.shared.models.ComplaintListResponse
 import com.example.cleancity.shared.models.ComplaintPhotoResponse
 import com.example.cleancity.shared.models.ComplaintResponse
 import com.example.cleancity.shared.models.ComplaintStatus
+import com.example.cleancity.shared.models.District
 import com.example.cleancity.shared.models.DuplicateCandidateResponse
 import com.example.cleancity.shared.models.DuplicateCandidatesResponse
 import com.example.cleancity.shared.models.MapMarker
@@ -109,7 +110,9 @@ class ComplaintService(
                 latitude = req.latitude,
                 longitude = req.longitude,
                 address = address,
-                district = req.district?.trim()?.takeIf { it.isNotBlank() }
+                // Нормализуем район геокодера к одному из 4 District (храним каноничный
+                // label) — иначе фильтр по району в веб-админке не находит совпадений.
+                district = District.fromGeocoderText(req.district)?.localizedLabel
             )
             val rows = repo.savePhotos(newId, processed)
             voteRepo.insertAuthorVote(newId, authorId)

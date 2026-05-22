@@ -141,4 +141,26 @@ class AnalyticsRoutesTest {
             assertEquals(HttpStatusCode.OK, resp.status, "$path should be 200, was ${resp.status}")
         }
     }
+
+    @Test
+    fun `admin gets 200 with 30 day series on trends`() = testApplication {
+        val ctx = initDb()
+        appWith()
+
+        val resp = client.get("/analytics/trends") {
+            header("Authorization", "Bearer ${bearerFor(ctx.adminId, UserRole.ADMIN)}")
+        }
+        assertEquals(HttpStatusCode.OK, resp.status)
+        val body = resp.bodyAsText()
+        assertEquals(true, body.contains("\"days\""), "ответ содержит поле days; body=$body")
+    }
+
+    @Test
+    fun `guest gets 401 on trends`() = testApplication {
+        initDb()
+        appWith()
+
+        val resp = client.get("/analytics/trends")
+        assertEquals(HttpStatusCode.Unauthorized, resp.status)
+    }
 }

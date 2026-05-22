@@ -8,6 +8,7 @@ import com.example.cleancity.database.tables.AuditAction
 import com.example.cleancity.notifications.NotificationService
 import com.example.cleancity.notifications.NotificationTexts
 import com.example.cleancity.shared.models.NotificationKind
+import com.example.cleancity.shared.models.CategorySla
 import com.example.cleancity.shared.models.ComplaintListResponse
 import com.example.cleancity.shared.models.ComplaintPhotoResponse
 import com.example.cleancity.shared.models.ComplaintResponse
@@ -89,6 +90,9 @@ class ComplaintService(
         )
 
         private val ADMIN_ROLES = setOf(UserRole.ADMIN, UserRole.OPERATOR, UserRole.INSPECTOR)
+
+        // Активные статусы, для которых SLA может «гореть» (terminal — никогда).
+        private val SLA_ACTIVE = setOf(ComplaintStatus.NEW, ComplaintStatus.IN_PROGRESS)
     }
 
     fun create(authorId: Long, req: CreateComplaintRequest, photos: List<PhotoUpload>): ComplaintResponse {
@@ -137,7 +141,8 @@ class ComplaintService(
         val userVoted = (viewer as? Viewer.Authenticated)?.let { voteRepo.userVoted(id, it.userId) } ?: false
         val history = repo.listStatusHistory(id).map { it.toResponse() }
 
-        return row.toResponse(photos, votesCount, userVoted, history)
+        val (slaDeadline, slaBreached) = slaFor(row, viewer)
+        return row.toResponse(photos, votesCount, userVoted, history, slaDeadline, slaBreached)
     }
 
     fun list(viewer: Viewer, filter: PublicListFilter): ComplaintListResponse {
@@ -335,11 +340,14 @@ class ComplaintService(
             ?: emptySet()
 
         val items = rows.map {
+            val (deadline, breached) = slaFor(it, viewer)
             it.toResponse(
                 photos = (photos[it.id] ?: emptyList()).toResponses(),
                 votesCount = countsByComplaint[it.id] ?: 0,
                 userVoted = it.id in votedSet,
-                statusHistory = emptyList()
+                statusHistory = emptyList(),
+                slaDeadline = deadline,
+                slaBreached = breached
             )
         }
         return ComplaintListResponse(items, page, size, total)
@@ -386,6 +394,19 @@ class ComplaintService(
         Viewer.Guest -> PUBLIC_VISIBLE
     }
 
+    /**
+     * SLA-метка для строки. SPEC §146: жителям SLA не видна нигде — для не-админа
+     * возвращаем (null, false), поле не утекает в JSON.
+     */
+    private fun slaFor(row: ComplaintRow, viewer: Viewer): Pair<String?, Boolean> {
+        val isAdmin = (viewer as? Viewer.Authenticated)?.role in ADMIN_ROLES
+        if (!isAdmin) return null to false
+        val deadline = row.createdAt.plusHours(CategorySla.hoursFor(row.category).toLong())
+        val breached = row.status in SLA_ACTIVE &&
+            OffsetDateTime.now(ZoneOffset.UTC).isAfter(deadline)
+        return deadline.toString() to breached
+    }
+
     private fun isVisible(
         complaintId: Long,
         status: ComplaintStatus,
@@ -407,7 +428,9 @@ class ComplaintService(
         photos: List<ComplaintPhotoResponse>,
         votesCount: Int,
         userVoted: Boolean,
-        statusHistory: List<StatusChangeResponse>
+        statusHistory: List<StatusChangeResponse>,
+        slaDeadline: String? = null,
+        slaBreached: Boolean = false
     ): ComplaintResponse =
         ComplaintResponse(
             id = id,
@@ -428,7 +451,9 @@ class ComplaintService(
             createdAt = createdAt.toString(),
             updatedAt = updatedAt.toString(),
             resolvedAt = resolvedAt?.toString(),
-            statusHistory = statusHistory
+            statusHistory = statusHistory,
+            slaDeadline = slaDeadline,
+            slaBreached = slaBreached
         )
 
     private fun StatusChangeRow.toResponse(): StatusChangeResponse = StatusChangeResponse(

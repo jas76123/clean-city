@@ -68,9 +68,6 @@ export function AnnouncementsPage() {
         submitting={createMutation.isPending}
         onSubmit={handleCreate}
       />
-      <p className="-mt-2 px-1 text-xs text-slate-400">
-        После публикации жителям выбранных районов придёт push-уведомление.
-      </p>
 
       <Card>
         <CardHeader className="border-b">

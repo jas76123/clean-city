@@ -80,4 +80,17 @@ describe('AnnouncementsPage', () => {
       expect(screen.getByText('Объявление опубликовано')).toBeInTheDocument(),
     )
   })
+
+  it('снятие с публикации показывает toast', async () => {
+    server.use(
+      http.get(`${BASE}/announcements`, () => HttpResponse.json({ items: [ann(1)], total: 1 })),
+      http.delete(`${BASE}/announcements/:id`, () => new HttpResponse(null, { status: 204 })),
+    )
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: /снять с публикации/i }))
+    await userEvent.click(screen.getByRole('button', { name: /^да$/i }))
+    await waitFor(() =>
+      expect(screen.getByText('Снято с публикации')).toBeInTheDocument(),
+    )
+  })
 })

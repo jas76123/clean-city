@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -45,7 +44,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -84,7 +82,6 @@ import com.example.cleancity.ui.theme.Green900
 import com.example.cleancity.ui.theme.Purple
 import com.example.cleancity.ui.theme.Red
 import com.example.cleancity.ui.theme.RedLight
-import kotlinx.coroutines.launch
 
 class ProfileScreen : Screen {
     @Composable
@@ -93,7 +90,6 @@ class ProfileScreen : Screen {
         val state by model.state.collectAsState()
         val navigator = LocalNavigator.currentOrThrow
         val snackbarHost = remember { SnackbarHostState() }
-        val scope = rememberCoroutineScope()
         val deleteState by model.deleteState.collectAsState()
         var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -118,11 +114,6 @@ class ProfileScreen : Screen {
                 is ProfileState.Loaded -> LoadedView(
                     user = s.user,
                     stats = s.stats,
-                    onSettingsClick = {
-                        scope.launch {
-                            snackbarHost.showSnackbar("Появится в ближайшем обновлении")
-                        }
-                    },
                     onAboutClick = { navigator.push(AboutScreen()) },
                     onLogoutClick = { model.logout() },
                     onDeleteAccountClick = { showDeleteDialog = true },
@@ -211,7 +202,7 @@ private fun GuestPromptView(onLoginClick: () -> Unit, onRegisterClick: () -> Uni
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "В профиле — статистика по поданным жалобам и подтверждениям, настройки уведомлений и выход.",
+            "В профиле — статистика по поданным жалобам и подтверждениям и выход.",
             style = MaterialTheme.typography.bodySmall,
             color = Gray500,
             textAlign = TextAlign.Center,
@@ -235,7 +226,6 @@ private fun GuestPromptView(onLoginClick: () -> Unit, onRegisterClick: () -> Uni
 private fun LoadedView(
     user: UserResponse,
     stats: ProfileStats,
-    onSettingsClick: () -> Unit,
     onAboutClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onDeleteAccountClick: () -> Unit,
@@ -246,7 +236,6 @@ private fun LoadedView(
         ProfileStatsGrid(stats = stats)
         Spacer(Modifier.height(16.dp))
         ProfileMenu(
-            onSettingsClick = onSettingsClick,
             onAboutClick = onAboutClick,
             onLogoutClick = onLogoutClick,
             onDeleteAccountClick = onDeleteAccountClick,
@@ -370,7 +359,6 @@ private fun StatCardView(card: StatCard, modifier: Modifier = Modifier) {
 
 @Composable
 private fun ProfileMenu(
-    onSettingsClick: () -> Unit,
     onAboutClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onDeleteAccountClick: () -> Unit,
@@ -381,7 +369,6 @@ private fun ProfileMenu(
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        MenuItemRow(icon = Icons.Default.NotificationsActive, label = "Настройки уведомлений", onClick = onSettingsClick)
         MenuItemRow(icon = Icons.Default.Info, label = "О приложении", onClick = onAboutClick)
         MenuItemRow(
             icon = Icons.AutoMirrored.Default.Logout,

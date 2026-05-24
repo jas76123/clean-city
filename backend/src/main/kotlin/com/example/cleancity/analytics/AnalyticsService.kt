@@ -160,17 +160,22 @@ class AnalyticsService(private val repo: AnalyticsRepository) {
         val curStart = now.minusDays(30)
         val prevStart = now.minusDays(60)
 
-        fun window(from: OffsetDateTime, to: OffsetDateTime): Triple<Int, Double?, Double> {
+        fun window(from: OffsetDateTime, to: OffsetDateTime): Triple<Int, Double?, Double?> {
             val created = rows.count { it.createdAt >= from && it.createdAt < to }
             val resolvedInWindow = rows.filter {
                 it.status == ComplaintStatus.RESOLVED && it.resolvedAt != null &&
                     it.resolvedAt >= from && it.resolvedAt < to
             }
-            val within7d = resolvedInWindow.count {
-                Duration.between(it.createdAt, it.resolvedAt!!).toHours() <= 7 * 24
+            // Пустой набор resolved — нет базы для процента; возвращаем null,
+            // иначе UI отрисует "0% решено", что вводит в заблуждение
+            // при отсутствии данных (см. prevAvgResolutionHours рядом).
+            val pct = if (resolvedInWindow.isEmpty()) null
+            else {
+                val within7d = resolvedInWindow.count {
+                    Duration.between(it.createdAt, it.resolvedAt!!).toHours() <= 7 * 24
+                }
+                round1(within7d * 100.0 / resolvedInWindow.size)
             }
-            val pct = if (resolvedInWindow.isEmpty()) 0.0
-            else round1(within7d * 100.0 / resolvedInWindow.size)
             return Triple(created, avgResolutionHours(resolvedInWindow), pct)
         }
 

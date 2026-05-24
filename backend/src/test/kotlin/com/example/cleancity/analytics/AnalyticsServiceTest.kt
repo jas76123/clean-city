@@ -246,7 +246,9 @@ class AnalyticsServiceTest {
         assertEquals(0, k.total)
         assertEquals(0, k.prevTotal)
         assertNull(k.avgResolutionHours)
-        assertEquals(0.0, k.resolvedWithin7dPct)
+        assertNull(k.prevAvgResolutionHours)
+        assertNull(k.resolvedWithin7dPct, "пустой период — нет базы для расчёта %")
+        assertNull(k.prevResolvedWithin7dPct, "пустой предыдущий период — нет базы для расчёта %")
     }
 
     @Test

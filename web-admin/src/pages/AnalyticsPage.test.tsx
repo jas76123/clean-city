@@ -15,6 +15,7 @@ const overview: AnalyticsOverview = {
   monthlyKpis: {
     total: 50, prevTotal: 40, avgResolutionHours: 41, prevAvgResolutionHours: 50,
     resolvedWithin7dPct: 78, prevResolvedWithin7dPct: 70,
+    newCount: 0, inProgressCount: 0, resolvedCount: 0, rejectedCount: 0, duplicateCount: 0,
   },
 }
 

@@ -25,6 +25,7 @@ export function useByDistrictQuery(period: AnalyticsPeriod) {
   return useQuery({
     queryKey: ['analytics', 'by-district', period],
     queryFn: () => getByDistrict(period),
+    refetchInterval: DASHBOARD_REFETCH_MS,
   })
 }
 

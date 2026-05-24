@@ -61,4 +61,20 @@ describe('OverviewPage', () => {
     expect(await screen.findByText('Жалоб за месяц')).toBeInTheDocument()
     expect(screen.queryByText(/превысили норматив SLA/)).not.toBeInTheDocument()
   })
+
+  it('рендерит строки топ-категорий с лейблами и счётчиками', async () => {
+    srv.use(
+      http.get(`${BASE}/analytics/by-category`, () =>
+        HttpResponse.json([
+          { category: 'GARBAGE', label: 'Мусор', count: 137, sharePct: 60, avgResolutionHours: 24 },
+          { category: 'ROADS', label: 'Дороги', count: 83, sharePct: 36, avgResolutionHours: 48 },
+        ]),
+      ),
+    )
+    renderPage()
+    expect(await screen.findByText('Мусор')).toBeInTheDocument()
+    expect(screen.getByText('137')).toBeInTheDocument()
+    expect(screen.getByText('Дороги')).toBeInTheDocument()
+    expect(screen.getByText('83')).toBeInTheDocument()
+  })
 })

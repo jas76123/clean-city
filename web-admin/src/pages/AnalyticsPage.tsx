@@ -56,7 +56,7 @@ export function AnalyticsPage() {
       <div className="grid grid-cols-3 gap-4">
         <TrendCard
           title="Решено за 7 дней"
-          value={k ? `${Math.round(k.resolvedWithin7dPct)}%` : '—'}
+          value={k?.resolvedWithin7dPct != null ? `${Math.round(k.resolvedWithin7dPct)}%` : '—'}
           sub="доля жалоб, решённых в течение недели"
           series={resolved.slice(-7)}
         />

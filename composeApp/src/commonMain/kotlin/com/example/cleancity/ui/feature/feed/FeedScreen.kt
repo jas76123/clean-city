@@ -184,18 +184,13 @@ private fun AnnouncementsSection(announcements: List<AnnouncementResponse>) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "📣 АДМИНИСТРАЦИЯ СОЧИ",
+                text = "📣 ОБЪЯВЛЕНИЯ",
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp,
                 ),
                 color = Gray500,
                 modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = "Все →",
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.primary,
             )
         }
         Spacer(Modifier.height(8.dp))

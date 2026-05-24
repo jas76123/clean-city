@@ -58,7 +58,13 @@ export function OverviewPage() {
         <KpiCard label="SLA-просрочки" value={String(o.slaBreachCount)} />
       </div>
 
-      <StatusPipeline newCount={o.new} inProgress={o.inProgress} resolved={o.resolved} />
+      <StatusPipeline
+        newCount={k.newCount}
+        inProgressCount={k.inProgressCount}
+        resolvedCount={k.resolvedCount}
+        rejectedCount={k.rejectedCount}
+        duplicateCount={k.duplicateCount}
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <TopDistricts stats={districts.data ?? []} />

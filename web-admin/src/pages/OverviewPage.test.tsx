@@ -15,6 +15,7 @@ function overview(slaBreachCount: number): AnalyticsOverview {
     monthlyKpis: {
       total: 50, prevTotal: 40, avgResolutionHours: 41, prevAvgResolutionHours: 50,
       resolvedWithin7dPct: 78, prevResolvedWithin7dPct: 70,
+      newCount: 10, inProgressCount: 15, resolvedCount: 20, rejectedCount: 3, duplicateCount: 2,
     },
   }
 }
@@ -45,9 +46,14 @@ describe('OverviewPage', () => {
   it('показывает KPI и пайплайн статусов из overview', async () => {
     renderPage()
     expect(await screen.findByText('Жалоб за месяц')).toBeInTheDocument()
-    expect(screen.getByText('Распределение по статусам')).toBeInTheDocument()
     expect(screen.getByText('+25%')).toBeInTheDocument() // 50 vs 40
     expect(screen.getByText('Топ-5 по категориям проблем')).toBeInTheDocument()
+    expect(screen.getByText('Распределение за месяц')).toBeInTheDocument()
+    expect(screen.getByText('Отклонено')).toBeInTheDocument()
+    expect(screen.getByText('Дубликаты')).toBeInTheDocument()
+    expect(screen.getByText('20')).toBeInTheDocument() // resolvedCount
+    expect(screen.getByText('3')).toBeInTheDocument()  // rejectedCount
+    expect(screen.getByText('2')).toBeInTheDocument()  // duplicateCount
   })
 
   it('показывает SLA-баннер когда slaBreachCount > 0', async () => {

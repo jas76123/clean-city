@@ -1,10 +1,10 @@
 import { useOverviewQuery } from '@/hooks/complaintQueries'
-import { useTopVotedQuery, useByDistrictQuery } from '@/hooks/dashboardQueries'
+import { useByCategoryQuery, useByDistrictQuery } from '@/hooks/dashboardQueries'
 import { KpiCard } from '@/components/dashboard/KpiCard'
 import { SlaAlertBanner } from './overview/SlaAlertBanner'
 import { StatusPipeline } from './overview/StatusPipeline'
 import { TopDistricts } from './overview/TopDistricts'
-import { TopVotedComplaints } from './overview/TopVotedComplaints'
+import { TopProblemCategories } from './overview/TopProblemCategories'
 
 function fmtHours(h: number | null): string {
   return h == null ? '—' : `${Math.round(h)} ч`
@@ -16,7 +16,7 @@ function fmtPct(p: number | null): string {
 
 export function OverviewPage() {
   const overview = useOverviewQuery()
-  const topVoted = useTopVotedQuery()
+  const topCategories = useByCategoryQuery('MONTH')
   const districts = useByDistrictQuery('MONTH')
 
   if (overview.isError) {
@@ -62,7 +62,7 @@ export function OverviewPage() {
 
       <div className="grid grid-cols-2 gap-4">
         <TopDistricts stats={districts.data ?? []} />
-        <TopVotedComplaints items={topVoted.data?.items ?? []} />
+        <TopProblemCategories items={topCategories.data ?? []} />
       </div>
     </div>
   )

@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { getTrends, getByDistrict, getSla, getVotesImpact } from '@/api/analytics'
-import { listComplaints } from '@/api/complaints'
-import type { AnalyticsPeriod, ComplaintFilter } from '@/api/types'
+import { getTrends, getByDistrict, getByCategory, getSla, getVotesImpact } from '@/api/analytics'
+import type { AnalyticsPeriod } from '@/api/types'
 
 // Дашборд автообновляется раз в минуту — синхронно с таблицей жалоб (Day 16).
 const DASHBOARD_REFETCH_MS = 60_000
@@ -14,14 +13,10 @@ export function useTrendsQuery() {
   })
 }
 
-const TOP_VOTED_FILTER: ComplaintFilter = {
-  status: null, slaBreached: false, category: null, district: null, sort: 'votes', page: 0,
-}
-
-export function useTopVotedQuery() {
+export function useByCategoryQuery(period: AnalyticsPeriod) {
   return useQuery({
-    queryKey: ['analytics', 'top-voted'],
-    queryFn: () => listComplaints(TOP_VOTED_FILTER),
+    queryKey: ['analytics', 'by-category', period],
+    queryFn: () => getByCategory(period),
     refetchInterval: DASHBOARD_REFETCH_MS,
   })
 }
@@ -30,6 +25,7 @@ export function useByDistrictQuery(period: AnalyticsPeriod) {
   return useQuery({
     queryKey: ['analytics', 'by-district', period],
     queryFn: () => getByDistrict(period),
+    refetchInterval: DASHBOARD_REFETCH_MS,
   })
 }
 

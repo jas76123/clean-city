@@ -181,6 +181,10 @@ class AnalyticsService(private val repo: AnalyticsRepository) {
 
         val (curTotal, curAvg, curPct) = window(curStart, now)
         val (prevTotal, prevAvg, prevPct) = window(prevStart, curStart)
+
+        val createdInWindow = rows.filter { it.createdAt >= curStart && it.createdAt < now }
+        val byStatus = createdInWindow.groupingBy { it.status }.eachCount()
+
         return MonthlyKpis(
             total = curTotal,
             prevTotal = prevTotal,
@@ -188,6 +192,11 @@ class AnalyticsService(private val repo: AnalyticsRepository) {
             prevAvgResolutionHours = prevAvg,
             resolvedWithin7dPct = curPct,
             prevResolvedWithin7dPct = prevPct,
+            newCount = byStatus[ComplaintStatus.NEW] ?: 0,
+            inProgressCount = byStatus[ComplaintStatus.IN_PROGRESS] ?: 0,
+            resolvedCount = byStatus[ComplaintStatus.RESOLVED] ?: 0,
+            rejectedCount = byStatus[ComplaintStatus.REJECTED] ?: 0,
+            duplicateCount = byStatus[ComplaintStatus.DUPLICATE] ?: 0,
         )
     }
 

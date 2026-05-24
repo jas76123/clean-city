@@ -238,6 +238,12 @@ class AnalyticsServiceTest {
         assertEquals(0.0, k.prevResolvedWithin7dPct, "решена за 20д — вне 7д")
         assertNotNull(k.avgResolutionHours)
         assertEquals(120.0, k.avgResolutionHours!!, 1.0, "5 суток = 120ч")
+        // Фикстура текущего окна: 1 NEW + 1 RESOLVED = 2
+        assertEquals(1, k.newCount)
+        assertEquals(0, k.inProgressCount)
+        assertEquals(1, k.resolvedCount)
+        assertEquals(0, k.rejectedCount)
+        assertEquals(0, k.duplicateCount)
     }
 
     @Test
@@ -249,6 +255,41 @@ class AnalyticsServiceTest {
         assertNull(k.prevAvgResolutionHours)
         assertNull(k.resolvedWithin7dPct, "пустой период — нет базы для расчёта %")
         assertNull(k.prevResolvedWithin7dPct, "пустой предыдущий период — нет базы для расчёта %")
+        assertEquals(0, k.newCount)
+        assertEquals(0, k.inProgressCount)
+        assertEquals(0, k.resolvedCount)
+        assertEquals(0, k.rejectedCount)
+        assertEquals(0, k.duplicateCount)
+    }
+
+    @Test
+    fun `overview monthlyKpis includes status breakdown for current 30d window`() {
+        val author = seedUser()
+        // В текущем окне: 2 NEW, 1 IN_PROGRESS, 1 RESOLVED, 1 REJECTED, 1 DUPLICATE = 6
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(3))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(5))
+        seedComplaint(author, ProblemCategory.ROADS, ComplaintStatus.IN_PROGRESS, now.minusDays(7))
+        seedComplaint(
+            author, ProblemCategory.ROADS, ComplaintStatus.RESOLVED,
+            now.minusDays(10), resolvedAt = now.minusDays(8),
+        )
+        seedComplaint(author, ProblemCategory.LIGHTING, ComplaintStatus.REJECTED, now.minusDays(15))
+        seedComplaint(author, ProblemCategory.SAFETY, ComplaintStatus.DUPLICATE, now.minusDays(20))
+        // Вне окна (>30д): не должна учитываться
+        seedComplaint(author, ProblemCategory.OTHER, ComplaintStatus.NEW, now.minusDays(45))
+
+        val k = service.overview(now).monthlyKpis
+        assertEquals(6, k.total, "в окне создано 6")
+        assertEquals(2, k.newCount)
+        assertEquals(1, k.inProgressCount)
+        assertEquals(1, k.resolvedCount)
+        assertEquals(1, k.rejectedCount)
+        assertEquals(1, k.duplicateCount)
+        assertEquals(
+            k.total,
+            k.newCount + k.inProgressCount + k.resolvedCount + k.rejectedCount + k.duplicateCount,
+            "сумма пятёрки == total",
+        )
     }
 
     @Test

@@ -23,9 +23,7 @@ function server(slaBreachCount: number) {
   return setupServer(
     http.get(`${BASE}/analytics/overview`, () => HttpResponse.json(overview(slaBreachCount))),
     http.get(`${BASE}/analytics/by-district`, () => HttpResponse.json([])),
-    http.get(`${BASE}/complaints`, () =>
-      HttpResponse.json({ items: [], page: 0, size: 20, total: 0 }),
-    ),
+    http.get(`${BASE}/analytics/by-category`, () => HttpResponse.json([])),
   )
 }
 
@@ -49,6 +47,7 @@ describe('OverviewPage', () => {
     expect(await screen.findByText('Жалоб за месяц')).toBeInTheDocument()
     expect(screen.getByText('Распределение по статусам')).toBeInTheDocument()
     expect(screen.getByText('+25%')).toBeInTheDocument() // 50 vs 40
+    expect(screen.getByText('Топ-5 по категориям проблем')).toBeInTheDocument()
   })
 
   it('показывает SLA-баннер когда slaBreachCount > 0', async () => {

@@ -62,6 +62,11 @@ data class MonthlyKpis(
     val prevAvgResolutionHours: Double?,
     val resolvedWithin7dPct: Double?,
     val prevResolvedWithin7dPct: Double?,
+    val newCount: Int,
+    val inProgressCount: Int,
+    val resolvedCount: Int,
+    val rejectedCount: Int,
+    val duplicateCount: Int,
 )
 
 @Serializable

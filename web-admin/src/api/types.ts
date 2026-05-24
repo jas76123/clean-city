@@ -112,6 +112,11 @@ export interface MonthlyKpis {
   prevAvgResolutionHours: number | null
   resolvedWithin7dPct: number | null
   prevResolvedWithin7dPct: number | null
+  newCount: number
+  inProgressCount: number
+  resolvedCount: number
+  rejectedCount: number
+  duplicateCount: number
 }
 
 export interface AnalyticsOverview {

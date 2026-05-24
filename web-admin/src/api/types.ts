@@ -110,8 +110,8 @@ export interface MonthlyKpis {
   prevTotal: number
   avgResolutionHours: number | null
   prevAvgResolutionHours: number | null
-  resolvedWithin7dPct: number
-  prevResolvedWithin7dPct: number
+  resolvedWithin7dPct: number | null
+  prevResolvedWithin7dPct: number | null
 }
 
 export interface AnalyticsOverview {

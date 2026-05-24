@@ -10,6 +10,10 @@ function fmtHours(h: number | null): string {
   return h == null ? '—' : `${Math.round(h)} ч`
 }
 
+function fmtPct(p: number | null): string {
+  return p == null ? '—' : `${Math.round(p)}%`
+}
+
 export function OverviewPage() {
   const overview = useOverviewQuery()
   const topVoted = useTopVotedQuery()
@@ -47,7 +51,7 @@ export function OverviewPage() {
         />
         <KpiCard
           label="Решено за 7 дней"
-          value={`${Math.round(k.resolvedWithin7dPct)}%`}
+          value={fmtPct(k.resolvedWithin7dPct)}
           current={k.resolvedWithin7dPct}
           previous={k.prevResolvedWithin7dPct}
         />

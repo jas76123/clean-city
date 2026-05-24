@@ -60,8 +60,8 @@ data class MonthlyKpis(
     val prevTotal: Int,
     val avgResolutionHours: Double?,
     val prevAvgResolutionHours: Double?,
-    val resolvedWithin7dPct: Double,
-    val prevResolvedWithin7dPct: Double,
+    val resolvedWithin7dPct: Double?,
+    val prevResolvedWithin7dPct: Double?,
 )
 
 @Serializable

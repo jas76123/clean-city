@@ -591,6 +591,80 @@ class AnalyticsServiceTest {
         assertEquals(0.0, stat.reopenRate)
     }
 
+    // ─── Task 8: trendsRange ────────────────────────────────────────────────
+
+    @Test
+    fun `trends range groupBy day returns created and resolved series`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(5)
+        val periodEnd = now.plusDays(1)
+
+        // 3 жалобы созданы в 3 дня подряд; 2 из них RESOLVED в эти же дни
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(3), resolvedAt = now.minusDays(2)
+        )
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(2), resolvedAt = now.minusDays(1)
+        )
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(1))
+
+        val trends = AnalyticsRepository().trendsRange(periodStart, periodEnd, groupBy = "day")
+        assertEquals("day", trends.groupBy)
+        assertEquals(3, trends.createdSeries.size, "3 разных дня создания")
+        assertEquals(2, trends.resolvedSeries.size, "2 разных дня резолва")
+        assertTrue(trends.createdSeries.all { it.second == 1 }, "по 1 в каждый день")
+    }
+
+    @Test
+    fun `trends range groupBy week aggregates multiple days`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(14)
+        val periodEnd = now.plusDays(1)
+        // Anchor to start-of-day in UTC to avoid cross-midnight drift when now is late in the day.
+        // All 3 events land in the same UTC date → same ISO week → 1 bucket.
+        val dayAnchor = now.minusDays(2).toLocalDate().atStartOfDay(java.time.ZoneOffset.UTC)
+            .toOffsetDateTime()
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, dayAnchor)
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, dayAnchor.plusMinutes(90))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, dayAnchor.plusMinutes(210))
+
+        val trends = AnalyticsRepository().trendsRange(periodStart, periodEnd, groupBy = "week")
+        val totalCreated = trends.createdSeries.sumOf { it.second }
+        assertEquals(3, totalCreated)
+        // 3 жалобы в один день → одна неделя в createdSeries
+        assertEquals(1, trends.createdSeries.size)
+    }
+
+    @Test
+    fun `trends range groupBy month buckets correctly`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(120)
+        val periodEnd = now.plusDays(1)
+        // 2 жалобы 90 дней назад, 1 жалоба 30 дней назад → возможно 2-3 разных месяца
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(90))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(90).plusDays(1))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(30))
+
+        val trends = AnalyticsRepository().trendsRange(periodStart, periodEnd, groupBy = "month")
+        val totalCreated = trends.createdSeries.sumOf { it.second }
+        assertEquals(3, totalCreated)
+        assertEquals("month", trends.groupBy)
+        assertTrue(trends.createdSeries.isNotEmpty())
+    }
+
+    @Test
+    fun `trends range rejects invalid groupBy`() {
+        val ex = kotlin.runCatching {
+            AnalyticsRepository().trendsRange(now.minusDays(7), now, groupBy = "year")
+        }.exceptionOrNull()
+        assertNotNull(ex)
+        assertTrue(ex is IllegalArgumentException)
+    }
+
+    // ─── END Task 8 ─────────────────────────────────────────────────────────
+
     @Test
     fun `operational snapshot counts createdToday and createdYesterday in Europe Moscow zone`() {
         val author = seedUser()

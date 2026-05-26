@@ -181,6 +181,62 @@ class AnalyticsRepository {
             .take(limit)
     }
 
+    data class StrategicKpisRow(
+        val slaCompliancePct: Double,
+        val medianResolutionHours: Double?,
+        val p90ResolutionHours: Double?,
+        val throughput: Int,
+    )
+
+    fun strategicKpis(periodStart: OffsetDateTime, periodEnd: OffsetDateTime): StrategicKpisRow {
+        val resolved = loadComplaints(null).filter { row ->
+            row.status == ComplaintStatus.RESOLVED &&
+                row.resolvedAt != null &&
+                !row.resolvedAt.isBefore(periodStart) &&
+                row.resolvedAt.isBefore(periodEnd)
+        }
+
+        val sortedHours = resolved
+            .map { row -> Duration.between(row.createdAt, row.resolvedAt!!).toMinutes() / 60.0 }
+            .sorted()
+
+        val throughput = sortedHours.size
+
+        val slaCompliancePct = if (throughput == 0) {
+            0.0
+        } else {
+            val withinSla = resolved.count { row ->
+                val hours = Duration.between(row.createdAt, row.resolvedAt!!).toMinutes() / 60.0
+                hours <= CategorySla.hoursFor(row.category)
+            }
+            100.0 * withinSla / throughput
+        }
+
+        return StrategicKpisRow(
+            slaCompliancePct = slaCompliancePct,
+            medianResolutionHours = median(sortedHours),
+            p90ResolutionHours = p90(sortedHours),
+            throughput = throughput,
+        )
+    }
+
+    private fun median(sortedHours: List<Double>): Double? {
+        if (sortedHours.isEmpty()) return null
+        val n = sortedHours.size
+        return if (n % 2 == 1) sortedHours[n / 2]
+        else (sortedHours[n / 2 - 1] + sortedHours[n / 2]) / 2.0
+    }
+
+    private fun p90(sortedHours: List<Double>): Double? {
+        if (sortedHours.isEmpty()) return null
+        if (sortedHours.size == 1) return sortedHours[0]
+        val idx = 0.9 * (sortedHours.size - 1)
+        val lo = idx.toInt()
+        val hi = (lo + 1).coerceAtMost(sortedHours.size - 1)
+        val frac = idx - lo
+        return sortedHours[lo] + frac * (sortedHours[hi] - sortedHours[lo])
+    }
+
     /** complaint_id → число `+1` голосов. */
     fun voteCounts(complaintIds: Collection<Long>): Map<Long, Int> {
         if (complaintIds.isEmpty()) return emptyMap()

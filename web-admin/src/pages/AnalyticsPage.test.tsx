@@ -5,68 +5,68 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { setupServer } from 'msw/node'
 import { http, HttpResponse } from 'msw'
 import { AnalyticsPage } from './AnalyticsPage'
-import type { AnalyticsOverview, SlaStat } from '@/api/types'
+import type { ReactNode } from 'react'
 
 const BASE = 'http://localhost:8081'
 
-const overview: AnalyticsOverview = {
-  total: 50, new: 10, inProgress: 15, resolved: 25, rejected: 0, duplicate: 0,
-  today: 2, week: 8, slaBreachCount: 3,
-  monthlyKpis: {
-    total: 50, prevTotal: 40, avgResolutionHours: 41, prevAvgResolutionHours: 50,
-    resolvedWithin7dPct: 78, prevResolvedWithin7dPct: 70,
-    newCount: 0, inProgressCount: 0, resolvedCount: 0, rejectedCount: 0, duplicateCount: 0,
-  },
-}
-
-const slaWeek: SlaStat[] = [
-  { category: 'GARBAGE', label: 'Мусор', slaHours: 24, avgResolutionHours: 38, breachPct: 60, resolvedCount: 5 },
-]
-const slaMonth: SlaStat[] = [
-  { category: 'ROADS', label: 'Дороги', slaHours: 72, avgResolutionHours: 50, breachPct: 0, resolvedCount: 9 },
-]
-
-let slaPeriods: string[] = []
+let strategicPeriods: string[] = []
 
 const srv = setupServer(
-  http.get(`${BASE}/analytics/overview`, () => HttpResponse.json(overview)),
-  http.get(`${BASE}/analytics/trends`, () => HttpResponse.json({ days: [] })),
-  http.get(`${BASE}/analytics/votes-impact`, () => HttpResponse.json([])),
-  http.get(`${BASE}/analytics/sla`, ({ request }) => {
+  http.get(`${BASE}/analytics/strategic`, ({ request }) => {
     const p = new URL(request.url).searchParams.get('period') ?? ''
-    slaPeriods.push(p)
-    return HttpResponse.json(p === 'WEEK' ? slaWeek : slaMonth)
+    strategicPeriods.push(p)
+    return HttpResponse.json({
+      slaCompliancePct: 78, slaTargetPct: 80,
+      medianResolutionHours: 24, p90ResolutionHours: 72,
+      reopenRate: 0.08, reopenTargetPct: 10, throughput: 145,
+    })
   }),
+  http.get(`${BASE}/analytics/reopen`, () => HttpResponse.json({
+    reopenRate: 0.08, reopenCount: 12, resolvedCount: 150,
+  })),
+  http.get(`${BASE}/analytics/trends`, () => HttpResponse.json({
+    days: [], createdSeries: [], resolvedSeries: [], groupBy: 'day',
+  })),
+  http.get(`${BASE}/analytics/by-district`, () => HttpResponse.json([])),
+  http.get(`${BASE}/analytics/by-category`, () => HttpResponse.json([])),
+  http.get(`${BASE}/analytics/sla`, () => HttpResponse.json([])),
+  http.get(`${BASE}/analytics/votes-impact`, () => HttpResponse.json([])),
 )
 
 beforeAll(() => srv.listen())
 afterEach(() => {
   srv.resetHandlers()
-  slaPeriods = []
+  strategicPeriods = []
 })
 afterAll(() => srv.close())
 
-function renderPage() {
+function wrap(node: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
-    <QueryClientProvider client={qc}>
-      <AnalyticsPage />
-    </QueryClientProvider>,
-  )
+  return <QueryClientProvider client={qc}>{node}</QueryClientProvider>
 }
 
 describe('AnalyticsPage', () => {
-  it('рендерит SLA-список и trend-карты для периода по умолчанию (MONTH)', async () => {
-    renderPage()
-    expect(await screen.findByText('Дороги')).toBeInTheDocument()
-    expect(screen.getByText('SLA по категориям')).toBeInTheDocument()
+  it('renders 4 strategic KPI cards and headers', async () => {
+    render(wrap(<AnalyticsPage />))
+    expect((await screen.findAllByText(/within SLA/i)).length).toBeGreaterThan(0)
+    expect(screen.getByText(/Время решения/)).toBeInTheDocument()
+    expect(screen.getByText(/Reopen/i)).toBeInTheDocument()
+    expect(screen.getByText(/Throughput/i)).toBeInTheDocument()
+    expect(screen.getByText('145')).toBeInTheDocument()  // throughput
   })
 
-  it('смена периода перезапрашивает данные с новым period', async () => {
-    renderPage()
-    await screen.findByText('Дороги')
-    await userEvent.click(screen.getByRole('button', { name: 'Неделя' }))
-    await waitFor(() => expect(screen.getByText('Мусор')).toBeInTheDocument())
-    expect(slaPeriods).toContain('WEEK')
+  it('does not render Export PDF button', async () => {
+    render(wrap(<AnalyticsPage />))
+    await screen.findByText(/Throughput/)
+    expect(screen.queryByText(/Экспорт PDF/i)).not.toBeInTheDocument()
+  })
+
+  it('changes period via switcher and refetches', async () => {
+    render(wrap(<AnalyticsPage />))
+    await screen.findByText(/Throughput/)
+    // initial fetch with default MONTH
+    expect(strategicPeriods).toContain('MONTH')
+    await userEvent.click(screen.getByRole('button', { name: 'Квартал' }))
+    await waitFor(() => expect(strategicPeriods).toContain('QUARTER'))
   })
 })

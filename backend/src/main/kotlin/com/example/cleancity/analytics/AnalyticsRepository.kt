@@ -9,6 +9,8 @@ import com.example.cleancity.shared.models.ProblemCategory
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.Duration
+import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
@@ -23,11 +25,22 @@ class AnalyticsRepository {
 
     data class Row(
         val id: Long,
+        val title: String,
         val category: ProblemCategory,
         val district: String?,
         val status: ComplaintStatus,
         val createdAt: OffsetDateTime,
         val resolvedAt: OffsetDateTime?
+    )
+
+    data class BurningRow(
+        val id: Long,
+        val title: String,
+        val districtCode: String?,
+        val category: String,
+        val createdAt: Instant,
+        val slaDueAt: Instant,
+        val secondsToDeadline: Long,
     )
 
     data class OperationalSnapshotRow(
@@ -48,6 +61,7 @@ class AnalyticsRepository {
         query.map {
             Row(
                 id = it[Complaints.id],
+                title = it[Complaints.title],
                 category = parseCategory(it[Complaints.category]),
                 district = it[Complaints.district],
                 status = parseStatus(it[Complaints.status]),
@@ -139,6 +153,32 @@ class AnalyticsRepository {
             createdYesterday = createdYesterday,
             statusBreakdown = statusBreakdown,
         )
+    }
+
+    /** Топ-N жалоб, ближайших к дедлайну SLA (или уже просроченных). */
+    fun burningQueue(
+        now: OffsetDateTime,
+        limit: Int = AnalyticsConfig.BURNING_QUEUE_DEFAULT_LIMIT,
+    ): List<BurningRow> {
+        val openStatuses = setOf(ComplaintStatus.NEW, ComplaintStatus.IN_PROGRESS)
+        val rows = loadComplaints(periodStart = null).filter { it.status in openStatuses }
+        val nowInstant = now.toInstant()
+        return rows
+            .map { row ->
+                val slaHours = CategorySla.hoursFor(row.category).toLong()
+                val slaDueAt = row.createdAt.toInstant().plus(Duration.ofHours(slaHours))
+                BurningRow(
+                    id = row.id,
+                    title = row.title,
+                    districtCode = row.district,
+                    category = row.category.name,
+                    createdAt = row.createdAt.toInstant(),
+                    slaDueAt = slaDueAt,
+                    secondsToDeadline = (slaDueAt.toEpochMilli() - nowInstant.toEpochMilli()) / 1000L,
+                )
+            }
+            .sortedBy { it.slaDueAt }
+            .take(limit)
     }
 
     /** complaint_id → число `+1` голосов. */

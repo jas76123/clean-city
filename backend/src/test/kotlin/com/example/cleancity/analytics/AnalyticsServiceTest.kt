@@ -443,6 +443,75 @@ class AnalyticsServiceTest {
     }
 
     @Test
+    fun `strategic kpis median p90 sla throughput`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(30)
+        val periodEnd = now.plusDays(1)
+        // 4 RESOLVED GARBAGE (SLA 24ч): 12ч (within), 18ч (within), 24ч (within — boundary), 100ч (breach)
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(10), resolvedAt = now.minusDays(10).plusHours(12)
+        )
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(9), resolvedAt = now.minusDays(9).plusHours(18)
+        )
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(8), resolvedAt = now.minusDays(8).plusHours(24)
+        )
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(7), resolvedAt = now.minusDays(7).plusHours(100)
+        )
+
+        val kpis = AnalyticsRepository().strategicKpis(periodStart, periodEnd)
+
+        assertEquals(4, kpis.throughput)
+        // SLA compliance: 3 of 4 within (≤24h) = 75%
+        assertEquals(75.0, kpis.slaCompliancePct, absoluteTolerance = 0.5)
+        // median of [12, 18, 24, 100]: avg of 18 and 24 = 21
+        assertEquals(21.0, kpis.medianResolutionHours!!, absoluteTolerance = 0.5)
+        // p90 = linear interp at idx 0.9*(4-1)=2.7: sorted[2] + 0.7*(sorted[3]-sorted[2]) = 24 + 0.7*(100-24) = 77.2
+        assertTrue(kpis.p90ResolutionHours!! > 50.0, "p90 should not be the average; it should be near the upper tail")
+        assertTrue(kpis.p90ResolutionHours!! < 100.0, "p90 should be < max")
+    }
+
+    @Test
+    fun `strategic kpis empty period returns zeros`() {
+        val periodStart = now.minusDays(7)
+        val periodEnd = now
+        val kpis = AnalyticsRepository().strategicKpis(periodStart, periodEnd)
+        assertEquals(0, kpis.throughput)
+        assertEquals(0.0, kpis.slaCompliancePct)
+        assertNull(kpis.medianResolutionHours)
+        assertNull(kpis.p90ResolutionHours)
+    }
+
+    @Test
+    fun `strategic kpis excludes resolved outside window`() {
+        val author = seedUser()
+        // Внутри окна: 1 RESOLVED 10ч
+        val periodStart = now.minusDays(7)
+        val periodEnd = now.plusDays(1)
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(3), resolvedAt = now.minusDays(3).plusHours(10)
+        )
+        // Вне окна (resolvedAt раньше periodStart): не должна попасть
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(40), resolvedAt = now.minusDays(35)
+        )
+        // NEW — не RESOLVED, не должна попасть
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(1))
+
+        val kpis = AnalyticsRepository().strategicKpis(periodStart, periodEnd)
+        assertEquals(1, kpis.throughput)
+        assertEquals(100.0, kpis.slaCompliancePct, absoluteTolerance = 0.5)
+    }
+
+    @Test
     fun `operational snapshot counts createdToday and createdYesterday in Europe Moscow zone`() {
         val author = seedUser()
         val mskZone = java.time.ZoneId.of("Europe/Moscow")

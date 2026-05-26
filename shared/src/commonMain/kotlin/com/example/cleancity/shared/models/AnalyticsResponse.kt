@@ -4,7 +4,7 @@ import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class AnalyticsPeriod { WEEK, MONTH, ALL }
+enum class AnalyticsPeriod { WEEK, MONTH, QUARTER, YEAR, ALL }
 
 @Serializable
 data class AnalyticsOverview(

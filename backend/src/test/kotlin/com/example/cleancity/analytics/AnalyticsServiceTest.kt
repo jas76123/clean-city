@@ -60,12 +60,13 @@ class AnalyticsServiceTest {
         status: ComplaintStatus,
         createdAt: OffsetDateTime,
         resolvedAt: OffsetDateTime? = null,
-        district: String? = null
+        district: String? = null,
+        title: String = "t"
     ): Long = transaction {
         Complaints.insert {
             it[Complaints.authorId] = authorId
             it[Complaints.category] = category.name
-            it[Complaints.title] = "t"
+            it[Complaints.title] = title
             it[Complaints.description] = "d"
             it[Complaints.latitude] = 43.6
             it[Complaints.longitude] = 39.7
@@ -395,6 +396,50 @@ class AnalyticsServiceTest {
 
         val snapshot = AnalyticsRepository().operationalSnapshot(now)
         assertNull(snapshot.avgDtaHours24h, "первый IN_PROGRESS был 40ч назад — жалоба не должна попадать в DTA-24h")
+    }
+
+    @Test
+    fun `burning queue sorts by slaDueAt and excludes terminal statuses`() {
+        val author = seedUser()
+        // c1: NEW, SAFETY (SLA 24ч), создана 30ч назад → overdue, slaDueAt = -6ч
+        val c1 = seedComplaint(author, ProblemCategory.SAFETY, ComplaintStatus.NEW, now.minusHours(30))
+        // c2: IN_PROGRESS, GARBAGE (SLA 24ч), создана 20ч назад → ещё не overdue, slaDueAt = +4ч
+        val c2 = seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.IN_PROGRESS, now.minusHours(20))
+        // c3: RESOLVED — не должна попасть
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+                      now.minusHours(48), resolvedAt = now.minusHours(2))
+
+        val items = AnalyticsRepository().burningQueue(now, limit = 10)
+
+        assertEquals(2, items.size, "RESOLVED исключена")
+        assertEquals(c1, items[0].id, "overdue c1 первая (более раннее slaDueAt)")
+        assertEquals(c2, items[1].id)
+        assertTrue(items[0].secondsToDeadline < 0, "c1 overdue")
+        assertTrue(items[1].secondsToDeadline > 0, "c2 ещё в сроке")
+    }
+
+    @Test
+    fun `burning queue respects limit`() {
+        val author = seedUser()
+        repeat(15) { i ->
+            seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusHours((i + 1).toLong()))
+        }
+        val items = AnalyticsRepository().burningQueue(now, limit = 5)
+        assertEquals(5, items.size)
+    }
+
+    @Test
+    fun `burning queue returns title and districtCode and category name`() {
+        val author = seedUser()
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusHours(2),
+            district = "Центральный", title = "Сломанная урна"
+        )
+        val items = AnalyticsRepository().burningQueue(now, limit = 10)
+        assertEquals(1, items.size)
+        assertEquals("Сломанная урна", items[0].title)
+        assertEquals("Центральный", items[0].districtCode)
+        assertEquals("GARBAGE", items[0].category)
     }
 
     @Test

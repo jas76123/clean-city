@@ -1,5 +1,6 @@
 package com.example.cleancity.shared.models
 
+import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -54,6 +55,7 @@ data class VotesBucket(
     val avgResolutionHours: Double?
 )
 
+@Deprecated("Используется только в legacy /analytics/overview. Перейти на OperationalSnapshot + StrategicKpis.")
 @Serializable
 data class MonthlyKpis(
     val total: Int,
@@ -79,4 +81,44 @@ data class DailyPoint(
 @Serializable
 data class TrendsResponse(
     val days: List<DailyPoint>,
+)
+
+@Serializable
+data class OperationalSnapshot(
+    val backlog: Int,                     // count(NEW + IN_PROGRESS) на момент запроса
+    val overdueNow: Int,                  // count(open AND now() > slaDueAt)
+    val avgDtaHours24h: Double?,          // среднее DTA по жалобам, ack-нутым за последние 24ч
+    val dtaTargetHours: Double,           // = AnalyticsConfig.DTA_TARGET_HOURS
+    val createdToday: Int,                // count за текущий день в Europe/Moscow
+    val createdYesterday: Int,            // для дельты
+    val statusBreakdown: Map<String, Int> // NEW/IN_PROGRESS/RESOLVED/REJECTED/DUPLICATE за 30 дней
+)
+
+@Serializable
+data class BurningComplaintItem(
+    val id: Long,
+    val title: String,
+    val districtCode: String?,
+    val category: String,
+    val createdAt: Instant,
+    val slaDueAt: Instant,
+    val secondsToDeadline: Long           // отрицательное = overdue
+)
+
+@Serializable
+data class StrategicKpis(
+    val slaCompliancePct: Double,
+    val slaTargetPct: Double,             // = AnalyticsConfig.SLA_TARGET_PCT
+    val medianResolutionHours: Double?,
+    val p90ResolutionHours: Double?,
+    val reopenRate: Double,
+    val reopenTargetPct: Double,          // = AnalyticsConfig.REOPEN_TARGET_PCT
+    val throughput: Int                   // закрыто за период
+)
+
+@Serializable
+data class ReopenStat(
+    val reopenRate: Double,
+    val reopenCount: Int,
+    val resolvedCount: Int,
 )

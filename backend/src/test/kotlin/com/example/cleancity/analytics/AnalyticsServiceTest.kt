@@ -61,15 +61,17 @@ class AnalyticsServiceTest {
         createdAt: OffsetDateTime,
         resolvedAt: OffsetDateTime? = null,
         district: String? = null,
-        title: String = "t"
+        title: String = "t",
+        latitude: Double = 43.6,
+        longitude: Double = 39.7,
     ): Long = transaction {
         Complaints.insert {
             it[Complaints.authorId] = authorId
             it[Complaints.category] = category.name
             it[Complaints.title] = title
             it[Complaints.description] = "d"
-            it[Complaints.latitude] = 43.6
-            it[Complaints.longitude] = 39.7
+            it[Complaints.latitude] = latitude
+            it[Complaints.longitude] = longitude
             it[Complaints.address] = "addr"
             it[Complaints.district] = district
             it[Complaints.status] = status.name
@@ -509,6 +511,84 @@ class AnalyticsServiceTest {
         val kpis = AnalyticsRepository().strategicKpis(periodStart, periodEnd)
         assertEquals(1, kpis.throughput)
         assertEquals(100.0, kpis.slaCompliancePct, absoluteTolerance = 0.5)
+    }
+
+    @Test
+    fun `reopen rate counts pairs within radius and window`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(30)
+        val periodEnd = now.plusDays(1)
+        // Точка A: 43.5856, 39.7231 (центр Сочи)
+        val latA = 43.5856; val lonA = 39.7231
+        // Точка B: ~50м к северу от A (1 градус широты ≈ 111км → 50м ≈ 0.00045°)
+        val latB = 43.586049; val lonB = 39.7231
+        // Точка C: ~200м к северу от A (вне 50м радиуса)
+        val latC = 43.587397; val lonC = 39.7231
+
+        // R1: resolved A, GARBAGE — в начале окна
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(20), resolvedAt = now.minusDays(20).plusHours(2),
+            latitude = latA, longitude = lonA,
+        )
+        // reopen для R1: B, GARBAGE, через 5 дней после resolvedAt → попадает
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.NEW,
+            now.minusDays(15), latitude = latB, longitude = lonB,
+        )
+        // not-reopen: C (200м), GARBAGE — НЕ попадает по радиусу
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.NEW,
+            now.minusDays(14), latitude = latC, longitude = lonC,
+        )
+        // not-reopen: A, LIGHTING — НЕ попадает по категории
+        seedComplaint(
+            author, ProblemCategory.LIGHTING, ComplaintStatus.NEW,
+            now.minusDays(13), latitude = latA, longitude = lonA,
+        )
+        // R2: ещё одна resolved в окне без reopen-пары
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(5), resolvedAt = now.minusDays(5).plusHours(3),
+            latitude = latA, longitude = lonA,
+        )
+
+        val stat = AnalyticsRepository().reopenStat(periodStart, periodEnd)
+
+        assertEquals(2, stat.resolvedCount)
+        assertEquals(1, stat.reopenCount)
+        assertEquals(0.5, stat.reopenRate, absoluteTolerance = 0.01)
+    }
+
+    @Test
+    fun `reopen rate ignores reopens outside 30 day window`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(60)
+        val periodEnd = now.plusDays(1)
+        // R: resolved 50 дней назад
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(55), resolvedAt = now.minusDays(50),
+            latitude = 43.5856, longitude = 39.7231,
+        )
+        // C: создана через 40 дней после resolvedAt (>30д окно) — НЕ reopen
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.NEW,
+            now.minusDays(10), latitude = 43.5856, longitude = 39.7231,
+        )
+
+        val stat = AnalyticsRepository().reopenStat(periodStart, periodEnd)
+        assertEquals(1, stat.resolvedCount)
+        assertEquals(0, stat.reopenCount)
+        assertEquals(0.0, stat.reopenRate)
+    }
+
+    @Test
+    fun `reopen rate empty resolved returns zeros`() {
+        val stat = AnalyticsRepository().reopenStat(now.minusDays(30), now)
+        assertEquals(0, stat.resolvedCount)
+        assertEquals(0, stat.reopenCount)
+        assertEquals(0.0, stat.reopenRate)
     }
 
     @Test

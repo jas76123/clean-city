@@ -9,10 +9,13 @@ import com.example.cleancity.shared.models.ProblemCategory
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.DayOfWeek
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.temporal.TemporalAdjusters
 import kotlin.math.pow
 
 /**
@@ -299,6 +302,56 @@ class AnalyticsRepository {
         val dLam = Math.toRadians(lon2 - lon1)
         val a = Math.sin(dPhi / 2).pow(2) + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam / 2).pow(2)
         return 2 * r * Math.asin(Math.sqrt(a))
+    }
+
+    data class TrendsRangeRow(
+        val createdSeries: List<Pair<Instant, Int>>,
+        val resolvedSeries: List<Pair<Instant, Int>>,
+        val groupBy: String,  // "day" | "week" | "month"
+    )
+
+    fun trendsRange(
+        periodStart: OffsetDateTime,
+        periodEnd: OffsetDateTime,
+        groupBy: String,
+    ): TrendsRangeRow {
+        require(groupBy in setOf("day", "week", "month")) { "groupBy must be day|week|month" }
+
+        fun bucketOf(dt: OffsetDateTime): Instant = when (groupBy) {
+            "day" -> dt.toLocalDate().atStartOfDay(ZoneOffset.UTC).toInstant()
+            "week" -> dt.toLocalDate()
+                .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant()
+            else -> dt.toLocalDate().withDayOfMonth(1).atStartOfDay(ZoneOffset.UTC).toInstant()
+        }
+
+        val allRows = loadComplaints(null)
+
+        val createdSeries: List<Pair<Instant, Int>> = allRows
+            .filter { !it.createdAt.isBefore(periodStart) && it.createdAt.isBefore(periodEnd) }
+            .groupBy { bucketOf(it.createdAt) }
+            .mapValues { it.value.size }
+            .toList()
+            .sortedBy { it.first }
+
+        val resolvedSeries: List<Pair<Instant, Int>> = allRows
+            .filter { row ->
+                row.status == ComplaintStatus.RESOLVED &&
+                    row.resolvedAt != null &&
+                    !row.resolvedAt.isBefore(periodStart) &&
+                    row.resolvedAt.isBefore(periodEnd)
+            }
+            .groupBy { bucketOf(it.resolvedAt!!) }
+            .mapValues { it.value.size }
+            .toList()
+            .sortedBy { it.first }
+
+        return TrendsRangeRow(
+            createdSeries = createdSeries,
+            resolvedSeries = resolvedSeries,
+            groupBy = groupBy,
+        )
     }
 
     private fun parseCategory(raw: String): ProblemCategory =

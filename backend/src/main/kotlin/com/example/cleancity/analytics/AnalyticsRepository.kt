@@ -92,41 +92,47 @@ class AnalyticsRepository {
             .eachCount()
             .filter { it.value > 0 }
 
-        // avgDtaHours24h: average DTA for complaints whose first IN_PROGRESS event is in [now-24h, now)
+        // avgDtaHours24h: average DTA for complaints whose FIRST-EVER IN_PROGRESS event falls in [now-24h, now)
         val dtaWindowStart = now.minusHours(24)
-        // Load all IN_PROGRESS status change events in the 24h window
-        val inProgressChanges = StatusChanges.selectAll()
-            .where {
-                (StatusChanges.toStatus eq "IN_PROGRESS") and
-                (StatusChanges.createdAt greaterEq dtaWindowStart) and
-                (StatusChanges.createdAt less now)
-            }
+        // Load ALL IN_PROGRESS status change events (no window filter) to find each complaint's global first
+        val allInProgressChanges = StatusChanges.selectAll()
+            .where { StatusChanges.toStatus eq "IN_PROGRESS" }
             .map { row ->
                 Pair(row[StatusChanges.complaintId], row[StatusChanges.createdAt])
             }
 
-        val avgDtaHours24h: Double? = if (inProgressChanges.isEmpty()) {
+        val avgDtaHours24h: Double? = if (allInProgressChanges.isEmpty()) {
             null
         } else {
-            // For each complaint, keep only the earliest IN_PROGRESS event
-            val firstInProgressByComplaint = inProgressChanges
+            // For each complaint, find the global first IN_PROGRESS event (minimum across all time)
+            val globalFirstInProgressByComplaint = allInProgressChanges
                 .groupBy { it.first }
                 .mapValues { (_, events) -> events.minByOrNull { it.second }!!.second }
 
-            // Look up complaint createdAt for those complaintIds
-            val complaintIds = firstInProgressByComplaint.keys
-            val complaintCreatedAtMap = Complaints.selectAll()
-                .where { Complaints.id inList complaintIds }
-                .associate { it[Complaints.id] to it[Complaints.createdAt] }
+            // Keep only complaints whose global first IN_PROGRESS event falls in [now-24h, now)
+            val inWindowFirst = globalFirstInProgressByComplaint
+                .filter { (_, firstIpAt) ->
+                    !firstIpAt.isBefore(dtaWindowStart) && firstIpAt.isBefore(now)
+                }
 
-            // Compute DTA in hours for each complaint
-            val dtaValues = firstInProgressByComplaint.mapNotNull { (complaintId, firstIpAt) ->
-                val createdAt = complaintCreatedAtMap[complaintId] ?: return@mapNotNull null
-                val minutes = java.time.Duration.between(createdAt, firstIpAt).toMinutes()
-                minutes / 60.0
+            if (inWindowFirst.isEmpty()) {
+                null
+            } else {
+                // Look up complaint createdAt for those complaintIds
+                val complaintIds = inWindowFirst.keys
+                val complaintCreatedAtMap = Complaints.selectAll()
+                    .where { Complaints.id inList complaintIds }
+                    .associate { it[Complaints.id] to it[Complaints.createdAt] }
+
+                // Compute DTA in hours for each complaint
+                val dtaValues = inWindowFirst.mapNotNull { (complaintId, firstIpAt) ->
+                    val createdAt = complaintCreatedAtMap[complaintId] ?: return@mapNotNull null
+                    val minutes = java.time.Duration.between(createdAt, firstIpAt).toMinutes()
+                    minutes / 60.0
+                }
+
+                if (dtaValues.isEmpty()) null else dtaValues.average()
             }
-
-            if (dtaValues.isEmpty()) null else dtaValues.average()
         }
 
         OperationalSnapshotRow(

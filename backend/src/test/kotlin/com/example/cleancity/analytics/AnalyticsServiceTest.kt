@@ -383,4 +383,17 @@ class AnalyticsServiceTest {
         assertNotNull(snapshot.avgDtaHours24h)
         assertEquals(10.0, snapshot.avgDtaHours24h!!, 0.5)
     }
+
+    @Test
+    fun `operational snapshot DTA ignores complaints whose first IN_PROGRESS event is outside 24h window`() {
+        val author = seedUser()
+        // Жалоба: создана 50ч назад, IN_PROGRESS поставлена 40ч назад → первое событие вне 24ч окна
+        val c1 = seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.IN_PROGRESS, now.minusHours(50))
+        seedStatusChange(c1, "NEW", "IN_PROGRESS", author, now.minusHours(40))
+        // Та же жалоба позже снова поставлена в IN_PROGRESS (например, после возврата из RESOLVED) — внутри окна
+        seedStatusChange(c1, "RESOLVED", "IN_PROGRESS", author, now.minusHours(5))
+
+        val snapshot = AnalyticsRepository().operationalSnapshot(now)
+        assertNull(snapshot.avgDtaHours24h, "первый IN_PROGRESS был 40ч назад — жалоба не должна попадать в DTA-24h")
+    }
 }

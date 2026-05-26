@@ -8,7 +8,7 @@ const DASHBOARD_REFETCH_MS = 60_000
 export function useTrendsQuery() {
   return useQuery({
     queryKey: ['analytics', 'trends'],
-    queryFn: getTrends,
+    queryFn: () => getTrends(),
     refetchInterval: DASHBOARD_REFETCH_MS,
   })
 }

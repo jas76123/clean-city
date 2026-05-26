@@ -740,6 +740,73 @@ class AnalyticsServiceTest {
 
     // ─── END Task 9 ──────────────────────────────────────────────────────────
 
+    // ─── Task 10: service-level wrappers ─────────────────────────────────────
+
+    @Test
+    fun `service operational returns DTO with target hours from config`() {
+        val s = AnalyticsService(AnalyticsRepository()).operational(now)
+        assertEquals(AnalyticsConfig.DTA_TARGET_HOURS, s.dtaTargetHours)
+        assertEquals(0, s.backlog)
+    }
+
+    @Test
+    fun `service burning maps repo rows to DTOs`() {
+        val author = seedUser()
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusHours(30))
+        val items = AnalyticsService(AnalyticsRepository()).burning(now, limit = 10)
+        assertEquals(1, items.size)
+        assertTrue(items[0].secondsToDeadline < 0, "GARBAGE 30ч назад — overdue")
+    }
+
+    @Test
+    fun `service strategic returns DTO with targets from config`() {
+        val k = AnalyticsService(AnalyticsRepository()).strategic(AnalyticsPeriod.MONTH)
+        assertEquals(AnalyticsConfig.SLA_TARGET_PCT, k.slaTargetPct)
+        assertEquals(AnalyticsConfig.REOPEN_TARGET_PCT, k.reopenTargetPct)
+        assertEquals(0, k.throughput)
+    }
+
+    @Test
+    fun `service reopen returns stat for period`() {
+        val r = AnalyticsService(AnalyticsRepository()).reopen(AnalyticsPeriod.MONTH)
+        assertEquals(0, r.resolvedCount)
+        assertEquals(0, r.reopenCount)
+    }
+
+    @Test
+    fun `service trendsRange returns parallel series`() {
+        val author = seedUser()
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(3), resolvedAt = now.minusDays(2))
+        val t = AnalyticsService(AnalyticsRepository()).trendsRange(AnalyticsPeriod.WEEK, groupBy = "day")
+        assertEquals("day", t.groupBy)
+        assertTrue(t.createdSeries.isNotEmpty())
+        assertTrue(t.resolvedSeries.isNotEmpty())
+    }
+
+    @Test
+    fun `byCategory uses extended fields and period range`() {
+        val author = seedUser()
+        // GARBAGE: 4 RESOLVED — внутри MONTH окна (последние 30д)
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(10), resolvedAt = now.minusDays(10).plusHours(12))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(9), resolvedAt = now.minusDays(9).plusHours(18))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(8), resolvedAt = now.minusDays(8).plusHours(24))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(7), resolvedAt = now.minusDays(7).plusHours(100))
+
+        val stats = AnalyticsService(AnalyticsRepository()).byCategory(AnalyticsPeriod.MONTH)
+        val garbage = stats.first { it.category == ProblemCategory.GARBAGE }
+        assertEquals(4, garbage.count)
+        assertEquals(21.0, garbage.medianResolutionHours!!, 0.5)
+        assertNotNull(garbage.p90ResolutionHours)
+        assertEquals(75.0, garbage.slaCompliancePct!!, 0.5)
+    }
+
+    // ─── END Task 10 ─────────────────────────────────────────────────────────
+
     @Test
     fun `operational snapshot counts createdToday and createdYesterday in Europe Moscow zone`() {
         val author = seedUser()

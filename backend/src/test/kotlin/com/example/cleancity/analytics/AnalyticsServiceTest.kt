@@ -1,6 +1,7 @@
 package com.example.cleancity.analytics
 
 import com.example.cleancity.database.tables.Complaints
+import com.example.cleancity.database.tables.StatusChanges
 import com.example.cleancity.database.tables.Users
 import com.example.cleancity.database.tables.Votes
 import com.example.cleancity.shared.models.AnalyticsPeriod
@@ -31,8 +32,8 @@ class AnalyticsServiceTest {
             driver = "org.h2.Driver"
         )
         transaction {
-            SchemaUtils.drop(Votes, Complaints, Users)
-            SchemaUtils.create(Users, Complaints, Votes)
+            SchemaUtils.drop(StatusChanges, Votes, Complaints, Users)
+            SchemaUtils.create(Users, Complaints, Votes, StatusChanges)
         }
         service = AnalyticsService(AnalyticsRepository())
     }
@@ -84,6 +85,23 @@ class AnalyticsServiceTest {
             it[Votes.value] = 1
             it[Votes.createdAt] = now
         }
+    }
+
+    private fun seedStatusChange(
+        complaintId: Long,
+        fromStatus: String?,
+        toStatus: String,
+        changedById: Long,
+        createdAt: OffsetDateTime,
+    ): Long = transaction {
+        StatusChanges.insert {
+            it[StatusChanges.complaintId] = complaintId
+            it[StatusChanges.fromStatus] = fromStatus
+            it[StatusChanges.toStatus] = toStatus
+            it[StatusChanges.comment] = "test"
+            it[StatusChanges.changedById] = changedById
+            it[StatusChanges.createdAt] = createdAt
+        }[StatusChanges.id]
     }
 
     @Test
@@ -325,5 +343,44 @@ class AnalyticsServiceTest {
         val t = service.trends(now)
         assertEquals(30, t.days.size)
         assertTrue(t.days.all { it.created == 0 && it.resolved == 0 })
+    }
+
+    @Test
+    fun `operational snapshot returns backlog overdue and dta`() {
+        val author = seedUser()
+        // backlog = 2 (1 NEW + 1 IN_PROGRESS); RESOLVED не в backlog
+        val c1 = seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusHours(2))
+        val c2 = seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.IN_PROGRESS, now.minusHours(48))
+        val c3 = seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusHours(72), resolvedAt = now.minusHours(24)
+        )
+        // status change для c2: первый IN_PROGRESS 36ч назад → ВНЕ 24ч окна DTA → avgDtaHours24h = null
+        seedStatusChange(c2, fromStatus = "NEW", toStatus = "IN_PROGRESS", changedById = author, createdAt = now.minusHours(36))
+
+        val snapshot = AnalyticsRepository().operationalSnapshot(now)
+
+        assertEquals(2, snapshot.backlog)
+        assertEquals(1, snapshot.overdueNow, "только c2 (48ч >= 24ч SLA для GARBAGE) — overdue")
+        assertEquals(mapOf("NEW" to 1, "IN_PROGRESS" to 1, "RESOLVED" to 1), snapshot.statusBreakdown)
+        assertNull(snapshot.avgDtaHours24h, "first IN_PROGRESS 36ч назад — вне 24ч окна")
+        // c3 не имеет «c3» использования — подавить warning
+        assertTrue(c3 > 0)
+    }
+
+    @Test
+    fun `operational snapshot DTA averages first IN_PROGRESS events in last 24h`() {
+        val author = seedUser()
+        val c1 = seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.IN_PROGRESS, now.minusHours(20))
+        val c2 = seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.IN_PROGRESS, now.minusHours(15))
+        // c1: первый IN_PROGRESS 10ч назад (10ч от создания → 10ч DTA), В окне 24ч
+        seedStatusChange(c1, "NEW", "IN_PROGRESS", author, now.minusHours(10))
+        // c2: первый IN_PROGRESS 5ч назад (10ч от создания → 10ч DTA), В окне 24ч
+        seedStatusChange(c2, "NEW", "IN_PROGRESS", author, now.minusHours(5))
+
+        val snapshot = AnalyticsRepository().operationalSnapshot(now)
+
+        assertNotNull(snapshot.avgDtaHours24h)
+        assertEquals(10.0, snapshot.avgDtaHours24h!!, 0.5)
     }
 }

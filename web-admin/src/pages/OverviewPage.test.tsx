@@ -1,86 +1,69 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import { setupServer } from 'msw/node'
 import { http, HttpResponse } from 'msw'
 import { OverviewPage } from './OverviewPage'
-import type { AnalyticsOverview } from '@/api/types'
+import type { ReactNode } from 'react'
 
 const BASE = 'http://localhost:8081'
 
-function overview(slaBreachCount: number): AnalyticsOverview {
-  return {
-    total: 50, new: 10, inProgress: 15, resolved: 25, rejected: 0, duplicate: 0,
-    today: 2, week: 8, slaBreachCount,
-    monthlyKpis: {
-      total: 50, prevTotal: 40, avgResolutionHours: 41, prevAvgResolutionHours: 50,
-      resolvedWithin7dPct: 78, prevResolvedWithin7dPct: 70,
-      newCount: 10, inProgressCount: 15, resolvedCount: 20, rejectedCount: 3, duplicateCount: 2,
+const server = setupServer(
+  http.get(`${BASE}/analytics/operational`, () => HttpResponse.json({
+    backlog: 12, overdueNow: 3, avgDtaHours24h: 5, dtaTargetHours: 24,
+    createdToday: 7, createdYesterday: 4,
+    statusBreakdown: { NEW: 5, IN_PROGRESS: 7, RESOLVED: 100, REJECTED: 2, DUPLICATE: 1 },
+  })),
+  http.get(`${BASE}/analytics/burning`, () => HttpResponse.json([
+    {
+      id: 1, title: 'Сломанная урна', districtCode: 'ADL', category: 'GARBAGE',
+      createdAt: '2026-05-26T08:00:00Z', slaDueAt: '2026-05-26T09:00:00Z',
+      secondsToDeadline: -3600,
     },
-  }
-}
+  ])),
+)
 
-function server(slaBreachCount: number) {
-  return setupServer(
-    http.get(`${BASE}/analytics/overview`, () => HttpResponse.json(overview(slaBreachCount))),
-    http.get(`${BASE}/analytics/by-district`, () => HttpResponse.json([])),
-    http.get(`${BASE}/analytics/by-category`, () => HttpResponse.json([])),
-  )
-}
+beforeAll(() => server.listen())
+afterEach(() => server.resetHandlers())
+afterAll(() => server.close())
 
-const srv = server(8)
-beforeAll(() => srv.listen())
-afterEach(() => srv.resetHandlers())
-afterAll(() => srv.close())
-
-function renderPage() {
+function wrap(node: ReactNode) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
+  return (
     <QueryClientProvider client={qc}>
-      <OverviewPage />
-    </QueryClientProvider>,
+      <MemoryRouter>{node}</MemoryRouter>
+    </QueryClientProvider>
   )
 }
 
 describe('OverviewPage', () => {
-  it('показывает KPI и пайплайн статусов из overview', async () => {
-    renderPage()
-    expect(await screen.findByText('Жалоб за месяц')).toBeInTheDocument()
-    expect(screen.getByText('+25%')).toBeInTheDocument() // 50 vs 40
-    expect(screen.getByText('Топ-5 по категориям проблем')).toBeInTheDocument()
-    expect(screen.getByText('Распределение за месяц')).toBeInTheDocument()
+  it('renders 4 KPI cards', async () => {
+    render(wrap(<OverviewPage />))
+    expect(await screen.findByText(/Backlog/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Просрочено/i)).toBeInTheDocument()
+    expect(await screen.findByText(/DTA/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Создано сегодня/i)).toBeInTheDocument()
+  })
+
+  it('renders Status Pipeline with all 5 statuses and counts from breakdown', async () => {
+    render(wrap(<OverviewPage />))
+    expect(await screen.findByText('В обработке')).toBeInTheDocument()
+    expect(screen.getByText('В работе')).toBeInTheDocument()
+    expect(screen.getByText('Решено')).toBeInTheDocument()
     expect(screen.getByText('Отклонено')).toBeInTheDocument()
     expect(screen.getByText('Дубликаты')).toBeInTheDocument()
-    expect(screen.getByText('20')).toBeInTheDocument() // resolvedCount
-    expect(screen.getByText('3')).toBeInTheDocument()  // rejectedCount
-    expect(screen.getByText('2')).toBeInTheDocument()  // duplicateCount
+    expect(screen.getByText('100')).toBeInTheDocument() // RESOLVED
   })
 
-  it('показывает SLA-баннер когда slaBreachCount > 0', async () => {
-    renderPage()
-    expect(await screen.findByText(/превысили норматив SLA/)).toBeInTheDocument()
+  it('renders Burning Queue table with seeded item', async () => {
+    render(wrap(<OverviewPage />))
+    expect(await screen.findByText('Сломанная урна')).toBeInTheDocument()
   })
 
-  it('скрывает SLA-баннер когда slaBreachCount = 0', async () => {
-    srv.use(http.get(`${BASE}/analytics/overview`, () => HttpResponse.json(overview(0))))
-    renderPage()
-    expect(await screen.findByText('Жалоб за месяц')).toBeInTheDocument()
-    expect(screen.queryByText(/превысили норматив SLA/)).not.toBeInTheDocument()
-  })
-
-  it('рендерит строки топ-категорий с лейблами и счётчиками', async () => {
-    srv.use(
-      http.get(`${BASE}/analytics/by-category`, () =>
-        HttpResponse.json([
-          { category: 'GARBAGE', label: 'Мусор', count: 137, sharePct: 60, avgResolutionHours: 24 },
-          { category: 'ROADS', label: 'Дороги', count: 83, sharePct: 36, avgResolutionHours: 48 },
-        ]),
-      ),
-    )
-    renderPage()
-    expect(await screen.findByText('Мусор')).toBeInTheDocument()
-    expect(screen.getByText('137')).toBeInTheDocument()
-    expect(screen.getByText('Дороги')).toBeInTheDocument()
-    expect(screen.getByText('83')).toBeInTheDocument()
+  it('shows delta vs yesterday', async () => {
+    render(wrap(<OverviewPage />))
+    // createdToday=7, createdYesterday=4 → +3
+    expect(await screen.findByText(/▲ \+3/)).toBeInTheDocument()
   })
 })

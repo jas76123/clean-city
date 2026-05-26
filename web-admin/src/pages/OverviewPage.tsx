@@ -1,75 +1,82 @@
-import { useOverviewQuery } from '@/hooks/complaintQueries'
-import { useByCategoryQuery, useByDistrictQuery } from '@/hooks/dashboardQueries'
-import { KpiCard } from '@/components/dashboard/KpiCard'
-import { SlaAlertBanner } from './overview/SlaAlertBanner'
+import { Link } from 'react-router-dom'
+import { useOperationalQuery, useBurningQuery } from '@/hooks/dashboardQueries'
+import { KpiCardWithTarget } from './analytics/KpiCardWithTarget'
+import { BurningQueueTable } from './overview/BurningQueueTable'
 import { StatusPipeline } from './overview/StatusPipeline'
-import { TopDistricts } from './overview/TopDistricts'
-import { TopProblemCategories } from './overview/TopProblemCategories'
-
-function fmtHours(h: number | null): string {
-  return h == null ? '—' : `${Math.round(h)} ч`
-}
-
-function fmtPct(p: number | null): string {
-  return p == null ? '—' : `${Math.round(p)}%`
-}
 
 export function OverviewPage() {
-  const overview = useOverviewQuery()
-  const topCategories = useByCategoryQuery('MONTH')
-  const districts = useByDistrictQuery('MONTH')
+  const op = useOperationalQuery()
+  const burn = useBurningQuery(10)
 
-  if (overview.isError) {
+  if (op.isError) {
     return (
       <div className="p-6 text-center text-sm text-red-600">
         Не удалось загрузить дашборд.{' '}
-        <button onClick={() => overview.refetch()} className="underline">
-          Повторить
-        </button>
+        <button onClick={() => op.refetch()} className="underline">Повторить</button>
       </div>
     )
   }
-  if (overview.isLoading || !overview.data) {
+  if (op.isLoading || !op.data) {
     return <div className="p-6 text-center text-sm text-slate-400">Загрузка…</div>
   }
 
-  const o = overview.data
-  const k = o.monthlyKpis
+  const s = op.data
+  const createdDelta = s.createdToday - s.createdYesterday
+  const today = new Date().toISOString().slice(0, 10)
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      {o.slaBreachCount > 0 && <SlaAlertBanner count={o.slaBreachCount} />}
-
-      <div className="grid grid-cols-4 gap-4">
-        <KpiCard label="Жалоб за месяц" value={String(k.total)} current={k.total} previous={k.prevTotal} />
-        <KpiCard
-          label="Среднее время решения"
-          value={fmtHours(k.avgResolutionHours)}
-          current={k.avgResolutionHours}
-          previous={k.prevAvgResolutionHours}
-          lowerIsBetter
+      <section className="grid grid-cols-4 gap-4">
+        <Link to="/complaints?status=NEW,IN_PROGRESS" className="block hover:opacity-90 transition-opacity">
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="text-xs text-slate-500">Backlog</div>
+            <div className="mt-1 text-2xl font-semibold text-slate-900">{s.backlog}</div>
+            <div className="mt-1 text-xs text-slate-500">открытые жалобы сейчас</div>
+          </div>
+        </Link>
+        <Link to="/complaints?status=NEW,IN_PROGRESS&slaBreached=true" className="block hover:opacity-90 transition-opacity">
+          <div className={`rounded-xl border p-4 ${
+            s.overdueNow > 0 ? 'border-rose-200 bg-rose-50' : 'border-emerald-200 bg-emerald-50'
+          }`}>
+            <div className="text-xs text-slate-500">Просрочено по SLA</div>
+            <div className={`mt-1 text-2xl font-semibold ${
+              s.overdueNow > 0 ? 'text-rose-700' : 'text-emerald-700'
+            }`}>{s.overdueNow}</div>
+            <div className="mt-1 text-xs text-slate-500">нарушают норматив сейчас</div>
+          </div>
+        </Link>
+        <KpiCardWithTarget
+          label="DTA за 24ч"
+          value={s.avgDtaHours24h}
+          unit="ч"
+          target={s.dtaTargetHours}
+          direction="lower-better"
         />
-        <KpiCard
-          label="Решено за 7 дней"
-          value={fmtPct(k.resolvedWithin7dPct)}
-          current={k.resolvedWithin7dPct}
-          previous={k.prevResolvedWithin7dPct}
-        />
-        <KpiCard label="SLA-просрочки" value={String(o.slaBreachCount)} />
-      </div>
+        <Link to={`/complaints?createdAfter=${today}`} className="block hover:opacity-90 transition-opacity">
+          <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="text-xs text-slate-500">Создано сегодня</div>
+            <div className="mt-1 text-2xl font-semibold text-slate-900">
+              {s.createdToday}
+              <span className={`ml-2 text-sm font-normal ${
+                createdDelta >= 0 ? 'text-rose-600' : 'text-emerald-600'
+              }`}>
+                {createdDelta >= 0 ? `▲ +${createdDelta}` : `▼ ${createdDelta}`}
+              </span>
+            </div>
+            <div className="mt-1 text-xs text-slate-500">vs вчера: {s.createdYesterday}</div>
+          </div>
+        </Link>
+      </section>
 
-      <StatusPipeline
-        newCount={k.newCount}
-        inProgressCount={k.inProgressCount}
-        resolvedCount={k.resolvedCount}
-        rejectedCount={k.rejectedCount}
-        duplicateCount={k.duplicateCount}
-      />
+      <StatusPipeline breakdown={s.statusBreakdown} />
 
-      <div className="grid grid-cols-2 gap-4">
-        <TopDistricts stats={districts.data ?? []} />
-        <TopProblemCategories items={topCategories.data ?? []} />
-      </div>
+      <section>
+        <h2 className="mb-2 text-sm font-medium text-slate-700">Горящие жалобы</h2>
+        {burn.isLoading
+          ? <div className="text-sm text-slate-400">Загрузка…</div>
+          : <BurningQueueTable items={burn.data ?? []} />
+        }
+      </section>
     </div>
   )
 }

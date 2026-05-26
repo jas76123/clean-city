@@ -396,4 +396,26 @@ class AnalyticsServiceTest {
         val snapshot = AnalyticsRepository().operationalSnapshot(now)
         assertNull(snapshot.avgDtaHours24h, "первый IN_PROGRESS был 40ч назад — жалоба не должна попадать в DTA-24h")
     }
+
+    @Test
+    fun `operational snapshot counts createdToday and createdYesterday in Europe Moscow zone`() {
+        val author = seedUser()
+        val mskZone = java.time.ZoneId.of("Europe/Moscow")
+        val todayMskStart = now.atZoneSameInstant(mskZone).toLocalDate().atStartOfDay(mskZone).toOffsetDateTime()
+        val yesterdayMskStart = todayMskStart.minusDays(1)
+
+        // Сегодня (в MSK) — 3 жалобы
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, todayMskStart.plusHours(1))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, todayMskStart.plusHours(5))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, todayMskStart.plusHours(20))
+        // Вчера (в MSK) — 2 жалобы
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, yesterdayMskStart.plusHours(2))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, yesterdayMskStart.plusHours(23))
+        // Позавчера (за пределами today/yesterday) — 1 жалоба, не должна учитываться
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, yesterdayMskStart.minusHours(2))
+
+        val snapshot = AnalyticsRepository().operationalSnapshot(now)
+        assertEquals(3, snapshot.createdToday)
+        assertEquals(2, snapshot.createdYesterday)
+    }
 }

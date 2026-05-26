@@ -90,7 +90,6 @@ class AnalyticsRepository {
             .filter { !it.createdAt.isBefore(thirtyDaysAgo) }
             .groupingBy { it.status.name }
             .eachCount()
-            .filter { it.value > 0 }
 
         // avgDtaHours24h: average DTA for complaints whose FIRST-EVER IN_PROGRESS event falls in [now-24h, now)
         val dtaWindowStart = now.minusHours(24)
@@ -107,7 +106,7 @@ class AnalyticsRepository {
             // For each complaint, find the global first IN_PROGRESS event (minimum across all time)
             val globalFirstInProgressByComplaint = allInProgressChanges
                 .groupBy { it.first }
-                .mapValues { (_, events) -> events.minByOrNull { it.second }!!.second }
+                .mapValues { (_, events) -> events.minOf { it.second } }
 
             // Keep only complaints whose global first IN_PROGRESS event falls in [now-24h, now)
             val inWindowFirst = globalFirstInProgressByComplaint
@@ -118,15 +117,12 @@ class AnalyticsRepository {
             if (inWindowFirst.isEmpty()) {
                 null
             } else {
-                // Look up complaint createdAt for those complaintIds
-                val complaintIds = inWindowFirst.keys
-                val complaintCreatedAtMap = Complaints.selectAll()
-                    .where { Complaints.id inList complaintIds }
-                    .associate { it[Complaints.id] to it[Complaints.createdAt] }
+                // Look up complaint createdAt in-memory from allRows (already loaded above)
+                val createdAtById: Map<Long, OffsetDateTime> = allRows.associate { it.id to it.createdAt }
 
                 // Compute DTA in hours for each complaint
                 val dtaValues = inWindowFirst.mapNotNull { (complaintId, firstIpAt) ->
-                    val createdAt = complaintCreatedAtMap[complaintId] ?: return@mapNotNull null
+                    val createdAt = createdAtById[complaintId] ?: return@mapNotNull null
                     val minutes = java.time.Duration.between(createdAt, firstIpAt).toMinutes()
                     minutes / 60.0
                 }

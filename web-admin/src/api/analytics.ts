@@ -13,6 +13,7 @@ import type {
   ReopenStat,
 } from './types'
 
+/** @deprecated Перейти на getOperational + getStrategic. /analytics/overview сохраняется только для legacy ComplaintsPage и будет удалён после полной миграции UI. */
 export async function getOverview(): Promise<AnalyticsOverview> {
   const res = await api.get<AnalyticsOverview>('/analytics/overview')
   return res.data

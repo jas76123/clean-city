@@ -59,4 +59,56 @@ class AnalyticsResponseSerializationTest {
         assertTrue(json.decodeFromString<StrategicKpis>(kpisStr) == kpis)
         assertTrue(json.decodeFromString<ReopenStat>(reopenStr) == reopen)
     }
+
+    @Test
+    fun `CategoryStat extended fields round-trip`() {
+        val stat = CategoryStat(
+            category = ProblemCategory.GARBAGE,
+            label = "Мусор",
+            count = 50,
+            sharePct = 12.5,
+            avgResolutionHours = 24.0,
+            medianResolutionHours = 18.0,
+            p90ResolutionHours = 60.0,
+            slaCompliancePct = 72.0,
+        )
+        val str = json.encodeToString(stat)
+        val parsed = json.decodeFromString<CategoryStat>(str)
+        assertTrue(parsed == stat)
+    }
+
+    @Test
+    fun `DistrictStat extended fields round-trip`() {
+        val stat = DistrictStat(
+            district = District.ADLER,
+            label = "Адлер",
+            count = 30,
+            newCount = 10,
+            resolvedCount = 20,
+            medianResolutionHours = 28.0,
+            slaCompliancePct = 81.0,
+        )
+        val str = json.encodeToString(stat)
+        val parsed = json.decodeFromString<DistrictStat>(str)
+        assertTrue(parsed == stat)
+    }
+
+    @Test
+    fun `TrendsResponse with createdSeries and resolvedSeries`() {
+        val trends = TrendsResponse(
+            days = emptyList(),
+            createdSeries = listOf(
+                TrendPoint(Instant.parse("2026-05-20T00:00:00Z"), 5),
+                TrendPoint(Instant.parse("2026-05-21T00:00:00Z"), 8),
+            ),
+            resolvedSeries = listOf(
+                TrendPoint(Instant.parse("2026-05-20T00:00:00Z"), 3),
+                TrendPoint(Instant.parse("2026-05-21T00:00:00Z"), 7),
+            ),
+            groupBy = "day",
+        )
+        val str = json.encodeToString(trends)
+        val parsed = json.decodeFromString<TrendsResponse>(str)
+        assertTrue(parsed == trends)
+    }
 }

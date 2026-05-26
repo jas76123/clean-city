@@ -26,7 +26,10 @@ data class CategoryStat(
     val label: String,
     val count: Int,
     val sharePct: Double,
-    val avgResolutionHours: Double?
+    val avgResolutionHours: Double?,
+    val medianResolutionHours: Double? = null,
+    val p90ResolutionHours: Double? = null,
+    val slaCompliancePct: Double? = null,
 )
 
 @Serializable
@@ -35,7 +38,9 @@ data class DistrictStat(
     val label: String,
     val count: Int,
     val newCount: Int,
-    val resolvedCount: Int
+    val resolvedCount: Int,
+    val medianResolutionHours: Double? = null,
+    val slaCompliancePct: Double? = null,
 )
 
 @Serializable
@@ -79,8 +84,17 @@ data class DailyPoint(
 )
 
 @Serializable
+data class TrendPoint(
+    val bucketStart: Instant,
+    val value: Int,
+)
+
+@Serializable
 data class TrendsResponse(
-    val days: List<DailyPoint>,
+    val days: List<DailyPoint> = emptyList(),
+    val createdSeries: List<TrendPoint> = emptyList(),
+    val resolvedSeries: List<TrendPoint> = emptyList(),
+    val groupBy: String = "day",
 )
 
 @Serializable

@@ -354,6 +354,96 @@ class AnalyticsRepository {
         )
     }
 
+    // ─── Task 9: byCategoryExtended, byDistrictExtended ─────────────────────
+
+    data class CategoryStatExtended(
+        val category: String,
+        val count: Int,
+        val avgResolutionHours: Double?,
+        val medianResolutionHours: Double?,
+        val p90ResolutionHours: Double?,
+        val slaCompliancePct: Double?,
+    )
+
+    data class DistrictStatExtended(
+        val district: String?,
+        val count: Int,
+        val newCount: Int,
+        val resolvedCount: Int,
+        val medianResolutionHours: Double?,
+        val slaCompliancePct: Double?,
+    )
+
+    /** Computes resolution hours for each row in [subset] (must all be RESOLVED with resolvedAt != null). */
+    private data class ResolutionMetrics(
+        val avgResolutionHours: Double?,
+        val medianResolutionHours: Double?,
+        val p90ResolutionHours: Double?,
+        val slaCompliancePct: Double?,
+    )
+
+    private fun computeResolutionMetrics(subset: List<Row>): ResolutionMetrics {
+        if (subset.isEmpty()) return ResolutionMetrics(null, null, null, null)
+        val hours = subset.map { row ->
+            Duration.between(row.createdAt, row.resolvedAt!!).toMinutes() / 60.0
+        }
+        val sortedHours = hours.sorted()
+        val withinSla = subset.count { row ->
+            val h = Duration.between(row.createdAt, row.resolvedAt!!).toMinutes() / 60.0
+            h <= CategorySla.hoursFor(row.category)
+        }
+        return ResolutionMetrics(
+            avgResolutionHours = hours.average(),
+            medianResolutionHours = median(sortedHours),
+            p90ResolutionHours = p90(sortedHours),
+            slaCompliancePct = 100.0 * withinSla / subset.size,
+        )
+    }
+
+    fun byCategoryExtended(periodStart: OffsetDateTime, periodEnd: OffsetDateTime): List<CategoryStatExtended> {
+        val rows = loadComplaints(null).filter { row ->
+            !row.createdAt.isBefore(periodStart) && row.createdAt.isBefore(periodEnd)
+        }
+        return rows
+            .groupBy { it.category }
+            .map { (category, group) ->
+                val resolvedSubset = group.filter { it.status == ComplaintStatus.RESOLVED && it.resolvedAt != null }
+                val metrics = computeResolutionMetrics(resolvedSubset)
+                CategoryStatExtended(
+                    category = category.name,
+                    count = group.size,
+                    avgResolutionHours = metrics.avgResolutionHours,
+                    medianResolutionHours = metrics.medianResolutionHours,
+                    p90ResolutionHours = metrics.p90ResolutionHours,
+                    slaCompliancePct = metrics.slaCompliancePct,
+                )
+            }
+            .sortedByDescending { it.count }
+    }
+
+    fun byDistrictExtended(periodStart: OffsetDateTime, periodEnd: OffsetDateTime): List<DistrictStatExtended> {
+        val rows = loadComplaints(null).filter { row ->
+            !row.createdAt.isBefore(periodStart) && row.createdAt.isBefore(periodEnd)
+        }
+        return rows
+            .groupBy { it.district }
+            .map { (district, group) ->
+                val resolvedSubset = group.filter { it.status == ComplaintStatus.RESOLVED && it.resolvedAt != null }
+                val metrics = computeResolutionMetrics(resolvedSubset)
+                DistrictStatExtended(
+                    district = district,
+                    count = group.size,
+                    newCount = group.count { it.status == ComplaintStatus.NEW },
+                    resolvedCount = resolvedSubset.size,
+                    medianResolutionHours = metrics.medianResolutionHours,
+                    slaCompliancePct = metrics.slaCompliancePct,
+                )
+            }
+            .sortedByDescending { it.count }
+    }
+
+    // ─── END Task 9 ──────────────────────────────────────────────────────────
+
     private fun parseCategory(raw: String): ProblemCategory =
         runCatching { ProblemCategory.valueOf(raw) }.getOrDefault(ProblemCategory.OTHER)
 

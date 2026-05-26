@@ -665,6 +665,81 @@ class AnalyticsServiceTest {
 
     // ─── END Task 8 ─────────────────────────────────────────────────────────
 
+    // ─── Task 9: byCategoryExtended, byDistrictExtended ─────────────────────
+
+    @Test
+    fun `byCategoryExtended returns median p90 and sla compliance`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(30)
+        val periodEnd = now.plusDays(1)
+        // 4 RESOLVED GARBAGE (SLA 24ч): 12, 18, 24, 100 ч → median=21, p90 ≈ 77.2, SLA compliance = 75%
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(10), resolvedAt = now.minusDays(10).plusHours(12))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(9), resolvedAt = now.minusDays(9).plusHours(18))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(8), resolvedAt = now.minusDays(8).plusHours(24))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(7), resolvedAt = now.minusDays(7).plusHours(100))
+
+        val stats = AnalyticsRepository().byCategoryExtended(periodStart, periodEnd)
+        val garbage = stats.first { it.category == "GARBAGE" }
+        assertEquals(4, garbage.count)
+        assertEquals(21.0, garbage.medianResolutionHours!!, absoluteTolerance = 0.5)
+        assertTrue(garbage.p90ResolutionHours!! > 50.0)
+        assertEquals(75.0, garbage.slaCompliancePct!!, absoluteTolerance = 0.5)
+    }
+
+    @Test
+    fun `byCategoryExtended category without resolved returns null metrics`() {
+        val author = seedUser()
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(1))
+        val stats = AnalyticsRepository().byCategoryExtended(now.minusDays(7), now.plusDays(1))
+        val garbage = stats.first { it.category == "GARBAGE" }
+        assertEquals(1, garbage.count)
+        assertNull(garbage.avgResolutionHours)
+        assertNull(garbage.medianResolutionHours)
+        assertNull(garbage.p90ResolutionHours)
+        assertNull(garbage.slaCompliancePct)
+    }
+
+    @Test
+    fun `byDistrictExtended returns median and sla compliance per district`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(30)
+        val periodEnd = now.plusDays(1)
+        // Адлерский: 2 RESOLVED GARBAGE (10h within, 30h breach) → median = 20h, sla = 50%
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(10), resolvedAt = now.minusDays(10).plusHours(10),
+            district = "Адлерский")
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(9), resolvedAt = now.minusDays(9).plusHours(30),
+            district = "Адлерский")
+        // Адлерский: + 1 NEW (counts in `count` and `newCount`, doesn't affect median/sla)
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW,
+            now.minusDays(5), district = "Адлерский")
+
+        val stats = AnalyticsRepository().byDistrictExtended(periodStart, periodEnd)
+        val adler = stats.first { it.district == "Адлерский" }
+        assertEquals(3, adler.count)
+        assertEquals(1, adler.newCount)
+        assertEquals(2, adler.resolvedCount)
+        assertEquals(20.0, adler.medianResolutionHours!!, absoluteTolerance = 0.5)
+        assertEquals(50.0, adler.slaCompliancePct!!, absoluteTolerance = 0.5)
+    }
+
+    @Test
+    fun `byDistrictExtended supports null district`() {
+        val author = seedUser()
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(1), district = null)
+        val stats = AnalyticsRepository().byDistrictExtended(now.minusDays(7), now.plusDays(1))
+        val nullDistrict = stats.first { it.district == null }
+        assertEquals(1, nullDistrict.count)
+        assertEquals(1, nullDistrict.newCount)
+    }
+
+    // ─── END Task 9 ──────────────────────────────────────────────────────────
+
     @Test
     fun `operational snapshot counts createdToday and createdYesterday in Europe Moscow zone`() {
         val author = seedUser()

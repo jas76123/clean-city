@@ -13,6 +13,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import kotlin.math.pow
 
 /**
  * Аналитика. Стратегия: выгружаем строки и считаем агрегаты в Kotlin.
@@ -30,7 +31,15 @@ class AnalyticsRepository {
         val district: String?,
         val status: ComplaintStatus,
         val createdAt: OffsetDateTime,
-        val resolvedAt: OffsetDateTime?
+        val resolvedAt: OffsetDateTime?,
+        val latitude: Double,
+        val longitude: Double,
+    )
+
+    data class ReopenStatRow(
+        val reopenRate: Double,   // 0..1
+        val reopenCount: Int,
+        val resolvedCount: Int,
     )
 
     data class BurningRow(
@@ -66,7 +75,9 @@ class AnalyticsRepository {
                 district = it[Complaints.district],
                 status = parseStatus(it[Complaints.status]),
                 createdAt = it[Complaints.createdAt],
-                resolvedAt = it[Complaints.resolvedAt]
+                resolvedAt = it[Complaints.resolvedAt],
+                latitude = it[Complaints.latitude],
+                longitude = it[Complaints.longitude],
             )
         }
     }
@@ -247,6 +258,47 @@ class AnalyticsRepository {
             val grouped = raw.groupingBy { it }.eachCount()
             complaintIds.associateWith { grouped[it] ?: 0 }
         }
+    }
+
+    fun reopenStat(periodStart: OffsetDateTime, periodEnd: OffsetDateTime): ReopenStatRow {
+        val allRows = loadComplaints(null)
+
+        // Resolved complaints whose resolvedAt falls in [periodStart, periodEnd)
+        val resolved = allRows.filter { row ->
+            row.status == ComplaintStatus.RESOLVED &&
+                row.resolvedAt != null &&
+                !row.resolvedAt.isBefore(periodStart) &&
+                row.resolvedAt.isBefore(periodEnd)
+        }
+
+        val reopenCount = resolved.count { r ->
+            allRows.any { c ->
+                c.id != r.id &&
+                    c.category == r.category &&
+                    c.createdAt.isAfter(r.resolvedAt!!) &&
+                    !c.createdAt.isAfter(r.resolvedAt.plusDays(AnalyticsConfig.REOPEN_WINDOW_DAYS.toLong())) &&
+                    haversineMeters(r.latitude, r.longitude, c.latitude, c.longitude) <= AnalyticsConfig.REOPEN_RADIUS_METERS
+            }
+        }
+
+        val resolvedCount = resolved.size
+        val reopenRate = if (resolvedCount == 0) 0.0 else reopenCount.toDouble() / resolvedCount
+
+        return ReopenStatRow(
+            reopenRate = reopenRate,
+            reopenCount = reopenCount,
+            resolvedCount = resolvedCount,
+        )
+    }
+
+    private fun haversineMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val r = 6_371_000.0 // earth radius meters
+        val phi1 = Math.toRadians(lat1)
+        val phi2 = Math.toRadians(lat2)
+        val dPhi = Math.toRadians(lat2 - lat1)
+        val dLam = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(dPhi / 2).pow(2) + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam / 2).pow(2)
+        return 2 * r * Math.asin(Math.sqrt(a))
     }
 
     private fun parseCategory(raw: String): ProblemCategory =

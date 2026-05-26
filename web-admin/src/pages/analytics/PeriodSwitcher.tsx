@@ -8,6 +8,8 @@ interface PeriodSwitcherProps {
 const OPTIONS: { value: AnalyticsPeriod; label: string }[] = [
   { value: 'WEEK', label: 'Неделя' },
   { value: 'MONTH', label: 'Месяц' },
+  { value: 'QUARTER', label: 'Квартал' },
+  { value: 'YEAR', label: 'Год' },
   { value: 'ALL', label: 'Всё время' },
 ]
 

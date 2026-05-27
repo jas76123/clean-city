@@ -56,7 +56,7 @@ data class TwoFactorVerifyRequest(
 @Serializable
 data class AdminInviteRequest(
     val email: String,
-    val role: String   // ADMIN | OPERATOR | INSPECTOR
+    val role: String   // "ADMIN" | "OPERATOR"
 )
 
 @Serializable

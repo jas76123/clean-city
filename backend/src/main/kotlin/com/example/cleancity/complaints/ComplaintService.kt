@@ -89,7 +89,7 @@ class ComplaintService(
             )
         )
 
-        private val ADMIN_ROLES = setOf(UserRole.ADMIN, UserRole.OPERATOR, UserRole.INSPECTOR)
+        private val ADMIN_ROLES = setOf(UserRole.ADMIN, UserRole.OPERATOR)
 
         // Активные статусы, для которых SLA может «гореть» (terminal — никогда).
         private val SLA_ACTIVE = setOf(ComplaintStatus.NEW, ComplaintStatus.IN_PROGRESS)

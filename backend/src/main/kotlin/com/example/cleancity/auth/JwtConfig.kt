@@ -103,7 +103,7 @@ enum class AccessTtl(val seconds: Long) {
     companion object {
         fun forRole(role: UserRole): AccessTtl = when (role) {
             UserRole.RESIDENT -> RESIDENT_1H
-            UserRole.OPERATOR, UserRole.INSPECTOR, UserRole.ADMIN -> ADMIN_15M
+            UserRole.OPERATOR, UserRole.ADMIN -> ADMIN_15M
         }
     }
 }
@@ -115,7 +115,7 @@ enum class RefreshTtl(val seconds: Long) {
     companion object {
         fun forRole(role: UserRole): RefreshTtl = when (role) {
             UserRole.RESIDENT -> RESIDENT_30D
-            UserRole.OPERATOR, UserRole.INSPECTOR, UserRole.ADMIN -> ADMIN_8H
+            UserRole.OPERATOR, UserRole.ADMIN -> ADMIN_8H
         }
     }
 }

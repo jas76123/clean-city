@@ -1,4 +1,4 @@
-export type UserRole = 'RESIDENT' | 'OPERATOR' | 'INSPECTOR' | 'ADMIN'
+export type UserRole = 'RESIDENT' | 'OPERATOR' | 'ADMIN'
 
 export interface UserResponse {
   id: number

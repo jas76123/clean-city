@@ -3,17 +3,15 @@ package com.example.cleancity.shared.models
 import kotlinx.serialization.Serializable
 
 /**
- * Роли пользователей. Источник правды: SPEC.md § 3.3.
+ * Роли пользователей CleanCity.
  *
- * В MVP OPERATOR/INSPECTOR имеют те же права что ADMIN
- * (поля сохранены для будущей фазы).
- *
- * Гости (без JWT) — read-only доступ к карте/ленте/объявлениям.
+ * - RESIDENT — житель: создаёт жалобы, голосует.
+ * - OPERATOR — сотрудник: обрабатывает жалобы, публикует объявления, видит команду в read-only.
+ * - ADMIN — администратор: всё, что OPERATOR, плюс управление командой.
  */
 @Serializable
 enum class UserRole {
     RESIDENT,
     OPERATOR,
-    INSPECTOR,
     ADMIN
 }

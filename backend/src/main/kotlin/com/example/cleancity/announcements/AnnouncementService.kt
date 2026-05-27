@@ -18,7 +18,7 @@ class AnnouncementService(
     private val notifications: NotificationService
 ) {
     companion object {
-        private val ADMIN_ROLES = setOf(UserRole.ADMIN, UserRole.OPERATOR, UserRole.INSPECTOR)
+        private val ADMIN_ROLES = setOf(UserRole.ADMIN, UserRole.OPERATOR)
         private const val MAX_TITLE = 300
         private const val MAX_BODY = 5000
     }

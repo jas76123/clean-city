@@ -39,13 +39,12 @@ class UserRepository {
 
     /**
      * true, если в системе есть хотя бы один пользователь с админ-ролью
-     * (ADMIN / OPERATOR / INSPECTOR), независимо от is_active.
+     * (ADMIN / OPERATOR), независимо от is_active.
      */
     fun hasAnyAdmin(): Boolean = transaction {
         !Users.selectAll().where {
             (Users.role eq UserRole.ADMIN.name) or
-                (Users.role eq UserRole.OPERATOR.name) or
-                (Users.role eq UserRole.INSPECTOR.name)
+                (Users.role eq UserRole.OPERATOR.name)
         }.empty()
     }
 

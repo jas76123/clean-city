@@ -234,13 +234,13 @@ fun Route.authRoutes(
             post("/admin/invite") {
                 val actorId = call.requireUserId()
                 val role = call.requireRole()
-                if (role !in setOf(UserRole.ADMIN, UserRole.OPERATOR, UserRole.INSPECTOR)) {
-                    throw ForbiddenException("Admins only")
+                if (role != UserRole.ADMIN) {
+                    throw ForbiddenException("Только администраторы могут приглашать сотрудников")
                 }
                 val req = call.receive<AdminInviteRequest>()
                 val targetRole = runCatching { UserRole.valueOf(req.role) }.getOrNull()
-                if (targetRole == null || targetRole == UserRole.RESIDENT) {
-                    throw BadRequestException("Invalid invite role", ErrorCodes.VALIDATION_BAD_FIELD)
+                if (targetRole == null || targetRole !in setOf(UserRole.ADMIN, UserRole.OPERATOR)) {
+                    throw BadRequestException("Роль должна быть ADMIN или OPERATOR", ErrorCodes.VALIDATION_BAD_FIELD)
                 }
                 try {
                     val invited = service.inviteAdmin(actorId, req.email, targetRole, call.clientIp(), call.userAgentSafe())

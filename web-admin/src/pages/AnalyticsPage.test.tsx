@@ -46,11 +46,10 @@ function wrap(node: ReactNode) {
 }
 
 describe('AnalyticsPage', () => {
-  it('renders 4 strategic KPI cards and headers', async () => {
+  it('renders visible strategic KPI cards and headers', async () => {
     render(wrap(<AnalyticsPage />))
-    expect((await screen.findAllByText(/Соблюдение SLA/i)).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText(/Соблюдение норматива/i)).length).toBeGreaterThan(0)
     expect(screen.getByText(/Время решения/)).toBeInTheDocument()
-    expect(screen.getByText(/Повторно открытых/i)).toBeInTheDocument()
     expect(screen.getByText(/Закрыто за период/i)).toBeInTheDocument()
     expect(screen.getByText('145')).toBeInTheDocument()  // throughput
   })

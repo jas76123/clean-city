@@ -10,7 +10,7 @@ interface Props {
 export function ReopenRateCard({ reopenRate, reopenCount, resolvedCount, target }: Props) {
   return (
     <KpiCardWithTarget
-      label={`Reopen rate · ${reopenCount}/${resolvedCount}`}
+      label={`Повторно открытых · ${reopenCount}/${resolvedCount}`}
       value={resolvedCount === 0 ? null : reopenRate * 100}
       unit="%"
       target={target}

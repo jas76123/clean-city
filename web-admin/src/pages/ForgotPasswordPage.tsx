@@ -34,7 +34,7 @@ export function ForgotPasswordPage() {
         {sent ? (
           <>
             <p className="mt-2 text-sm text-slate-500">
-              Если такой email зарегистрирован, на него отправлено письмо со ссылкой
+              Если такая почта зарегистрирована, на неё отправлено письмо со ссылкой
               для сброса пароля.
             </p>
             <Link to="/login" className="mt-4 block text-center text-sm text-slate-500 hover:underline">
@@ -44,7 +44,7 @@ export function ForgotPasswordPage() {
         ) : (
           <form onSubmit={handleSubmit} className="mt-2 flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Почта</Label>
               <Input
                 id="email"
                 type="email"

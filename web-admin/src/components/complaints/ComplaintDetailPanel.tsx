@@ -40,7 +40,7 @@ export function ComplaintDetailPanel({ complaint, isLoading, isError, onAction }
         </div>
         <h2 className="mt-2 text-lg font-semibold text-slate-800">{complaint.title}</h2>
         <div className="text-sm text-slate-500">
-          {CATEGORY_META[complaint.category].icon} {CATEGORY_META[complaint.category].label}
+          {CATEGORY_META[complaint.category].label}
         </div>
       </div>
 

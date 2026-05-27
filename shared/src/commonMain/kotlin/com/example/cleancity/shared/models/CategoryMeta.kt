@@ -24,29 +24,15 @@ object CategorySla {
     private val HOURS_24 = setOf(
         ProblemCategory.GARBAGE,
         ProblemCategory.ECOLOGY,
-        ProblemCategory.SAFETY
-    )
-    private val HOURS_48 = setOf(
+        ProblemCategory.SAFETY,
         ProblemCategory.LIGHTING,
         ProblemCategory.SEWAGE,
         ProblemCategory.WATER_SUPPLY,
-        ProblemCategory.ELECTRICITY
-    )
-    private val HOURS_72 = setOf(
-        ProblemCategory.ROADS,
-        ProblemCategory.SIDEWALKS,
-        ProblemCategory.GREENERY,
-        ProblemCategory.LANDSCAPING,
-        ProblemCategory.PLAYGROUNDS,
-        ProblemCategory.PARKS,
-        ProblemCategory.BEACHES,
-        ProblemCategory.ACCESSIBILITY
+        ProblemCategory.ELECTRICITY,
     )
 
     fun hoursFor(c: ProblemCategory): Int = when (c) {
         in HOURS_24 -> 24
-        in HOURS_48 -> 48
-        in HOURS_72 -> 72
         else -> 120
     }
 }

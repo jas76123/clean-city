@@ -63,7 +63,7 @@ export function AcceptInvitePage() {
   return (
     <CenteredCard title="Создание пароля">
       <p className="mb-4 text-sm text-slate-400">
-        Задайте пароль для входа в админ-панель CleanCity.
+        Задайте пароль для входа в панель администратора «Чистый Город».
       </p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">

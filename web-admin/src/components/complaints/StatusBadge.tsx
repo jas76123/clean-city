@@ -5,7 +5,7 @@ const BASE = 'inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-
 
 export function StatusBadge({ status, slaBreached }: { status: ComplaintStatus; slaBreached?: boolean }) {
   if (slaBreached) {
-    return <span className={`${BASE} bg-red-100 text-red-700`}>⚠ SLA</span>
+    return <span className={`${BASE} bg-red-100 text-red-700`}>⚠ просрочено</span>
   }
   const meta = STATUS_META[status]
   return <span className={`${BASE} ${meta.className}`}>{meta.label}</span>

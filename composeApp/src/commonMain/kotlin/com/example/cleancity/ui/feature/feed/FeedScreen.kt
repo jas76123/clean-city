@@ -31,7 +31,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -126,6 +128,7 @@ private fun FeedLoadedContent(
                 item {
                     AnnouncementsSection(
                         announcements = loaded.announcements,
+                        isRefreshing = loaded.isRefreshing,
                         onAnnouncementClick = onAnnouncementClick,
                     )
                 }
@@ -186,8 +189,17 @@ private fun FeedLoadedContent(
 @Composable
 private fun AnnouncementsSection(
     announcements: List<AnnouncementResponse>,
+    isRefreshing: Boolean,
     onAnnouncementClick: (AnnouncementResponse) -> Unit,
 ) {
+    val rowState = rememberLazyListState()
+    var wasRefreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(isRefreshing) {
+        if (wasRefreshing && !isRefreshing && announcements.isNotEmpty()) {
+            rowState.animateScrollToItem(0)
+        }
+        wasRefreshing = isRefreshing
+    }
     Column(Modifier.padding(top = 14.dp)) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -205,6 +217,7 @@ private fun AnnouncementsSection(
         }
         Spacer(Modifier.height(8.dp))
         LazyRow(
+            state = rowState,
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {

@@ -8,7 +8,7 @@ export function TopProblemCategories({ items }: TopProblemCategoriesProps) {
   const top = items.slice(0, 5)
   return (
     <div className="rounded-xl border bg-white p-4">
-      <div className="mb-3 text-sm font-medium text-slate-700">Топ-5 по категориям проблем</div>
+      <div className="mb-3 text-sm font-medium text-slate-700">Главные категории проблем</div>
       {top.length === 0 ? (
         <div className="py-6 text-center text-sm text-slate-400">Нет данных</div>
       ) : (

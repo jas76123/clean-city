@@ -56,7 +56,7 @@ export function ComplaintsTable({ items, selectedId, onSelect, onResetFilters }:
             <td className="px-3 py-2 font-medium text-slate-800">{c.title}</td>
             <td className="px-3 py-2 text-slate-600">{c.district ?? '—'}</td>
             <td className="px-3 py-2 text-slate-600">
-              {CATEGORY_META[c.category].icon} {CATEGORY_META[c.category].label}
+              {CATEGORY_META[c.category].label}
             </td>
             <td className="px-3 py-2 text-slate-600">{formatDate(c.createdAt)}</td>
             <td className="px-3 py-2 text-slate-600">{c.votesCount}</td>

@@ -1,6 +1,7 @@
 package com.example.cleancity.analytics
 
 import com.example.cleancity.database.tables.Complaints
+import com.example.cleancity.database.tables.StatusChanges
 import com.example.cleancity.database.tables.Users
 import com.example.cleancity.database.tables.Votes
 import com.example.cleancity.shared.models.AnalyticsPeriod
@@ -31,8 +32,8 @@ class AnalyticsServiceTest {
             driver = "org.h2.Driver"
         )
         transaction {
-            SchemaUtils.drop(Votes, Complaints, Users)
-            SchemaUtils.create(Users, Complaints, Votes)
+            SchemaUtils.drop(StatusChanges, Votes, Complaints, Users)
+            SchemaUtils.create(Users, Complaints, Votes, StatusChanges)
         }
         service = AnalyticsService(AnalyticsRepository())
     }
@@ -59,15 +60,18 @@ class AnalyticsServiceTest {
         status: ComplaintStatus,
         createdAt: OffsetDateTime,
         resolvedAt: OffsetDateTime? = null,
-        district: String? = null
+        district: String? = null,
+        title: String = "t",
+        latitude: Double = 43.6,
+        longitude: Double = 39.7,
     ): Long = transaction {
         Complaints.insert {
             it[Complaints.authorId] = authorId
             it[Complaints.category] = category.name
-            it[Complaints.title] = "t"
+            it[Complaints.title] = title
             it[Complaints.description] = "d"
-            it[Complaints.latitude] = 43.6
-            it[Complaints.longitude] = 39.7
+            it[Complaints.latitude] = latitude
+            it[Complaints.longitude] = longitude
             it[Complaints.address] = "addr"
             it[Complaints.district] = district
             it[Complaints.status] = status.name
@@ -84,6 +88,23 @@ class AnalyticsServiceTest {
             it[Votes.value] = 1
             it[Votes.createdAt] = now
         }
+    }
+
+    private fun seedStatusChange(
+        complaintId: Long,
+        fromStatus: String?,
+        toStatus: String,
+        changedById: Long,
+        createdAt: OffsetDateTime,
+    ): Long = transaction {
+        StatusChanges.insert {
+            it[StatusChanges.complaintId] = complaintId
+            it[StatusChanges.fromStatus] = fromStatus
+            it[StatusChanges.toStatus] = toStatus
+            it[StatusChanges.comment] = "test"
+            it[StatusChanges.changedById] = changedById
+            it[StatusChanges.createdAt] = createdAt
+        }[StatusChanges.id]
     }
 
     @Test
@@ -325,5 +346,486 @@ class AnalyticsServiceTest {
         val t = service.trends(now)
         assertEquals(30, t.days.size)
         assertTrue(t.days.all { it.created == 0 && it.resolved == 0 })
+    }
+
+    @Test
+    fun `operational snapshot returns backlog overdue and dta`() {
+        val author = seedUser()
+        // backlog = 2 (1 NEW + 1 IN_PROGRESS); RESOLVED не в backlog
+        val c1 = seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusHours(2))
+        val c2 = seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.IN_PROGRESS, now.minusHours(48))
+        val c3 = seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusHours(72), resolvedAt = now.minusHours(24)
+        )
+        // status change для c2: первый IN_PROGRESS 36ч назад → ВНЕ 24ч окна DTA → avgDtaHours24h = null
+        seedStatusChange(c2, fromStatus = "NEW", toStatus = "IN_PROGRESS", changedById = author, createdAt = now.minusHours(36))
+
+        val snapshot = AnalyticsRepository().operationalSnapshot(now)
+
+        assertEquals(2, snapshot.backlog)
+        assertEquals(1, snapshot.overdueNow, "только c2 (48ч >= 24ч SLA для GARBAGE) — overdue")
+        assertEquals(mapOf("NEW" to 1, "IN_PROGRESS" to 1, "RESOLVED" to 1), snapshot.statusBreakdown)
+        assertNull(snapshot.avgDtaHours24h, "first IN_PROGRESS 36ч назад — вне 24ч окна")
+        // c3 не имеет «c3» использования — подавить warning
+        assertTrue(c3 > 0)
+    }
+
+    @Test
+    fun `operational snapshot DTA averages first IN_PROGRESS events in last 24h`() {
+        val author = seedUser()
+        val c1 = seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.IN_PROGRESS, now.minusHours(20))
+        val c2 = seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.IN_PROGRESS, now.minusHours(15))
+        // c1: первый IN_PROGRESS 10ч назад (10ч от создания → 10ч DTA), В окне 24ч
+        seedStatusChange(c1, "NEW", "IN_PROGRESS", author, now.minusHours(10))
+        // c2: первый IN_PROGRESS 5ч назад (10ч от создания → 10ч DTA), В окне 24ч
+        seedStatusChange(c2, "NEW", "IN_PROGRESS", author, now.minusHours(5))
+
+        val snapshot = AnalyticsRepository().operationalSnapshot(now)
+
+        assertNotNull(snapshot.avgDtaHours24h)
+        assertEquals(10.0, snapshot.avgDtaHours24h!!, 0.5)
+    }
+
+    @Test
+    fun `operational snapshot DTA ignores complaints whose first IN_PROGRESS event is outside 24h window`() {
+        val author = seedUser()
+        // Жалоба: создана 50ч назад, IN_PROGRESS поставлена 40ч назад → первое событие вне 24ч окна
+        val c1 = seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.IN_PROGRESS, now.minusHours(50))
+        seedStatusChange(c1, "NEW", "IN_PROGRESS", author, now.minusHours(40))
+        // Та же жалоба позже снова поставлена в IN_PROGRESS (например, после возврата из RESOLVED) — внутри окна
+        seedStatusChange(c1, "RESOLVED", "IN_PROGRESS", author, now.minusHours(5))
+
+        val snapshot = AnalyticsRepository().operationalSnapshot(now)
+        assertNull(snapshot.avgDtaHours24h, "первый IN_PROGRESS был 40ч назад — жалоба не должна попадать в DTA-24h")
+    }
+
+    @Test
+    fun `burning queue sorts by slaDueAt and excludes terminal statuses`() {
+        val author = seedUser()
+        // c1: NEW, SAFETY (SLA 24ч), создана 30ч назад → overdue, slaDueAt = -6ч
+        val c1 = seedComplaint(author, ProblemCategory.SAFETY, ComplaintStatus.NEW, now.minusHours(30))
+        // c2: IN_PROGRESS, GARBAGE (SLA 24ч), создана 20ч назад → ещё не overdue, slaDueAt = +4ч
+        val c2 = seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.IN_PROGRESS, now.minusHours(20))
+        // c3: RESOLVED — не должна попасть
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+                      now.minusHours(48), resolvedAt = now.minusHours(2))
+
+        val items = AnalyticsRepository().burningQueue(now, limit = 10)
+
+        assertEquals(2, items.size, "RESOLVED исключена")
+        assertEquals(c1, items[0].id, "overdue c1 первая (более раннее slaDueAt)")
+        assertEquals(c2, items[1].id)
+        assertTrue(items[0].secondsToDeadline < 0, "c1 overdue")
+        assertTrue(items[1].secondsToDeadline > 0, "c2 ещё в сроке")
+    }
+
+    @Test
+    fun `burning queue respects limit`() {
+        val author = seedUser()
+        repeat(15) { i ->
+            seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusHours((i + 1).toLong()))
+        }
+        val items = AnalyticsRepository().burningQueue(now, limit = 5)
+        assertEquals(5, items.size)
+    }
+
+    @Test
+    fun `burning queue returns title and districtCode and category name`() {
+        val author = seedUser()
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusHours(2),
+            district = "Центральный", title = "Сломанная урна"
+        )
+        val items = AnalyticsRepository().burningQueue(now, limit = 10)
+        assertEquals(1, items.size)
+        assertEquals("Сломанная урна", items[0].title)
+        assertEquals("Центральный", items[0].districtCode)
+        assertEquals("GARBAGE", items[0].category)
+    }
+
+    @Test
+    fun `strategic kpis median p90 sla throughput`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(30)
+        val periodEnd = now.plusDays(1)
+        // 4 RESOLVED GARBAGE (SLA 24ч): 12ч (within), 18ч (within), 24ч (within — boundary), 100ч (breach)
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(10), resolvedAt = now.minusDays(10).plusHours(12)
+        )
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(9), resolvedAt = now.minusDays(9).plusHours(18)
+        )
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(8), resolvedAt = now.minusDays(8).plusHours(24)
+        )
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(7), resolvedAt = now.minusDays(7).plusHours(100)
+        )
+
+        val kpis = AnalyticsRepository().strategicKpis(periodStart, periodEnd)
+
+        assertEquals(4, kpis.throughput)
+        // SLA compliance: 3 of 4 within (≤24h) = 75%
+        assertEquals(75.0, kpis.slaCompliancePct, absoluteTolerance = 0.5)
+        // median of [12, 18, 24, 100]: avg of 18 and 24 = 21
+        assertEquals(21.0, kpis.medianResolutionHours!!, absoluteTolerance = 0.5)
+        // p90 = linear interp at idx 0.9*(4-1)=2.7: sorted[2] + 0.7*(sorted[3]-sorted[2]) = 24 + 0.7*(100-24) = 77.2
+        assertTrue(kpis.p90ResolutionHours!! > 50.0, "p90 should not be the average; it should be near the upper tail")
+        assertTrue(kpis.p90ResolutionHours!! < 100.0, "p90 should be < max")
+    }
+
+    @Test
+    fun `strategic kpis empty period returns zeros`() {
+        val periodStart = now.minusDays(7)
+        val periodEnd = now
+        val kpis = AnalyticsRepository().strategicKpis(periodStart, periodEnd)
+        assertEquals(0, kpis.throughput)
+        assertEquals(0.0, kpis.slaCompliancePct)
+        assertNull(kpis.medianResolutionHours)
+        assertNull(kpis.p90ResolutionHours)
+    }
+
+    @Test
+    fun `strategic kpis excludes resolved outside window`() {
+        val author = seedUser()
+        // Внутри окна: 1 RESOLVED 10ч
+        val periodStart = now.minusDays(7)
+        val periodEnd = now.plusDays(1)
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(3), resolvedAt = now.minusDays(3).plusHours(10)
+        )
+        // Вне окна (resolvedAt раньше periodStart): не должна попасть
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(40), resolvedAt = now.minusDays(35)
+        )
+        // NEW — не RESOLVED, не должна попасть
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(1))
+
+        val kpis = AnalyticsRepository().strategicKpis(periodStart, periodEnd)
+        assertEquals(1, kpis.throughput)
+        assertEquals(100.0, kpis.slaCompliancePct, absoluteTolerance = 0.5)
+    }
+
+    @Test
+    fun `reopen rate counts pairs within radius and window`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(30)
+        val periodEnd = now.plusDays(1)
+        // Точка A: 43.5856, 39.7231 (центр Сочи)
+        val latA = 43.5856; val lonA = 39.7231
+        // Точка B: ~50м к северу от A (1 градус широты ≈ 111км → 50м ≈ 0.00045°)
+        val latB = 43.586049; val lonB = 39.7231
+        // Точка C: ~200м к северу от A (вне 50м радиуса)
+        val latC = 43.587397; val lonC = 39.7231
+
+        // R1: resolved A, GARBAGE — в начале окна
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(20), resolvedAt = now.minusDays(20).plusHours(2),
+            latitude = latA, longitude = lonA,
+        )
+        // reopen для R1: B, GARBAGE, через 5 дней после resolvedAt → попадает
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.NEW,
+            now.minusDays(15), latitude = latB, longitude = lonB,
+        )
+        // not-reopen: C (200м), GARBAGE — НЕ попадает по радиусу
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.NEW,
+            now.minusDays(14), latitude = latC, longitude = lonC,
+        )
+        // not-reopen: A, LIGHTING — НЕ попадает по категории
+        seedComplaint(
+            author, ProblemCategory.LIGHTING, ComplaintStatus.NEW,
+            now.minusDays(13), latitude = latA, longitude = lonA,
+        )
+        // R2: ещё одна resolved в окне без reopen-пары
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(5), resolvedAt = now.minusDays(5).plusHours(3),
+            latitude = latA, longitude = lonA,
+        )
+
+        val stat = AnalyticsRepository().reopenStat(periodStart, periodEnd)
+
+        assertEquals(2, stat.resolvedCount)
+        assertEquals(1, stat.reopenCount)
+        assertEquals(0.5, stat.reopenRate, absoluteTolerance = 0.01)
+    }
+
+    @Test
+    fun `reopen rate ignores reopens outside 30 day window`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(60)
+        val periodEnd = now.plusDays(1)
+        // R: resolved 50 дней назад
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(55), resolvedAt = now.minusDays(50),
+            latitude = 43.5856, longitude = 39.7231,
+        )
+        // C: создана через 40 дней после resolvedAt (>30д окно) — НЕ reopen
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.NEW,
+            now.minusDays(10), latitude = 43.5856, longitude = 39.7231,
+        )
+
+        val stat = AnalyticsRepository().reopenStat(periodStart, periodEnd)
+        assertEquals(1, stat.resolvedCount)
+        assertEquals(0, stat.reopenCount)
+        assertEquals(0.0, stat.reopenRate)
+    }
+
+    @Test
+    fun `reopen rate empty resolved returns zeros`() {
+        val stat = AnalyticsRepository().reopenStat(now.minusDays(30), now)
+        assertEquals(0, stat.resolvedCount)
+        assertEquals(0, stat.reopenCount)
+        assertEquals(0.0, stat.reopenRate)
+    }
+
+    // ─── Task 8: trendsRange ────────────────────────────────────────────────
+
+    @Test
+    fun `trends range groupBy day returns created and resolved series`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(5)
+        val periodEnd = now.plusDays(1)
+
+        // 3 жалобы созданы в 3 дня подряд; 2 из них RESOLVED в эти же дни
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(3), resolvedAt = now.minusDays(2)
+        )
+        seedComplaint(
+            author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(2), resolvedAt = now.minusDays(1)
+        )
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(1))
+
+        val trends = AnalyticsRepository().trendsRange(periodStart, periodEnd, groupBy = "day")
+        assertEquals("day", trends.groupBy)
+        assertEquals(3, trends.createdSeries.size, "3 разных дня создания")
+        assertEquals(2, trends.resolvedSeries.size, "2 разных дня резолва")
+        assertTrue(trends.createdSeries.all { it.second == 1 }, "по 1 в каждый день")
+    }
+
+    @Test
+    fun `trends range groupBy week aggregates multiple days`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(14)
+        val periodEnd = now.plusDays(1)
+        // Anchor to start-of-day in UTC to avoid cross-midnight drift when now is late in the day.
+        // All 3 events land in the same UTC date → same ISO week → 1 bucket.
+        val dayAnchor = now.minusDays(2).toLocalDate().atStartOfDay(java.time.ZoneOffset.UTC)
+            .toOffsetDateTime()
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, dayAnchor)
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, dayAnchor.plusMinutes(90))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, dayAnchor.plusMinutes(210))
+
+        val trends = AnalyticsRepository().trendsRange(periodStart, periodEnd, groupBy = "week")
+        val totalCreated = trends.createdSeries.sumOf { it.second }
+        assertEquals(3, totalCreated)
+        // 3 жалобы в один день → одна неделя в createdSeries
+        assertEquals(1, trends.createdSeries.size)
+    }
+
+    @Test
+    fun `trends range groupBy month buckets correctly`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(120)
+        val periodEnd = now.plusDays(1)
+        // 2 жалобы 90 дней назад, 1 жалоба 30 дней назад → возможно 2-3 разных месяца
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(90))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(90).plusDays(1))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(30))
+
+        val trends = AnalyticsRepository().trendsRange(periodStart, periodEnd, groupBy = "month")
+        val totalCreated = trends.createdSeries.sumOf { it.second }
+        assertEquals(3, totalCreated)
+        assertEquals("month", trends.groupBy)
+        assertTrue(trends.createdSeries.isNotEmpty())
+    }
+
+    @Test
+    fun `trends range rejects invalid groupBy`() {
+        val ex = kotlin.runCatching {
+            AnalyticsRepository().trendsRange(now.minusDays(7), now, groupBy = "year")
+        }.exceptionOrNull()
+        assertNotNull(ex)
+        assertTrue(ex is IllegalArgumentException)
+    }
+
+    // ─── END Task 8 ─────────────────────────────────────────────────────────
+
+    // ─── Task 9: byCategoryExtended, byDistrictExtended ─────────────────────
+
+    @Test
+    fun `byCategoryExtended returns median p90 and sla compliance`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(30)
+        val periodEnd = now.plusDays(1)
+        // 4 RESOLVED GARBAGE (SLA 24ч): 12, 18, 24, 100 ч → median=21, p90 ≈ 77.2, SLA compliance = 75%
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(10), resolvedAt = now.minusDays(10).plusHours(12))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(9), resolvedAt = now.minusDays(9).plusHours(18))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(8), resolvedAt = now.minusDays(8).plusHours(24))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(7), resolvedAt = now.minusDays(7).plusHours(100))
+
+        val stats = AnalyticsRepository().byCategoryExtended(periodStart, periodEnd)
+        val garbage = stats.first { it.category == "GARBAGE" }
+        assertEquals(4, garbage.count)
+        assertEquals(21.0, garbage.medianResolutionHours!!, absoluteTolerance = 0.5)
+        assertTrue(garbage.p90ResolutionHours!! > 50.0)
+        assertEquals(75.0, garbage.slaCompliancePct!!, absoluteTolerance = 0.5)
+    }
+
+    @Test
+    fun `byCategoryExtended category without resolved returns null metrics`() {
+        val author = seedUser()
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(1))
+        val stats = AnalyticsRepository().byCategoryExtended(now.minusDays(7), now.plusDays(1))
+        val garbage = stats.first { it.category == "GARBAGE" }
+        assertEquals(1, garbage.count)
+        assertNull(garbage.avgResolutionHours)
+        assertNull(garbage.medianResolutionHours)
+        assertNull(garbage.p90ResolutionHours)
+        assertNull(garbage.slaCompliancePct)
+    }
+
+    @Test
+    fun `byDistrictExtended returns median and sla compliance per district`() {
+        val author = seedUser()
+        val periodStart = now.minusDays(30)
+        val periodEnd = now.plusDays(1)
+        // Адлерский: 2 RESOLVED GARBAGE (10h within, 30h breach) → median = 20h, sla = 50%
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(10), resolvedAt = now.minusDays(10).plusHours(10),
+            district = "Адлерский")
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(9), resolvedAt = now.minusDays(9).plusHours(30),
+            district = "Адлерский")
+        // Адлерский: + 1 NEW (counts in `count` and `newCount`, doesn't affect median/sla)
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW,
+            now.minusDays(5), district = "Адлерский")
+
+        val stats = AnalyticsRepository().byDistrictExtended(periodStart, periodEnd)
+        val adler = stats.first { it.district == "Адлерский" }
+        assertEquals(3, adler.count)
+        assertEquals(1, adler.newCount)
+        assertEquals(2, adler.resolvedCount)
+        assertEquals(20.0, adler.medianResolutionHours!!, absoluteTolerance = 0.5)
+        assertEquals(50.0, adler.slaCompliancePct!!, absoluteTolerance = 0.5)
+    }
+
+    @Test
+    fun `byDistrictExtended supports null district`() {
+        val author = seedUser()
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusDays(1), district = null)
+        val stats = AnalyticsRepository().byDistrictExtended(now.minusDays(7), now.plusDays(1))
+        val nullDistrict = stats.first { it.district == null }
+        assertEquals(1, nullDistrict.count)
+        assertEquals(1, nullDistrict.newCount)
+    }
+
+    // ─── END Task 9 ──────────────────────────────────────────────────────────
+
+    // ─── Task 10: service-level wrappers ─────────────────────────────────────
+
+    @Test
+    fun `service operational returns DTO with target hours from config`() {
+        val s = AnalyticsService(AnalyticsRepository()).operational(now)
+        assertEquals(AnalyticsConfig.DTA_TARGET_HOURS, s.dtaTargetHours)
+        assertEquals(0, s.backlog)
+    }
+
+    @Test
+    fun `service burning maps repo rows to DTOs`() {
+        val author = seedUser()
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, now.minusHours(30))
+        val items = AnalyticsService(AnalyticsRepository()).burning(now, limit = 10)
+        assertEquals(1, items.size)
+        assertTrue(items[0].secondsToDeadline < 0, "GARBAGE 30ч назад — overdue")
+    }
+
+    @Test
+    fun `service strategic returns DTO with targets from config`() {
+        val k = AnalyticsService(AnalyticsRepository()).strategic(AnalyticsPeriod.MONTH)
+        assertEquals(AnalyticsConfig.SLA_TARGET_PCT, k.slaTargetPct)
+        assertEquals(AnalyticsConfig.REOPEN_TARGET_PCT, k.reopenTargetPct)
+        assertEquals(0, k.throughput)
+    }
+
+    @Test
+    fun `service reopen returns stat for period`() {
+        val r = AnalyticsService(AnalyticsRepository()).reopen(AnalyticsPeriod.MONTH)
+        assertEquals(0, r.resolvedCount)
+        assertEquals(0, r.reopenCount)
+    }
+
+    @Test
+    fun `service trendsRange returns parallel series`() {
+        val author = seedUser()
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(3), resolvedAt = now.minusDays(2))
+        val t = AnalyticsService(AnalyticsRepository()).trendsRange(AnalyticsPeriod.WEEK, groupBy = "day")
+        assertEquals("day", t.groupBy)
+        assertTrue(t.createdSeries.isNotEmpty())
+        assertTrue(t.resolvedSeries.isNotEmpty())
+    }
+
+    @Test
+    fun `byCategory uses extended fields and period range`() {
+        val author = seedUser()
+        // GARBAGE: 4 RESOLVED — внутри MONTH окна (последние 30д)
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(10), resolvedAt = now.minusDays(10).plusHours(12))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(9), resolvedAt = now.minusDays(9).plusHours(18))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(8), resolvedAt = now.minusDays(8).plusHours(24))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.RESOLVED,
+            now.minusDays(7), resolvedAt = now.minusDays(7).plusHours(100))
+
+        val stats = AnalyticsService(AnalyticsRepository()).byCategory(AnalyticsPeriod.MONTH)
+        val garbage = stats.first { it.category == ProblemCategory.GARBAGE }
+        assertEquals(4, garbage.count)
+        assertEquals(21.0, garbage.medianResolutionHours!!, 0.5)
+        assertNotNull(garbage.p90ResolutionHours)
+        assertEquals(75.0, garbage.slaCompliancePct!!, 0.5)
+    }
+
+    // ─── END Task 10 ─────────────────────────────────────────────────────────
+
+    @Test
+    fun `operational snapshot counts createdToday and createdYesterday in Europe Moscow zone`() {
+        val author = seedUser()
+        val mskZone = java.time.ZoneId.of("Europe/Moscow")
+        val todayMskStart = now.atZoneSameInstant(mskZone).toLocalDate().atStartOfDay(mskZone).toOffsetDateTime()
+        val yesterdayMskStart = todayMskStart.minusDays(1)
+
+        // Сегодня (в MSK) — 3 жалобы
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, todayMskStart.plusHours(1))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, todayMskStart.plusHours(5))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, todayMskStart.plusHours(20))
+        // Вчера (в MSK) — 2 жалобы
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, yesterdayMskStart.plusHours(2))
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, yesterdayMskStart.plusHours(23))
+        // Позавчера (за пределами today/yesterday) — 1 жалоба, не должна учитываться
+        seedComplaint(author, ProblemCategory.GARBAGE, ComplaintStatus.NEW, yesterdayMskStart.minusHours(2))
+
+        val snapshot = AnalyticsRepository().operationalSnapshot(now)
+        assertEquals(3, snapshot.createdToday)
+        assertEquals(2, snapshot.createdYesterday)
     }
 }

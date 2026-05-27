@@ -42,6 +42,7 @@ dependencies {
     implementation(libs.imgscalr)
     implementation(libs.metadata.extractor)
     implementation(libs.aws.sdk.s3)
+    implementation(libs.kotlinx.datetime)
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test)

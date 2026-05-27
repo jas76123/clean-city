@@ -24,6 +24,7 @@ export function useComplaintQuery(id: number | null) {
   })
 }
 
+/** @deprecated Перейти на useOperationalQuery + useStrategicQuery (Dashboard Redesign). */
 export function useOverviewQuery() {
   return useQuery({
     queryKey: ['analytics', 'overview'],

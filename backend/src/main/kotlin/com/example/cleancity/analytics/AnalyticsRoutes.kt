@@ -23,6 +23,24 @@ fun Route.analyticsRoutes(service: AnalyticsService) {
                 call.requireAdmin()
                 call.respond(service.overview())
             }
+            get("/operational") {
+                call.requireAdmin()
+                call.respond(service.operational())
+            }
+            get("/burning") {
+                call.requireAdmin()
+                val limit = (call.request.queryParameters["limit"]?.toIntOrNull()
+                    ?: AnalyticsConfig.BURNING_QUEUE_DEFAULT_LIMIT).coerceIn(1, 100)
+                call.respond(service.burning(limit = limit))
+            }
+            get("/strategic") {
+                call.requireAdmin()
+                call.respond(service.strategic(call.period()))
+            }
+            get("/reopen") {
+                call.requireAdmin()
+                call.respond(service.reopen(call.period()))
+            }
             get("/by-category") {
                 call.requireAdmin()
                 call.respond(service.byCategory(call.period()))
@@ -41,7 +59,11 @@ fun Route.analyticsRoutes(service: AnalyticsService) {
             }
             get("/trends") {
                 call.requireAdmin()
-                call.respond(service.trends())
+                val groupByRaw = call.request.queryParameters["groupBy"]?.trim()?.lowercase() ?: "day"
+                require(groupByRaw in setOf("day", "week", "month")) {
+                    "Invalid groupBy '$groupByRaw' (allowed: day, week, month)"
+                }
+                call.respond(service.trendsRange(call.period(), groupBy = groupByRaw))
             }
         }
     }
@@ -50,7 +72,7 @@ fun Route.analyticsRoutes(service: AnalyticsService) {
 private fun ApplicationCall.period(): AnalyticsPeriod {
     val raw = request.queryParameters["period"]?.trim()?.uppercase() ?: return AnalyticsPeriod.ALL
     return runCatching { AnalyticsPeriod.valueOf(raw) }
-        .getOrElse { throw IllegalArgumentException("Invalid period '$raw' (allowed: WEEK, MONTH, ALL)") }
+        .getOrElse { throw IllegalArgumentException("Invalid period '$raw' (allowed: WEEK, MONTH, QUARTER, YEAR, ALL)") }
 }
 
 private fun ApplicationCall.requireAdmin() {

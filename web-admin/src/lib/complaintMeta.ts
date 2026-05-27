@@ -70,6 +70,14 @@ export const CATEGORY_ORDER = Object.keys(CATEGORY_META) as ProblemCategory[]
 /** 4 каноничных района Сочи — значение = нормализованный label из backend. */
 export const DISTRICTS: string[] = ['Центральный', 'Адлерский', 'Хостинский', 'Лазаревский']
 
+/** Маппинг короткого districtCode (из backend) → читаемое русское название. */
+export const DISTRICT_CODE_LABEL: Record<string, string> = {
+  CEN: 'Центральный',
+  ADL: 'Адлерский',
+  HOS: 'Хостинский',
+  LAZ: 'Лазаревский',
+}
+
 export const SORT_OPTIONS: { value: ComplaintSort; label: string }[] = [
   { value: 'date', label: 'По дате' },
   { value: 'priority', label: 'По приоритету' },

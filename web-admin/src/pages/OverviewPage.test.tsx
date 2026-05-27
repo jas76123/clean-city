@@ -47,7 +47,7 @@ describe('OverviewPage', () => {
     renderPage()
     expect(await screen.findByText('Жалоб за месяц')).toBeInTheDocument()
     expect(screen.getByText('+25%')).toBeInTheDocument() // 50 vs 40
-    expect(screen.getByText('Топ-5 по категориям проблем')).toBeInTheDocument()
+    expect(screen.getByText('Главные категории проблем')).toBeInTheDocument()
     expect(screen.getByText('Распределение за месяц')).toBeInTheDocument()
     expect(screen.getByText('Отклонено')).toBeInTheDocument()
     expect(screen.getByText('Дубликаты')).toBeInTheDocument()

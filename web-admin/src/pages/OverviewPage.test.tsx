@@ -40,9 +40,9 @@ function wrap(node: ReactNode) {
 describe('OverviewPage', () => {
   it('renders 4 KPI cards', async () => {
     render(wrap(<OverviewPage />))
-    expect(await screen.findByText(/Backlog/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Очередь/i)).toBeInTheDocument()
     expect(await screen.findByText(/Просрочено/i)).toBeInTheDocument()
-    expect(await screen.findByText(/DTA/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Среднее время отклика/i)).toBeInTheDocument()
     expect(await screen.findByText(/Создано сегодня/i)).toBeInTheDocument()
   })
 

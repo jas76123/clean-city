@@ -5,7 +5,7 @@ export function Sidebar() {
   return (
     <aside className="flex w-60 flex-col border-r border-slate-200 bg-white">
       <div className="px-6 py-5 text-lg font-semibold text-slate-800">
-        CleanCity
+        Чистый Город
       </div>
       <nav className="flex flex-col gap-1 px-3">
         {NAV_ITEMS.map((item) => (

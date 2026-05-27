@@ -29,7 +29,7 @@ export function EquityTable({ items }: Props) {
             <th className="px-3 py-2">Район</th>
             <th className="px-3 py-2">Жалоб</th>
             <th className="px-3 py-2">Медиана решения</th>
-            <th className="px-3 py-2">% within SLA</th>
+            <th className="px-3 py-2">Соблюдение норматива, %</th>
           </tr>
         </thead>
         <tbody>

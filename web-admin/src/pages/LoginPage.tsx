@@ -59,7 +59,7 @@ export function LoginPage() {
   return (
     <div className="flex h-screen items-center justify-center bg-slate-50">
       <Card className="w-full max-w-sm p-6">
-        <h1 className="mb-1 text-lg font-semibold text-slate-800">CleanCity — админ-панель</h1>
+        <h1 className="mb-1 text-lg font-semibold text-slate-800">Чистый Город — панель администратора</h1>
         <p className="mb-4 text-sm text-slate-400">
           {challengeToken ? 'Введите код из приложения-аутентификатора' : 'Вход для сотрудников'}
         </p>
@@ -67,7 +67,7 @@ export function LoginPage() {
         {!challengeToken ? (
           <form onSubmit={handleCredentials} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Почта</Label>
               <Input
                 id="email"
                 type="email"

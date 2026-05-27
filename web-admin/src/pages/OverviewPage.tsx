@@ -11,7 +11,7 @@ export function OverviewPage() {
   if (op.isError) {
     return (
       <div className="p-6 text-center text-sm text-red-600">
-        Не удалось загрузить дашборд.{' '}
+        Не удалось загрузить обзор.{' '}
         <button onClick={() => op.refetch()} className="underline">Повторить</button>
       </div>
     )
@@ -29,7 +29,7 @@ export function OverviewPage() {
       <section className="grid grid-cols-4 gap-4">
         <Link to="/complaints?status=NEW,IN_PROGRESS" className="block hover:opacity-90 transition-opacity">
           <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <div className="text-xs text-slate-500">Backlog</div>
+            <div className="text-xs text-slate-500">Очередь</div>
             <div className="mt-1 text-2xl font-semibold text-slate-900">{s.backlog}</div>
             <div className="mt-1 text-xs text-slate-500">открытые жалобы сейчас</div>
           </div>
@@ -38,7 +38,7 @@ export function OverviewPage() {
           <div className={`rounded-xl border p-4 ${
             s.overdueNow > 0 ? 'border-rose-200 bg-rose-50' : 'border-emerald-200 bg-emerald-50'
           }`}>
-            <div className="text-xs text-slate-500">Просрочено по SLA</div>
+            <div className="text-xs text-slate-500">Просрочено по нормативу</div>
             <div className={`mt-1 text-2xl font-semibold ${
               s.overdueNow > 0 ? 'text-rose-700' : 'text-emerald-700'
             }`}>{s.overdueNow}</div>
@@ -46,7 +46,7 @@ export function OverviewPage() {
           </div>
         </Link>
         <KpiCardWithTarget
-          label="DTA за 24ч"
+          label="Среднее время отклика, 24ч"
           value={s.avgDtaHours24h}
           unit="ч"
           target={s.dtaTargetHours}
@@ -63,7 +63,7 @@ export function OverviewPage() {
                 {createdDelta >= 0 ? `▲ +${createdDelta}` : `▼ ${createdDelta}`}
               </span>
             </div>
-            <div className="mt-1 text-xs text-slate-500">vs вчера: {s.createdYesterday}</div>
+            <div className="mt-1 text-xs text-slate-500">вчера было: {s.createdYesterday}</div>
           </div>
         </Link>
       </section>
@@ -71,7 +71,7 @@ export function OverviewPage() {
       <StatusPipeline breakdown={s.statusBreakdown} />
 
       <section>
-        <h2 className="mb-2 text-sm font-medium text-slate-700">Горящие жалобы</h2>
+        <h2 className="mb-2 text-sm font-medium text-slate-700">Срочные жалобы</h2>
         {burn.isLoading
           ? <div className="text-sm text-slate-400">Загрузка…</div>
           : <BurningQueueTable items={burn.data ?? []} />

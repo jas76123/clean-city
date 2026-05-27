@@ -48,22 +48,22 @@ function wrap(node: ReactNode) {
 describe('AnalyticsPage', () => {
   it('renders 4 strategic KPI cards and headers', async () => {
     render(wrap(<AnalyticsPage />))
-    expect((await screen.findAllByText(/within SLA/i)).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText(/Соблюдение SLA/i)).length).toBeGreaterThan(0)
     expect(screen.getByText(/Время решения/)).toBeInTheDocument()
-    expect(screen.getByText(/Reopen/i)).toBeInTheDocument()
-    expect(screen.getByText(/Throughput/i)).toBeInTheDocument()
+    expect(screen.getByText(/Повторно открытых/i)).toBeInTheDocument()
+    expect(screen.getByText(/Закрыто за период/i)).toBeInTheDocument()
     expect(screen.getByText('145')).toBeInTheDocument()  // throughput
   })
 
   it('does not render Export PDF button', async () => {
     render(wrap(<AnalyticsPage />))
-    await screen.findByText(/Throughput/)
+    await screen.findByText(/Закрыто за период/)
     expect(screen.queryByText(/Экспорт PDF/i)).not.toBeInTheDocument()
   })
 
   it('changes period via switcher and refetches', async () => {
     render(wrap(<AnalyticsPage />))
-    await screen.findByText(/Throughput/)
+    await screen.findByText(/Закрыто за период/)
     // initial fetch with default MONTH
     expect(strategicPeriods).toContain('MONTH')
     await userEvent.click(screen.getByRole('button', { name: 'Квартал' }))

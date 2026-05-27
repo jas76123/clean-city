@@ -46,7 +46,7 @@ export function ComplaintFilters({ filter, overview, onChange }: Props) {
     statusChip('DUPLICATE', 'Дубликат', overview?.duplicate),
     {
       key: 'SLA',
-      label: '⚠ SLA',
+      label: '⚠ Просрочено',
       count: overview?.slaBreachCount,
       active: filter.slaBreached,
       apply: (f) => ({ ...f, status: null, slaBreached: true, page: 0 }),
@@ -88,7 +88,7 @@ export function ComplaintFilters({ filter, overview, onChange }: Props) {
           <option value="">Все категории</option>
           {CATEGORY_ORDER.map((c) => (
             <option key={c} value={c}>
-              {CATEGORY_META[c].icon} {CATEGORY_META[c].label}
+              {CATEGORY_META[c].label}
             </option>
           ))}
         </select>

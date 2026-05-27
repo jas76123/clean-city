@@ -31,7 +31,6 @@ let slaPeriods: string[] = []
 const srv = setupServer(
   http.get(`${BASE}/analytics/overview`, () => HttpResponse.json(overview)),
   http.get(`${BASE}/analytics/trends`, () => HttpResponse.json({ days: [] })),
-  http.get(`${BASE}/analytics/votes-impact`, () => HttpResponse.json([])),
   http.get(`${BASE}/analytics/sla`, ({ request }) => {
     const p = new URL(request.url).searchParams.get('period') ?? ''
     slaPeriods.push(p)

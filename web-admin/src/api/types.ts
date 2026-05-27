@@ -169,12 +169,6 @@ export interface SlaStat {
   resolvedCount: number
 }
 
-export interface VotesBucket {
-  bucket: string
-  count: number
-  avgResolutionHours: number | null
-}
-
 export interface ChangeStatusRequest {
   toStatus: ComplaintStatus
   comment: string

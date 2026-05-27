@@ -6,7 +6,6 @@ import type {
   DistrictStat,
   SlaStat,
   TrendsResponse,
-  VotesBucket,
 } from './types'
 
 export async function getOverview(): Promise<AnalyticsOverview> {
@@ -31,10 +30,5 @@ export async function getByDistrict(period: AnalyticsPeriod): Promise<DistrictSt
 
 export async function getSla(period: AnalyticsPeriod): Promise<SlaStat[]> {
   const res = await api.get<SlaStat[]>('/analytics/sla', { params: { period } })
-  return res.data
-}
-
-export async function getVotesImpact(period: AnalyticsPeriod): Promise<VotesBucket[]> {
-  const res = await api.get<VotesBucket[]>('/analytics/votes-impact', { params: { period } })
   return res.data
 }

@@ -1,18 +1,16 @@
 import { useState } from 'react'
 import type { AnalyticsPeriod } from '@/api/types'
 import { useOverviewQuery } from '@/hooks/complaintQueries'
-import { useTrendsQuery, useSlaQuery, useVotesImpactQuery } from '@/hooks/dashboardQueries'
+import { useTrendsQuery, useSlaQuery } from '@/hooks/dashboardQueries'
 import { PeriodSwitcher } from './analytics/PeriodSwitcher'
 import { TrendCard } from './analytics/TrendCard'
 import { SlaByCategory } from './analytics/SlaByCategory'
-import { VotesImpactCard } from './analytics/VotesImpactCard'
 
 export function AnalyticsPage() {
   const [period, setPeriod] = useState<AnalyticsPeriod>('MONTH')
   const overview = useOverviewQuery()
   const trends = useTrendsQuery()
   const sla = useSlaQuery(period)
-  const votes = useVotesImpactQuery(period)
 
   if (overview.isError) {
     return (
@@ -38,7 +36,7 @@ export function AnalyticsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-base font-semibold text-slate-900">Аналитика</h1>
-          <p className="text-xs text-slate-400">Тренды по жалобам, SLA и голосам жителей</p>
+          <p className="text-xs text-slate-400">Тренды по жалобам и SLA по категориям</p>
         </div>
         <div className="flex items-center gap-3">
           <PeriodSwitcher value={period} onChange={setPeriod} />
@@ -73,10 +71,7 @@ export function AnalyticsPage() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <SlaByCategory stats={sla.data ?? []} />
-        <VotesImpactCard buckets={votes.data ?? []} />
-      </div>
+      <SlaByCategory stats={sla.data ?? []} />
     </div>
   )
 }

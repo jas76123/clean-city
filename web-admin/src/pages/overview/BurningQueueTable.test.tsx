@@ -28,7 +28,7 @@ describe('BurningQueueTable', () => {
 
   it('renders empty state', () => {
     render(<MemoryRouter><BurningQueueTable items={[]} /></MemoryRouter>)
-    expect(screen.getByText(/нет горящих жалоб/i)).toBeInTheDocument()
+    expect(screen.getByText(/нет срочных жалоб/i)).toBeInTheDocument()
   })
 
   it('links each row to /complaints/:id', () => {

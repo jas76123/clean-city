@@ -27,7 +27,7 @@ describe('ComplaintFilters', () => {
   it('клик по чипу SLA выставляет slaBreached и сбрасывает status', async () => {
     const onChange = vi.fn()
     render(<ComplaintFilters filter={{ ...baseFilter, status: 'NEW' }} overview={overview} onChange={onChange} />)
-    await userEvent.click(screen.getByRole('button', { name: /SLA/ }))
+    await userEvent.click(screen.getByRole('button', { name: /просрочено/i }))
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({ status: null, slaBreached: true }),
     )

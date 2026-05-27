@@ -92,10 +92,10 @@ class ComplaintFilterTest {
     @Test
     fun `SLA-поля заполнены для админа`() {
         val a = admin()
-        seedComplaint(a.userId, ComplaintStatus.NEW, ProblemCategory.ROADS, ageHours = 100)
+        seedComplaint(a.userId, ComplaintStatus.NEW, ProblemCategory.ROADS, ageHours = 150)
         val resp = service.list(a, PublicListFilter())
         val item = resp.items.single()
-        assertTrue(item.slaBreached, "активная ROADS возрастом 100ч (норматив 72ч) — просрочена")
+        assertTrue(item.slaBreached, "активная ROADS возрастом 150ч (норматив 120ч) — просрочена")
         assertTrue(item.slaDeadline != null)
     }
 
@@ -150,8 +150,8 @@ class ComplaintFilterTest {
     @Test
     fun `slaBreached фильтрует только просроченные активные`() {
         val a = admin()
-        seedComplaint(a.userId, ComplaintStatus.NEW, ProblemCategory.ROADS, ageHours = 100)
-        seedComplaint(a.userId, ComplaintStatus.IN_PROGRESS, ProblemCategory.ROADS, ageHours = 100)
+        seedComplaint(a.userId, ComplaintStatus.NEW, ProblemCategory.ROADS, ageHours = 150)
+        seedComplaint(a.userId, ComplaintStatus.IN_PROGRESS, ProblemCategory.ROADS, ageHours = 150)
         seedComplaint(a.userId, ComplaintStatus.NEW, ProblemCategory.ROADS, ageHours = 1)
         seedComplaint(a.userId, ComplaintStatus.RESOLVED, ProblemCategory.ROADS, ageHours = 500)
         val resp = service.list(a, PublicListFilter(slaBreached = true))

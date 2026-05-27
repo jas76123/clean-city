@@ -34,7 +34,7 @@ describe('LoginPage', () => {
       challengeExpiresIn: 300,
     }))
     renderLogin({ login })
-    await userEvent.type(screen.getByLabelText(/email/i), 'admin@cleancity.local')
+    await userEvent.type(screen.getByLabelText(/почта/i), 'admin@cleancity.local')
     await userEvent.type(screen.getByLabelText(/пароль/i), 'Secret123!xyz')
     await userEvent.click(screen.getByRole('button', { name: /войти/i }))
     expect(login).toHaveBeenCalledWith('admin@cleancity.local', 'Secret123!xyz')
@@ -51,7 +51,7 @@ describe('LoginPage', () => {
       throw err
     })
     renderLogin({ login })
-    await userEvent.type(screen.getByLabelText(/email/i), 'a@b.c')
+    await userEvent.type(screen.getByLabelText(/почта/i), 'a@b.c')
     await userEvent.type(screen.getByLabelText(/пароль/i), 'wrongpass1234')
     await userEvent.click(screen.getByRole('button', { name: /войти/i }))
     expect(await screen.findByText(/неверная пара/i)).toBeInTheDocument()

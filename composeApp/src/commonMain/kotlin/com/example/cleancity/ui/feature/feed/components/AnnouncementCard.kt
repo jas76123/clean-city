@@ -25,7 +25,6 @@ import com.example.cleancity.ui.theme.Accent
 import com.example.cleancity.ui.theme.Amber
 import com.example.cleancity.ui.theme.Blue
 import com.example.cleancity.ui.theme.Gray200
-import com.example.cleancity.ui.theme.Gray400
 import com.example.cleancity.ui.theme.Gray600
 import com.example.cleancity.ui.theme.Gray900
 import com.example.cleancity.ui.theme.Green700
@@ -45,7 +44,6 @@ fun AnnouncementCard(
     }
     val titleColor = if (isPositive) Color.White else Gray900
     val bodyColor = if (isPositive) Color.White.copy(alpha = 0.7f) else Gray600
-    val metaColor = if (isPositive) Color.White.copy(alpha = 0.5f) else Gray400
     val borderColor = if (isPositive) Color.Transparent else Gray200
 
     Column(
@@ -86,12 +84,6 @@ fun AnnouncementCard(
             style = MaterialTheme.typography.bodySmall,
             color = bodyColor,
             maxLines = 2,
-        )
-        val districtsText = announcement.districts.joinToString(", ").ifBlank { "Все районы" }
-        Text(
-            text = districtsText,
-            style = MaterialTheme.typography.labelSmall,
-            color = metaColor,
         )
     }
 }

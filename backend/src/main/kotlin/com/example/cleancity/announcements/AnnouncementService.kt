@@ -29,6 +29,9 @@ class AnnouncementService(
         return AnnouncementsListResponse(items = rows.map { it.toResponse() }, total = total)
     }
 
+    fun get(id: Long): AnnouncementResponse =
+        repo.findById(id)?.toResponse() ?: throw NotFoundException("Объявление не найдено")
+
     fun create(actor: Viewer.Authenticated, req: CreateAnnouncementRequest): AnnouncementResponse {
         if (actor.role !in ADMIN_ROLES) throw ForbiddenException("Только админ может публиковать объявления")
         val title = req.title.trim()
@@ -38,6 +41,10 @@ class AnnouncementService(
         require(body.isNotBlank()) { "Body is required" }
         require(body.length <= MAX_BODY) { "Body too long (max $MAX_BODY)" }
         val expiresAt = req.expiresAt?.let { parseTs(it) }
+        // Срок в прошлом бессмысленен: объявление сразу истекло бы, а push жителям уже улетел.
+        require(expiresAt == null || expiresAt.isAfter(OffsetDateTime.now())) {
+            "expiresAt must be in the future"
+        }
         val districts = req.districts.map { it.trim() }.filter { it.isNotBlank() }
 
         val newId = transaction {
@@ -78,6 +85,9 @@ class AnnouncementService(
         val districts = req.districts?.map { it.trim() }?.filter { it.isNotBlank() }
         val expiresAtParsed = req.expiresAt?.let { if (it.isBlank()) null else parseTs(it) }
         val clearExpires = req.expiresAt?.isBlank() == true
+        require(expiresAtParsed == null || expiresAtParsed.isAfter(OffsetDateTime.now())) {
+            "expiresAt must be in the future"
+        }
 
         val ok = repo.update(
             id = id,

@@ -3,10 +3,9 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { DISTRICTS } from '@/lib/complaintMeta'
 import { ICON_STYLE_META, ICON_STYLE_ORDER } from '@/lib/announcementMeta'
 import type { CreateAnnouncementRequest, IconStyle } from '@/api/types'
-import { toEndOfDayIso } from '@/lib/dateUtils'
+import { toEndOfDayIso, todayInSochi } from '@/lib/dateUtils'
 
 interface Props {
   submitting: boolean
@@ -17,17 +16,15 @@ export function AnnouncementForm({ submitting, onSubmit }: Props) {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [iconStyle, setIconStyle] = useState<IconStyle>('INFO')
-  const [allDistricts, setAllDistricts] = useState(true)
-  const [districts, setDistricts] = useState<string[]>([])
   const [expiry, setExpiry] = useState('')
 
-  const districtsMissing = !allDistricts && districts.length === 0
+  const today = todayInSochi()
+  const expiryInPast = expiry !== '' && expiry < today
   const canSubmit =
-    !submitting && title.trim().length > 0 && body.trim().length > 0 && !districtsMissing
-
-  function toggleDistrict(d: string) {
-    setDistricts((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]))
-  }
+    !submitting &&
+    title.trim().length > 0 &&
+    body.trim().length > 0 &&
+    !expiryInPast
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -36,7 +33,7 @@ export function AnnouncementForm({ submitting, onSubmit }: Props) {
       title: title.trim(),
       body: body.trim(),
       iconStyle,
-      districts: allDistricts ? [] : districts,
+      districts: [],
     }
     if (expiry) req.expiresAt = toEndOfDayIso(expiry)
     onSubmit(req)
@@ -99,39 +96,15 @@ export function AnnouncementForm({ submitting, onSubmit }: Props) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>Районы</Label>
-            <label className="flex w-fit items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={allDistricts}
-                onChange={(e) => setAllDistricts(e.target.checked)}
-              />
-              Все районы
-            </label>
-            {!allDistricts && (
-              <div className="flex flex-wrap gap-3 pl-1">
-                {DISTRICTS.map((d) => (
-                  <label key={d} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={districts.includes(d)}
-                      onChange={() => toggleDistrict(d)}
-                    />
-                    {d}
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
             <Label htmlFor="ann-expiry">Срок действия</Label>
             <div className="flex items-center gap-2">
               <Input
                 id="ann-expiry"
                 type="date"
                 value={expiry}
+                min={today}
                 className="w-44"
+                aria-invalid={expiryInPast || undefined}
                 onChange={(e) => setExpiry(e.target.value)}
               />
               {expiry ? (
@@ -142,10 +115,15 @@ export function AnnouncementForm({ submitting, onSubmit }: Props) {
                 <span className="text-xs text-muted-foreground">Пусто — бессрочно</span>
               )}
             </div>
+            {expiryInPast && (
+              <p className="text-xs text-red-600">
+                Срок должен быть не раньше сегодняшнего дня — объявление с прошедшей датой бессмысленно публиковать.
+              </p>
+            )}
           </div>
 
           <p className="text-xs text-muted-foreground">
-            После публикации жителям выбранных районов придёт push-уведомление.
+            После публикации всем жителям приложения придёт push-уведомление.
           </p>
         </CardContent>
       </Card>

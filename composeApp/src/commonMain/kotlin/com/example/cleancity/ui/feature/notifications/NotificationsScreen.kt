@@ -37,7 +37,6 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.koin.koinScreenModel
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import com.example.cleancity.shared.models.NotificationResponse
 import com.example.cleancity.ui.components.EmptyState
 import com.example.cleancity.ui.components.ErrorState
@@ -45,8 +44,8 @@ import com.example.cleancity.ui.components.LoadingState
 import com.example.cleancity.ui.feature.auth.LoginScreen
 import com.example.cleancity.ui.feature.auth.RegisterScreen
 import com.example.cleancity.ui.feature.detail.ComplaintDetailScreen
+import com.example.cleancity.ui.feature.feed.AnnouncementDetailScreen
 import com.example.cleancity.ui.feature.notifications.components.NotificationCard
-import com.example.cleancity.ui.feature.shell.tabs.FeedTab
 import com.example.cleancity.ui.theme.Gray900
 import com.example.cleancity.ui.theme.Green700
 
@@ -58,7 +57,6 @@ class NotificationsScreen : Screen {
         val model: NotificationsScreenModel = koinScreenModel()
         val state by model.state.collectAsState()
         val navigator = LocalNavigator.currentOrThrow
-        val tabNavigator = LocalTabNavigator.current
         val snackbarHost = remember { SnackbarHostState() }
 
         LaunchedEffect(Unit) { model.load() }
@@ -73,7 +71,7 @@ class NotificationsScreen : Screen {
             model.markRead(n.id)
             when {
                 n.complaintId != null -> navigator.push(ComplaintDetailScreen(n.complaintId!!))
-                n.announcementId != null -> tabNavigator.current = FeedTab
+                n.announcementId != null -> navigator.push(AnnouncementDetailScreen(n.announcementId!!))
             }
         }
 

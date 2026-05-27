@@ -40,15 +40,17 @@ BEGIN
     )
     RETURNING id INTO admin_id;
 
-    -- 5 резидентов.
+    -- 5 резидентов. Район проставляем циклически по 4 районам Сочи —
+    -- без него фильтр получателей у объявлений с конкретными районами всех отсеет.
     WITH residents AS (
-        INSERT INTO users (email, password_hash, role, full_name, email_verified, is_active,
+        INSERT INTO users (email, password_hash, role, full_name, district, email_verified, is_active,
                            accepted_terms_at, accepted_terms_version, password_changed_at)
         SELECT
             'resident' || g || '@cleancity.dev',
             '$2b$12$ZDfqomE.4Ox7GQepuUIieeoGZFvN/ELU1XCXxXfGzyG0xfBd4sjNe',
             'RESIDENT',
             'Житель ' || g,
+            (ARRAY['Центральный','Адлерский','Хостинский','Лазаревский'])[((g - 1) % 4) + 1],
             TRUE, TRUE,
             NOW(), 'v1',
             NOW()

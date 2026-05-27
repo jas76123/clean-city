@@ -32,6 +32,12 @@ fun Route.announcementRoutes(service: AnnouncementService) {
                 val limit = (call.request.queryParameters["limit"]?.toIntOrNull() ?: 10).coerceIn(1, 100)
                 call.respond(service.list(viewer, district, limit))
             }
+
+            get("/{id}") {
+                val id = call.parameters["id"]?.toLongOrNull()
+                    ?: throw BadRequestException("Invalid id", ErrorCodes.VALIDATION_BAD_FIELD)
+                call.respond(service.get(id))
+            }
         }
 
         authenticate("auth-jwt") {

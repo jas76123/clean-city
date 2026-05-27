@@ -1,6 +1,7 @@
 package com.example.cleancity.announcements
 
 import com.example.cleancity.ForbiddenException
+import com.example.cleancity.NotFoundException
 import com.example.cleancity.complaints.Viewer
 import com.example.cleancity.database.tables.Announcements
 import com.example.cleancity.database.tables.Notifications
@@ -158,6 +159,23 @@ class AnnouncementServiceTest {
     }
 
     @Test
+    fun `create rejects past expiresAt and sends no notifications`() {
+        val admin = seedUser("admin@x.ru", role = UserRole.ADMIN)
+        seedUser("r1@x.ru", district = "Центральный")
+
+        val past = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1).toString()
+        assertFailsWith<IllegalArgumentException> {
+            service.create(
+                Viewer.Authenticated(admin, UserRole.ADMIN),
+                CreateAnnouncementRequest(title = "t", body = "b", expiresAt = past)
+            )
+        }
+        // ни объявления, ни push — транзакция и не должна была начаться
+        assertEquals(0L, transaction { Announcements.selectAll().count() })
+        assertEquals(0L, transaction { Notifications.selectAll().count() })
+    }
+
+    @Test
     fun `update changes fields without re-pushing`() {
         val admin = seedUser("admin@x.ru", role = UserRole.ADMIN)
         seedUser("r1@x.ru")
@@ -176,6 +194,28 @@ class AnnouncementServiceTest {
         val notifAfter = transaction { Notifications.selectAll().count() }
         assertEquals(notifBefore, notifAfter, "update must not produce new notifications")
         assertEquals("new", repo.findById(created.id)!!.title)
+    }
+
+    @Test
+    fun `get returns full announcement and 404 for unknown id`() {
+        val admin = seedUser("admin@x.ru", role = UserRole.ADMIN)
+        seedUser("r1@x.ru", district = "Центральный")
+        val created = service.create(
+            Viewer.Authenticated(admin, UserRole.ADMIN),
+            CreateAnnouncementRequest(
+                title = "Субботник",
+                body = "Полный текст с подробностями…",
+                districts = listOf("Центральный")
+            )
+        )
+
+        val fetched = service.get(created.id)
+        assertEquals(created.id, fetched.id)
+        assertEquals("Субботник", fetched.title)
+        assertEquals("Полный текст с подробностями…", fetched.body)
+        assertEquals(listOf("Центральный"), fetched.districts)
+
+        assertFailsWith<NotFoundException> { service.get(999_999L) }
     }
 
     @Test

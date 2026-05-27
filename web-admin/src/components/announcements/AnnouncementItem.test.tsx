@@ -20,11 +20,10 @@ function ann(over: Partial<Announcement> = {}): Announcement {
 }
 
 describe('AnnouncementItem', () => {
-  it('рендерит заголовок, текст и районы', () => {
+  it('рендерит заголовок и текст', () => {
     render(<AnnouncementItem announcement={ann()} unpublishing={false} onUnpublish={vi.fn()} />)
     expect(screen.getByText('Заголовок')).toBeInTheDocument()
     expect(screen.getByText('Текст объявления')).toBeInTheDocument()
-    expect(screen.getByText(/Все районы/)).toBeInTheDocument()
   })
 
   it('снятие требует инлайн-подтверждения', async () => {

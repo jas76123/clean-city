@@ -36,7 +36,7 @@ export function AnalyticsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-base font-semibold text-slate-900">Аналитика</h1>
-          <p className="text-xs text-slate-400">Тренды по жалобам и SLA по категориям</p>
+          <p className="text-xs text-slate-400">Динамика жалоб и SLA по категориям</p>
         </div>
         <div className="flex items-center gap-3">
           <PeriodSwitcher value={period} onChange={setPeriod} />

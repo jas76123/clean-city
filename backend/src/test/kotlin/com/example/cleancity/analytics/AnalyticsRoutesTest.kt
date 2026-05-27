@@ -2,6 +2,7 @@ package com.example.cleancity.analytics
 
 import com.example.cleancity.auth.JwtConfig
 import com.example.cleancity.database.tables.Complaints
+import com.example.cleancity.database.tables.StatusChanges
 import com.example.cleancity.database.tables.Users
 import com.example.cleancity.database.tables.Votes
 import com.example.cleancity.shared.models.UserRole
@@ -45,8 +46,8 @@ class AnalyticsRoutesTest {
             driver = "org.h2.Driver"
         )
         return transaction {
-            SchemaUtils.drop(Votes, Complaints, Users)
-            SchemaUtils.create(Users, Complaints, Votes)
+            SchemaUtils.drop(Votes, StatusChanges, Complaints, Users)
+            SchemaUtils.create(Users, Complaints, StatusChanges, Votes)
             val now = OffsetDateTime.now(ZoneOffset.UTC)
             val admin = Users.insert {
                 it[Users.email] = "a@x.ru"; it[Users.passwordHash] = "x"
@@ -123,19 +124,26 @@ class AnalyticsRoutesTest {
         val ctx = initDb()
         appWith()
 
-        val resp = client.get("/analytics/by-category?period=YEAR") {
+        val resp = client.get("/analytics/by-category?period=BANANA") {
             header("Authorization", "Bearer ${bearerFor(ctx.adminId, UserRole.ADMIN)}")
         }
         assertEquals(HttpStatusCode.BadRequest, resp.status)
     }
 
     @Test
-    fun `all four parametrized endpoints return 200 for admin`() = testApplication {
+    fun `all parametrized endpoints return 200 for admin`() = testApplication {
         val ctx = initDb()
         appWith()
 
-        listOf("/analytics/by-category", "/analytics/by-district", "/analytics/sla", "/analytics/votes-impact").forEach { path ->
-            val resp = client.get("$path?period=week") {
+        listOf(
+            "/analytics/by-category?period=week",
+            "/analytics/by-district?period=week",
+            "/analytics/sla?period=week",
+            "/analytics/votes-impact?period=week",
+            "/analytics/strategic?period=month",
+            "/analytics/reopen?period=month",
+        ).forEach { path ->
+            val resp = client.get(path) {
                 header("Authorization", "Bearer ${bearerFor(ctx.adminId, UserRole.ADMIN)}")
             }
             assertEquals(HttpStatusCode.OK, resp.status, "$path should be 200, was ${resp.status}")
@@ -147,12 +155,12 @@ class AnalyticsRoutesTest {
         val ctx = initDb()
         appWith()
 
-        val resp = client.get("/analytics/trends") {
+        val resp = client.get("/analytics/trends?groupBy=week") {
             header("Authorization", "Bearer ${bearerFor(ctx.adminId, UserRole.ADMIN)}")
         }
         assertEquals(HttpStatusCode.OK, resp.status)
         val body = resp.bodyAsText()
-        assertEquals(true, body.contains("\"days\""), "ответ содержит поле days; body=$body")
+        assertEquals(true, body.contains("\"groupBy\":\"week\""), "ответ содержит поле groupBy; body=$body")
     }
 
     @Test
@@ -162,5 +170,90 @@ class AnalyticsRoutesTest {
 
         val resp = client.get("/analytics/trends")
         assertEquals(HttpStatusCode.Unauthorized, resp.status)
+    }
+
+    @Test
+    fun `admin gets 200 on operational`() = testApplication {
+        val ctx = initDb()
+        appWith()
+
+        val resp = client.get("/analytics/operational") {
+            header("Authorization", "Bearer ${bearerFor(ctx.adminId, UserRole.ADMIN)}")
+        }
+        assertEquals(HttpStatusCode.OK, resp.status)
+        val body = resp.bodyAsText()
+        assertEquals(true, body.contains("\"backlog\":0"), "Empty DB → backlog=0; body=$body")
+        assertEquals(true, body.contains("\"dtaTargetHours\":24"), "DTA target = 24h; body=$body")
+    }
+
+    @Test
+    fun `admin gets 200 on burning with limit param`() = testApplication {
+        val ctx = initDb()
+        appWith()
+
+        val resp = client.get("/analytics/burning?limit=5") {
+            header("Authorization", "Bearer ${bearerFor(ctx.adminId, UserRole.ADMIN)}")
+        }
+        assertEquals(HttpStatusCode.OK, resp.status)
+    }
+
+    @Test
+    fun `burning out-of-range limit coerced to bounds`() = testApplication {
+        val ctx = initDb()
+        appWith()
+
+        val resp = client.get("/analytics/burning?limit=500") {
+            header("Authorization", "Bearer ${bearerFor(ctx.adminId, UserRole.ADMIN)}")
+        }
+        // Не падает 400; просто ограничено до 100
+        assertEquals(HttpStatusCode.OK, resp.status)
+    }
+
+    @Test
+    fun `quarter and year periods are valid on strategic`() = testApplication {
+        val ctx = initDb()
+        appWith()
+
+        listOf("QUARTER", "YEAR").forEach { period ->
+            val resp = client.get("/analytics/strategic?period=$period") {
+                header("Authorization", "Bearer ${bearerFor(ctx.adminId, UserRole.ADMIN)}")
+            }
+            assertEquals(HttpStatusCode.OK, resp.status, "period=$period should be 200, was ${resp.status}")
+        }
+    }
+
+    @Test
+    fun `trends accepts groupBy week`() = testApplication {
+        val ctx = initDb()
+        appWith()
+
+        val resp = client.get("/analytics/trends?groupBy=week") {
+            header("Authorization", "Bearer ${bearerFor(ctx.adminId, UserRole.ADMIN)}")
+        }
+        assertEquals(HttpStatusCode.OK, resp.status)
+        val body = resp.bodyAsText()
+        assertEquals(true, body.contains("\"groupBy\":\"week\""), "groupBy=week in body; body=$body")
+    }
+
+    @Test
+    fun `trends rejects invalid groupBy with 400`() = testApplication {
+        val ctx = initDb()
+        appWith()
+
+        val resp = client.get("/analytics/trends?groupBy=year") {
+            header("Authorization", "Bearer ${bearerFor(ctx.adminId, UserRole.ADMIN)}")
+        }
+        assertEquals(HttpStatusCode.BadRequest, resp.status)
+    }
+
+    @Test
+    fun `resident gets 403 on operational`() = testApplication {
+        val ctx = initDb()
+        appWith()
+
+        val resp = client.get("/analytics/operational") {
+            header("Authorization", "Bearer ${bearerFor(ctx.residentId, UserRole.RESIDENT)}")
+        }
+        assertEquals(HttpStatusCode.Forbidden, resp.status)
     }
 }

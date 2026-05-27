@@ -2,6 +2,7 @@ package com.example.cleancity.analytics
 
 import com.example.cleancity.shared.models.AnalyticsOverview
 import com.example.cleancity.shared.models.AnalyticsPeriod
+import com.example.cleancity.shared.models.BurningComplaintItem
 import com.example.cleancity.shared.models.CategorySla
 import com.example.cleancity.shared.models.CategoryStat
 import com.example.cleancity.shared.models.ComplaintStatus
@@ -9,13 +10,18 @@ import com.example.cleancity.shared.models.DailyPoint
 import com.example.cleancity.shared.models.District
 import com.example.cleancity.shared.models.DistrictStat
 import com.example.cleancity.shared.models.MonthlyKpis
+import com.example.cleancity.shared.models.OperationalSnapshot
 import com.example.cleancity.shared.models.ProblemCategory
+import com.example.cleancity.shared.models.ReopenStat
 import com.example.cleancity.shared.models.SlaStat
+import com.example.cleancity.shared.models.StrategicKpis
+import com.example.cleancity.shared.models.TrendPoint
 import com.example.cleancity.shared.models.TrendsResponse
 import com.example.cleancity.shared.models.VotesBucket
 import java.time.Duration
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import kotlinx.datetime.Instant
 
 class AnalyticsService(private val repo: AnalyticsRepository) {
 
@@ -50,37 +56,104 @@ class AnalyticsService(private val repo: AnalyticsRepository) {
     }
 
     fun byCategory(period: AnalyticsPeriod): List<CategoryStat> {
-        val rows = repo.loadComplaints(periodStart(period))
-        val total = rows.size
-        return ProblemCategory.entries.map { cat ->
-            val catRows = rows.filter { it.category == cat }
-            val resolved = catRows.filter { it.status == ComplaintStatus.RESOLVED && it.resolvedAt != null }
-            val avgHours = avgResolutionHours(resolved)
+        val (from, to) = toRange(period)
+        val rows = repo.byCategoryExtended(from, to)
+        val total = rows.sumOf { it.count }
+        return rows.mapNotNull { r ->
+            val cat = runCatching { ProblemCategory.valueOf(r.category) }.getOrNull() ?: return@mapNotNull null
             CategoryStat(
                 category = cat,
                 label = cat.localizedLabel,
-                count = catRows.size,
-                sharePct = if (total == 0) 0.0 else round1(catRows.size * 100.0 / total),
-                avgResolutionHours = avgHours
+                count = r.count,
+                sharePct = if (total == 0) 0.0 else round1(r.count * 100.0 / total),
+                avgResolutionHours = r.avgResolutionHours,
+                medianResolutionHours = r.medianResolutionHours,
+                p90ResolutionHours = r.p90ResolutionHours,
+                slaCompliancePct = r.slaCompliancePct,
             )
-        }.filter { it.count > 0 }
-            .sortedByDescending { it.count }
+        }
     }
 
     fun byDistrict(period: AnalyticsPeriod): List<DistrictStat> {
-        val rows = repo.loadComplaints(periodStart(period))
-        return District.entries.map { d ->
-            val dRows = rows.filter { row ->
-                row.district != null && row.district.equals(d.localizedLabel, ignoreCase = true)
-            }
+        val (from, to) = toRange(period)
+        val rows = repo.byDistrictExtended(from, to)
+        return rows.mapNotNull { r ->
+            val districtName = r.district ?: return@mapNotNull null
+            val d = District.entries.firstOrNull {
+                it.localizedLabel.equals(districtName, ignoreCase = true)
+            } ?: return@mapNotNull null
             DistrictStat(
                 district = d,
                 label = d.localizedLabel,
-                count = dRows.size,
-                newCount = dRows.count { it.status == ComplaintStatus.NEW },
-                resolvedCount = dRows.count { it.status == ComplaintStatus.RESOLVED }
+                count = r.count,
+                newCount = r.newCount,
+                resolvedCount = r.resolvedCount,
+                medianResolutionHours = r.medianResolutionHours,
+                slaCompliancePct = r.slaCompliancePct,
             )
-        }.sortedByDescending { it.count }
+        }
+    }
+
+    fun operational(now: OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)): OperationalSnapshot {
+        val row = repo.operationalSnapshot(now)
+        return OperationalSnapshot(
+            backlog = row.backlog,
+            overdueNow = row.overdueNow,
+            avgDtaHours24h = row.avgDtaHours24h,
+            dtaTargetHours = AnalyticsConfig.DTA_TARGET_HOURS,
+            createdToday = row.createdToday,
+            createdYesterday = row.createdYesterday,
+            statusBreakdown = row.statusBreakdown,
+        )
+    }
+
+    fun burning(
+        now: OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC),
+        limit: Int = AnalyticsConfig.BURNING_QUEUE_DEFAULT_LIMIT,
+    ): List<BurningComplaintItem> {
+        return repo.burningQueue(now, limit).map { r ->
+            BurningComplaintItem(
+                id = r.id,
+                title = r.title,
+                districtCode = r.districtCode,
+                category = r.category,
+                createdAt = Instant.fromEpochMilliseconds(r.createdAt.toEpochMilli()),
+                slaDueAt = Instant.fromEpochMilliseconds(r.slaDueAt.toEpochMilli()),
+                secondsToDeadline = r.secondsToDeadline,
+            )
+        }
+    }
+
+    fun strategic(period: AnalyticsPeriod): StrategicKpis {
+        val (from, to) = toRange(period)
+        val k = repo.strategicKpis(from, to)
+        val r = repo.reopenStat(from, to)
+        return StrategicKpis(
+            slaCompliancePct = k.slaCompliancePct,
+            slaTargetPct = AnalyticsConfig.SLA_TARGET_PCT,
+            medianResolutionHours = k.medianResolutionHours,
+            p90ResolutionHours = k.p90ResolutionHours,
+            reopenRate = r.reopenRate,
+            reopenTargetPct = AnalyticsConfig.REOPEN_TARGET_PCT,
+            throughput = k.throughput,
+        )
+    }
+
+    fun reopen(period: AnalyticsPeriod): ReopenStat {
+        val (from, to) = toRange(period)
+        val r = repo.reopenStat(from, to)
+        return ReopenStat(reopenRate = r.reopenRate, reopenCount = r.reopenCount, resolvedCount = r.resolvedCount)
+    }
+
+    fun trendsRange(period: AnalyticsPeriod, groupBy: String = "day"): TrendsResponse {
+        val (from, to) = toRange(period)
+        val r = repo.trendsRange(from, to, groupBy)
+        return TrendsResponse(
+            days = emptyList(),
+            createdSeries = r.createdSeries.map { TrendPoint(Instant.fromEpochMilliseconds(it.first.toEpochMilli()), it.second) },
+            resolvedSeries = r.resolvedSeries.map { TrendPoint(Instant.fromEpochMilliseconds(it.first.toEpochMilli()), it.second) },
+            groupBy = r.groupBy,
+        )
     }
 
     fun sla(period: AnalyticsPeriod): List<SlaStat> {
@@ -142,8 +215,21 @@ class AnalyticsService(private val repo: AnalyticsRepository) {
         return when (period) {
             AnalyticsPeriod.WEEK -> now.minusDays(7)
             AnalyticsPeriod.MONTH -> now.minusDays(30)
+            AnalyticsPeriod.QUARTER -> now.minusDays(90)
+            AnalyticsPeriod.YEAR -> now.minusDays(365)
             AnalyticsPeriod.ALL -> null
         }
+    }
+
+    private fun toRange(period: AnalyticsPeriod, now: OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)): Pair<OffsetDateTime, OffsetDateTime> {
+        val start = when (period) {
+            AnalyticsPeriod.WEEK -> now.minusDays(7)
+            AnalyticsPeriod.MONTH -> now.minusDays(30)
+            AnalyticsPeriod.QUARTER -> now.minusDays(90)
+            AnalyticsPeriod.YEAR -> now.minusDays(365)
+            AnalyticsPeriod.ALL -> now.minusYears(10)
+        }
+        return start to now
     }
 
     private fun avgResolutionHours(rows: List<AnalyticsRepository.Row>): Double? {

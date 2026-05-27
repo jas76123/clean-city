@@ -132,7 +132,7 @@ export interface AnalyticsOverview {
   monthlyKpis: MonthlyKpis
 }
 
-export type AnalyticsPeriod = 'WEEK' | 'MONTH' | 'ALL'
+export type AnalyticsPeriod = 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR' | 'ALL'
 
 export interface DailyPoint {
   date: string
@@ -140,8 +140,16 @@ export interface DailyPoint {
   resolved: number
 }
 
+export interface TrendPoint {
+  bucketStart: string
+  value: number
+}
+
 export interface TrendsResponse {
   days: DailyPoint[]
+  createdSeries?: TrendPoint[]
+  resolvedSeries?: TrendPoint[]
+  groupBy?: 'day' | 'week' | 'month'
 }
 
 export interface CategoryStat {
@@ -150,6 +158,9 @@ export interface CategoryStat {
   count: number
   sharePct: number
   avgResolutionHours: number | null
+  medianResolutionHours?: number | null
+  p90ResolutionHours?: number | null
+  slaCompliancePct?: number | null
 }
 
 export interface DistrictStat {
@@ -158,6 +169,8 @@ export interface DistrictStat {
   count: number
   newCount: number
   resolvedCount: number
+  medianResolutionHours?: number | null
+  slaCompliancePct?: number | null
 }
 
 export interface SlaStat {
@@ -166,6 +179,48 @@ export interface SlaStat {
   slaHours: number
   avgResolutionHours: number | null
   breachPct: number
+  resolvedCount: number
+}
+
+export interface VotesBucket {
+  bucket: string
+  count: number
+  avgResolutionHours: number | null
+}
+
+export interface OperationalSnapshot {
+  backlog: number
+  overdueNow: number
+  avgDtaHours24h: number | null
+  dtaTargetHours: number
+  createdToday: number
+  createdYesterday: number
+  statusBreakdown: Record<string, number>
+}
+
+export interface BurningComplaintItem {
+  id: number
+  title: string
+  districtCode: string | null
+  category: string
+  createdAt: string
+  slaDueAt: string
+  secondsToDeadline: number
+}
+
+export interface StrategicKpis {
+  slaCompliancePct: number
+  slaTargetPct: number
+  medianResolutionHours: number | null
+  p90ResolutionHours: number | null
+  reopenRate: number
+  reopenTargetPct: number
+  throughput: number
+}
+
+export interface ReopenStat {
+  reopenRate: number
+  reopenCount: number
   resolvedCount: number
 }
 

@@ -17,17 +17,7 @@ describe('AnnouncementForm', () => {
     expect(screen.getByRole('button', { name: /опубликовать/i })).toBeEnabled()
   })
 
-  it('при выключенном «Все районы» нужен хотя бы один отмеченный район', async () => {
-    render(<AnnouncementForm submitting={false} onSubmit={vi.fn()} />)
-    await userEvent.type(screen.getByLabelText(/заголовок/i), 'Заголовок')
-    await userEvent.type(screen.getByLabelText(/текст объявления/i), 'Текст')
-    await userEvent.click(screen.getByLabelText(/все районы/i)) // снять галочку «Все»
-    expect(screen.getByRole('button', { name: /опубликовать/i })).toBeDisabled()
-    await userEvent.click(screen.getByLabelText('Адлерский'))
-    expect(screen.getByRole('button', { name: /опубликовать/i })).toBeEnabled()
-  })
-
-  it('submit передаёт собранный запрос (по умолчанию все районы)', async () => {
+  it('submit всегда передаёт пустой districts — рассылка по всем жителям', async () => {
     const onSubmit = vi.fn()
     render(<AnnouncementForm submitting={false} onSubmit={onSubmit} />)
     await userEvent.type(screen.getByLabelText(/заголовок/i), 'Заголовок')
@@ -39,6 +29,18 @@ describe('AnnouncementForm', () => {
       iconStyle: 'INFO',
       districts: [],
     })
+  })
+
+  it('кнопка блокируется и показывается ошибка, если срок раньше сегодня', async () => {
+    const onSubmit = vi.fn()
+    render(<AnnouncementForm submitting={false} onSubmit={onSubmit} />)
+    await userEvent.type(screen.getByLabelText(/заголовок/i), 'Заголовок')
+    await userEvent.type(screen.getByLabelText(/текст объявления/i), 'Текст')
+    await userEvent.type(screen.getByLabelText(/срок действия/i), '2020-01-01')
+    expect(screen.getByRole('button', { name: /опубликовать/i })).toBeDisabled()
+    expect(screen.getByText(/не раньше сегодняшнего дня/i)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /опубликовать/i }))
+    expect(onSubmit).not.toHaveBeenCalled()
   })
 })
 

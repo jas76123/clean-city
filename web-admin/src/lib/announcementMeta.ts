@@ -16,9 +16,3 @@ export const ICON_STYLE_META: Record<IconStyle, IconStyleMeta> = {
 }
 
 export const ICON_STYLE_ORDER: IconStyle[] = ['INFO', 'SUCCESS', 'WARNING']
-
-/** Человекочитаемая строка районов: пустой список или ALL → «Все районы». */
-export function formatDistricts(districts: string[]): string {
-  if (districts.length === 0 || districts.includes('ALL')) return 'Все районы'
-  return districts.join(', ')
-}

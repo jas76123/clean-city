@@ -59,7 +59,7 @@ export function LoginPage() {
   return (
     <div className="flex h-screen items-center justify-center bg-slate-50">
       <Card className="w-full max-w-sm p-6">
-        <h1 className="mb-1 text-lg font-semibold text-slate-800">CleanCity — админ-панель</h1>
+        <h1 className="mb-1 text-lg font-semibold text-slate-800">Чистый Город — админ-панель</h1>
         <p className="mb-4 text-sm text-slate-400">
           {challengeToken ? 'Введите код из приложения-аутентификатора' : 'Вход для сотрудников'}
         </p>

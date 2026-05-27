@@ -78,6 +78,7 @@ class FeedScreen : Screen {
                     onRefresh = model::refresh,
                     onModeChange = model::setMode,
                     onComplaintClick = { id -> navigator.push(ComplaintDetailScreen(id)) },
+                    onAnnouncementClick = { ann -> navigator.push(AnnouncementDetailScreen(ann)) },
                     onLoadMore = model::loadNextPage,
                 )
             }
@@ -92,6 +93,7 @@ private fun FeedLoadedContent(
     onRefresh: () -> Unit,
     onModeChange: (FeedMode) -> Unit,
     onComplaintClick: (Long) -> Unit,
+    onAnnouncementClick: (AnnouncementResponse) -> Unit,
     onLoadMore: () -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -121,7 +123,12 @@ private fun FeedLoadedContent(
             contentPadding = PaddingValues(bottom = 16.dp),
         ) {
             if (loaded.announcements.isNotEmpty()) {
-                item { AnnouncementsSection(announcements = loaded.announcements) }
+                item {
+                    AnnouncementsSection(
+                        announcements = loaded.announcements,
+                        onAnnouncementClick = onAnnouncementClick,
+                    )
+                }
             }
             item {
                 FeedToggle(
@@ -177,7 +184,10 @@ private fun FeedLoadedContent(
 }
 
 @Composable
-private fun AnnouncementsSection(announcements: List<AnnouncementResponse>) {
+private fun AnnouncementsSection(
+    announcements: List<AnnouncementResponse>,
+    onAnnouncementClick: (AnnouncementResponse) -> Unit,
+) {
     Column(Modifier.padding(top = 14.dp)) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -199,7 +209,12 @@ private fun AnnouncementsSection(announcements: List<AnnouncementResponse>) {
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(items = announcements, key = { it.id }) { ann ->
-                AnnouncementCard(announcement = ann, modifier = Modifier.width(280.dp))
+                AnnouncementCard(
+                    announcement = ann,
+                    modifier = Modifier
+                        .width(280.dp)
+                        .clickable { onAnnouncementClick(ann) },
+                )
             }
         }
     }

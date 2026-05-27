@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { ICON_STYLE_META, formatDistricts } from '@/lib/announcementMeta'
+import { ICON_STYLE_META } from '@/lib/announcementMeta'
 import { cn } from '@/lib/utils'
 import type { Announcement } from '@/api/types'
 
@@ -34,7 +34,7 @@ export function AnnouncementItem({ announcement, unpublishing, onUnpublish }: Pr
         <div className="text-sm font-semibold text-slate-800">{announcement.title}</div>
         <div className="mt-0.5 text-sm text-slate-600">{announcement.body}</div>
         <div className="mt-1 text-xs text-slate-400">
-          Опубликовано: {formatDate(announcement.publishedAt)} · {formatDistricts(announcement.districts)}
+          Опубликовано: {formatDate(announcement.publishedAt)}
         </div>
       </div>
 

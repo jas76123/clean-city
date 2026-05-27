@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { getTrends, getByDistrict, getByCategory, getSla, getVotesImpact } from '@/api/analytics'
+import { getTrends, getByDistrict, getByCategory, getSla } from '@/api/analytics'
 import type { AnalyticsPeriod } from '@/api/types'
 
 // Дашборд автообновляется раз в минуту — синхронно с таблицей жалоб (Day 16).
@@ -33,12 +33,5 @@ export function useSlaQuery(period: AnalyticsPeriod) {
   return useQuery({
     queryKey: ['analytics', 'sla', period],
     queryFn: () => getSla(period),
-  })
-}
-
-export function useVotesImpactQuery(period: AnalyticsPeriod) {
-  return useQuery({
-    queryKey: ['analytics', 'votes-impact', period],
-    queryFn: () => getVotesImpact(period),
   })
 }

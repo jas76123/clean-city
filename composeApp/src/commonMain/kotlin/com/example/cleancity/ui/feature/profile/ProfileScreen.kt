@@ -259,7 +259,7 @@ private fun ProfileHeader(user: UserResponse) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Green700, Green900)))
+            .background(Green700)
             .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 24.dp, vertical = 28.dp),
     ) {

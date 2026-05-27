@@ -14,7 +14,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 
-private val ADMIN_ROLES = setOf(UserRole.ADMIN, UserRole.OPERATOR, UserRole.INSPECTOR)
+private val ADMIN_ROLES = setOf(UserRole.ADMIN, UserRole.OPERATOR)
 
 fun Route.analyticsRoutes(service: AnalyticsService) {
     authenticate("auth-jwt") {

@@ -2,7 +2,10 @@ package com.example.cleancity.auth
 
 import com.example.cleancity.database.tables.Users
 import com.example.cleancity.shared.models.UserRole
+import com.example.cleancity.shared.responses.admin.TeamStatus
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
@@ -165,6 +168,28 @@ class UserRepository {
             it[Users.passwordHash] = ""
             it[Users.fullName] = null
         }
+    }
+
+    /**
+     * Список сотрудников (ADMIN/OPERATOR) по статусу команды.
+     * status = null → все три статуса (без RESIDENT).
+     */
+    fun listByTeamStatus(status: TeamStatus?): List<UserRow> = transaction {
+        Users.selectAll().where {
+            val staffRoles = (Users.role eq UserRole.ADMIN.name) or (Users.role eq UserRole.OPERATOR.name)
+            val statusFilter = when (status) {
+                TeamStatus.ACTIVE ->
+                    (Users.isActive eq true) and (Users.emailVerified eq true)
+                TeamStatus.FROZEN ->
+                    (Users.isActive eq false) and (Users.emailVerified eq true)
+                TeamStatus.PENDING ->
+                    (Users.isActive eq false) and (Users.emailVerified eq false)
+                null -> null
+            }
+            if (statusFilter == null) staffRoles else staffRoles and statusFilter
+        }
+            .orderBy(Users.createdAt to SortOrder.DESC)
+            .map { it.toUserRow() }
     }
 
     private fun ResultRow.toUserRow() = UserRow(

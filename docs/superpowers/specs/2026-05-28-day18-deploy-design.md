@@ -11,6 +11,7 @@
 - SMTP в backend через `SmtpEmailService` с фоллбеком на `LoggingEmailService`. Включается через env.
 - Push-уведомления работают через polling каналом (FCM/Firebase не используется, см. memory `project_cleancity_notifications`).
 - Релизный keystore и подписанная сборка — хвост Day 13, делается в этот же день перед заливкой.
+- В `ops/` репозитория уже готовы: `backup.sh` (pg_dump → GPG → S3), `healthcheck.sh` (с recovery-алертом), `alert.sh` (Telegram), `cleancity.cron` (расписание) и идемпотентный `install-cron.sh` — интерактивно собирает секреты и раскладывает всё по `/opt/cleancity/` и `/etc/cleancity/`. Их не переписываем, используем как есть.
 
 ## Архитектура
 
@@ -56,30 +57,41 @@ api.clean--city.ru {
 
 Caddy сам получает Let's Encrypt сертификаты на старте — нужны лишь корректные A-записи.
 
-### Прод-секреты
+### Прод-секреты (раздельные файлы)
 
-Файл `/opt/cleancity/.env.prod` (НЕ в git, права 600, владелец root):
+**Для docker compose (приложение)** — `/opt/cleancity/.env.prod` (НЕ в git, права 600, владелец root). Имена ENV должны совпадать с `${?…}` подстановками в `backend/src/main/resources/application.conf`:
 
 ```
-STAGE=PROD
-DB_PASSWORD=<pwgen>
+APP_STAGE=PROD
+APP_BASE_URL=https://api.clean--city.ru
+POSTGRES_DB=cleancity
+POSTGRES_USER=cleancity
+POSTGRES_PASSWORD=<pwgen 32>
+DB_URL=jdbc:postgresql://db:5432/cleancity
+DB_USER=cleancity
+DB_PASSWORD=<тот же POSTGRES_PASSWORD>
 JWT_SECRET=<32 байта base64>
 STORAGE_S3_BUCKET=cleancity-photos-prod
 STORAGE_S3_ENDPOINT=https://storage.yandexcloud.net
 STORAGE_S3_ACCESS_KEY=<IAM ключ cleancity-photos>
 STORAGE_S3_SECRET_KEY=<IAM секрет cleancity-photos>
 STORAGE_S3_PUBLIC_URL_BASE=https://cleancity-photos-prod.storage.yandexcloud.net
-EMAIL_SMTP_HOST=smtp.yandex.ru
-EMAIL_SMTP_USER=noreply@clean--city.ru
-EMAIL_SMTP_PASSWORD=<app password Я.Почты>
-TELEGRAM_BOT_TOKEN=<токен @BotFather>
-TELEGRAM_ALERT_CHAT_ID=<chat_id>
-BACKUP_S3_BUCKET=cleancity-backups
-BACKUP_S3_ACCESS_KEY=<IAM ключ cleancity-backups>
-BACKUP_S3_SECRET_KEY=<IAM секрет cleancity-backups>
-ADMIN_BOOTSTRAP_EMAIL=<email>
-ADMIN_BOOTSTRAP_PASSWORD=<разовый, сменить после первого логина>
+EMAIL_FROM=CleanCity Сочи <noreply@clean--city.ru>
+SMTP_HOST=smtp.yandex.ru
+SMTP_PORT=465
+SMTP_USER=noreply@clean--city.ru
+SMTP_PASSWORD=<app password Я.Почты>
+INITIAL_ADMIN_EMAIL=<email>
+INITIAL_ADMIN_PASSWORD=<разовый, сменить после первого логина>
 ```
+
+> **NB:** В текущем `application.conf` нет блока `storage.s3.*` — его нужно добавить с ENV-fallback. Без этого backend на проде молча упадёт на `LocalStorageService`. Это первый шаг плана (Task 0).
+
+**Для cron-скриптов (бэкап/алерты)** — раскладываются `ops/install-cron.sh` интерактивно:
+
+- `/etc/cleancity/backup.env` (0600) — Postgres-кред, S3-кред для bucket `cleancity-backups`, путь к gpg-passphrase.
+- `/etc/cleancity/backup-gpg.pass` (0600) — passphrase для GPG-шифрования дампов, генерируется `install-cron.sh` (`openssl rand -base64 64`). **Без неё бэкапы не расшифровать — сохранить в менеджер паролей.**
+- `/etc/cleancity/alert.env` (0600) — `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`.
 
 ### Yandex IAM service accounts
 
@@ -115,12 +127,13 @@ ADMIN_BOOTSTRAP_PASSWORD=<разовый, сменить после первог
 1. `admin.clean--city.ru` → Caddy → React SPA вызывает `api.clean--city.ru/v1/*`.
 2. Смена статуса жалобы → backend пишет в `complaint_status_history` → следующий polling мобилки увидит уведомление.
 
-### Бэкапы (cron на VM, 03:00 МСК ежедневно)
+### Бэкапы (`ops/backup.sh` через cron, 03:00 UTC = 06:00 МСК ежедневно)
 
-1. `pg_dump -Fc cleancity` → `cleancity-YYYYMMDD-HHMMSS.dump`.
-2. `aws --endpoint-url=https://storage.yandexcloud.net s3 cp <файл> s3://cleancity-backups/`.
-3. Локальный файл удаляется.
-4. Bucket `cleancity-backups` имеет lifecycle 30 дней — старые удаляются автоматически (это конфиг bucket'а, не cron'а).
+1. `pg_dump -Fc cleancity` → `cleancity_YYYYMMDDTHHMMSSZ.dump` во временный каталог.
+2. `gpg --symmetric --cipher AES256 --batch --passphrase-file /etc/cleancity/backup-gpg.pass` → `.dump.gpg`.
+3. `aws --endpoint-url=https://storage.yandexcloud.net s3 cp <файл>.gpg s3://cleancity-backups/`.
+4. Временный каталог удаляется (`trap rm -rf`).
+5. Bucket `cleancity-backups` имеет lifecycle 30 дней — старые удаляются автоматически (это конфиг bucket'а, не cron'а).
 
 ### Healthcheck (cron на VM, каждые 5 минут)
 
@@ -137,7 +150,7 @@ ADMIN_BOOTSTRAP_PASSWORD=<разовый, сменить после первог
 3. Проверить APK: `aapt dump badging` + grep по строкам на `clean--city.ru` (убедиться, что нет dev-URL).
 4. Сгенерить QR: `qrencode -o qr.png -s 8 "https://clean--city.ru/cleancity.apk"`.
 5. Написать `landing/index.html` (~80 строк, без фреймворков, мобильная адаптация через viewport+flex).
-6. Подготовить `docker-compose.prod.yml`, `Caddyfile`, `scripts/backup.sh`, `scripts/healthcheck.sh` (адаптировать существующие `ops/backup.sh`/`ops/alert.sh` под прод-пути).
+6. Подготовить `docker-compose.prod.yml`, `Caddyfile`, `landing/index.html` в репо (cron-скрипты в `ops/` уже готовы и не требуют адаптации).
 
 ### Yandex Cloud (консоль)
 
@@ -153,18 +166,14 @@ ADMIN_BOOTSTRAP_PASSWORD=<разовый, сменить после первог
 
 ### На VM (SSH)
 
-13. `apt update && apt install -y docker.io docker-compose-plugin awscli qrencode`.
-14. `mkdir -p /opt/cleancity/{landing,backups,scripts}`.
-15. Скопировать с Mac: `docker-compose.prod.yml`, `Caddyfile`, `.env.prod`, `landing/`, `cleancity.apk`, `scripts/backup.sh`, `scripts/healthcheck.sh`.
-16. `.env.prod` → права 600, root:root.
-17. `docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d`. Caddy при первом запуске возьмёт сертификаты.
+13. `apt update && apt install -y docker.io docker-compose-plugin postgresql-client gnupg curl unzip git`. AWS CLI v2 — отдельной командой из официального installer (см. `ops/README.md`).
+14. Склонировать репо в `/opt/cleancity/repo`.
+15. Скопировать с Mac на VM в `/opt/cleancity/repo/deploy/`: `docker-compose.prod.yml`, `Caddyfile`, `landing/`, `cleancity.apk`. (Альтернатива — закоммитить и `git pull`.)
+16. Создать `/opt/cleancity/.env.prod`, заполнить значениями. Права 600, root:root.
+17. `cd /opt/cleancity/repo/deploy && docker compose --env-file /opt/cleancity/.env.prod -f docker-compose.prod.yml pull && docker compose ... up -d`. Caddy при первом запуске возьмёт сертификаты.
 18. Flyway-миграции запустятся автоматически при старте backend.
-19. Backend на старте создаст seed-админа из `ADMIN_BOOTSTRAP_*` (через `bootstrapInitialAdmin`).
-20. Установить cron'ы:
-    ```
-    0 3 * * * /opt/cleancity/scripts/backup.sh
-    */5 * * * * /opt/cleancity/scripts/healthcheck.sh
-    ```
+19. Backend на старте создаст seed-админа из `INITIAL_ADMIN_*` (через `bootstrapInitialAdmin`).
+20. Установить cron'ы и секреты: `sudo bash /opt/cleancity/repo/ops/install-cron.sh` (интерактивно спросит TG_TOKEN/CHAT_ID, Postgres-кред, AWS-ключ для бэкапов; запишет в `/etc/cleancity/*.env`, поставит `cleancity.cron`, прогонит smoke alert).
 
 ## Тестирование (acceptance criteria)
 
@@ -185,8 +194,7 @@ ADMIN_BOOTSTRAP_PASSWORD=<разовый, сменить после первог
 
 ## Что НЕ входит (отложено)
 
-- Восстановление БД из бэкапа в отдельную staging-БД — не делаем, только проверяем что дамп лежит в bucket'е.
-- GPG-шифрование бэкапов — bucket приватный, IAM-ключ только-на-запись, этого достаточно.
+- Восстановление БД из бэкапа в отдельную staging-БД — не делаем, только проверяем что дамп лежит в bucket'е. GPG-passphrase сохраняем в менеджер паролей, чтобы восстановление было возможно в принципе.
 - Telegram-алерты на ERROR-логи в backend — только healthcheck.
 - Cloudflare proxy / WAF — добавляется позже, не блокер защиты.
 - Seed демо-данных (80 жалоб, фото и т. п.) — это Day 19.

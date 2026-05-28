@@ -55,6 +55,39 @@ class AnalyticsService(private val repo: AnalyticsRepository) {
         )
     }
 
+    /** Сводка за произвольный диапазон [from, to). Используется PDF-отчётом. */
+    fun overviewRange(from: OffsetDateTime, to: OffsetDateTime): AnalyticsOverview {
+        val rows = repo.loadComplaints(periodStart = from)
+            .filter { it.createdAt < to }
+        val byStatus = rows.groupingBy { it.status }.eachCount()
+
+        val slaBreachCount = rows.count { row ->
+            val active = row.status == ComplaintStatus.NEW || row.status == ComplaintStatus.IN_PROGRESS
+            if (!active) return@count false
+            val ageHours = Duration.between(row.createdAt, to).toHours()
+            ageHours > CategorySla.hoursFor(row.category)
+        }
+
+        return AnalyticsOverview(
+            total = rows.size,
+            new = byStatus[ComplaintStatus.NEW] ?: 0,
+            inProgress = byStatus[ComplaintStatus.IN_PROGRESS] ?: 0,
+            resolved = byStatus[ComplaintStatus.RESOLVED] ?: 0,
+            rejected = byStatus[ComplaintStatus.REJECTED] ?: 0,
+            duplicate = byStatus[ComplaintStatus.DUPLICATE] ?: 0,
+            today = 0,
+            week = 0,
+            slaBreachCount = slaBreachCount,
+            monthlyKpis = MonthlyKpis(
+                total = 0, prevTotal = 0,
+                avgResolutionHours = null, prevAvgResolutionHours = null,
+                resolvedWithin7dPct = null, prevResolvedWithin7dPct = null,
+                newCount = 0, inProgressCount = 0, resolvedCount = 0,
+                rejectedCount = 0, duplicateCount = 0,
+            ),
+        )
+    }
+
     fun byCategory(period: AnalyticsPeriod): List<CategoryStat> {
         val (from, to) = toRange(period)
         val rows = repo.byCategoryExtended(from, to)
@@ -90,6 +123,23 @@ class AnalyticsService(private val repo: AnalyticsRepository) {
                 resolvedCount = r.resolvedCount,
                 medianResolutionHours = r.medianResolutionHours,
                 slaCompliancePct = r.slaCompliancePct,
+            )
+        }
+    }
+
+    /** По районам за произвольный диапазон [from, to). */
+    fun byDistrictRange(from: OffsetDateTime, to: OffsetDateTime): List<DistrictStat> {
+        val rows = repo.loadComplaints(periodStart = from).filter { it.createdAt < to }
+        return District.entries.map { d ->
+            val districtRows = rows.filter { it.district == d.localizedLabel }
+            DistrictStat(
+                district = d,
+                label = d.localizedLabel,
+                count = districtRows.size,
+                newCount = districtRows.count { it.status == ComplaintStatus.NEW },
+                resolvedCount = districtRows.count { it.status == ComplaintStatus.RESOLVED },
+                medianResolutionHours = null,
+                slaCompliancePct = null,
             )
         }
     }
@@ -174,6 +224,29 @@ class AnalyticsService(private val repo: AnalyticsRepository) {
                 resolvedCount = resolved.size
             )
         }.filter { it.resolvedCount > 0 }
+            .sortedBy { it.category.ordinal }
+    }
+
+    /** SLA по категориям за произвольный диапазон [from, to). */
+    fun slaRange(from: OffsetDateTime, to: OffsetDateTime): List<SlaStat> {
+        val rows = repo.loadComplaints(periodStart = from).filter { it.createdAt < to }
+        return ProblemCategory.entries.map { cat ->
+            val slaHours = CategorySla.hoursFor(cat)
+            val resolved = rows.filter {
+                it.category == cat && it.status == ComplaintStatus.RESOLVED && it.resolvedAt != null
+            }
+            val breach = resolved.count { Duration.between(it.createdAt, it.resolvedAt!!).toHours() > slaHours }
+            val breachPct = if (resolved.isEmpty()) 0.0 else round1(breach * 100.0 / resolved.size)
+            SlaStat(
+                category = cat,
+                label = cat.localizedLabel,
+                slaHours = slaHours,
+                avgResolutionHours = avgResolutionHours(resolved),
+                breachPct = breachPct,
+                resolvedCount = resolved.size,
+            )
+        }
+            .filter { it.resolvedCount > 0 }
             .sortedBy { it.category.ordinal }
     }
 

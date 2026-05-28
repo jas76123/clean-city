@@ -455,6 +455,8 @@ Web admin может быть проще (показываем основной 
 > Дизайн+план: `docs/superpowers/specs/2026-05-28-day17c-settings-team-audit-design.md`,
 > `docs/superpowers/plans/2026-05-28-day17c-settings-team-audit.md`.
 
+- [x] Follow-up 2026-05-28: ФИО обязательным полем в инвайте, колонка «Район» удалена из таблицы команды и `TeamMemberDto` (БД-колонка остаётся для рассылок). План: `docs/superpowers/plans/2026-05-28-team-fullname-no-district.md`.
+
 **Checkpoint:** Все экраны дашборда наполнены реальными данными из seed. PDF «Сводный за месяц» скачивается и открывается. Заморозка сотрудника отзывает все его refresh-токены (проверка: попытка использовать API → 401).
 
 ---

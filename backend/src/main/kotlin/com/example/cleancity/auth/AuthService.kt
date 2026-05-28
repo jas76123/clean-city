@@ -27,6 +27,7 @@ class InvalidCredentialsException(msg: String = "Invalid email or password") : R
 class TokenInvalidException(msg: String = "Invalid or expired token") : RuntimeException(msg)
 class WeakPasswordException(msg: String) : IllegalArgumentException(msg)
 class InvalidEmailException(msg: String = "Invalid email format") : IllegalArgumentException(msg)
+class InvalidFullNameException(msg: String = "Full name is required") : IllegalArgumentException(msg)
 class EmailAlreadyRegisteredException(msg: String = "Email already registered") : RuntimeException(msg)
 class AccountLockedException(val lockedUntil: OffsetDateTime) :
     RuntimeException("Account locked until $lockedUntil")
@@ -297,22 +298,24 @@ class AuthService(
     suspend fun inviteAdmin(
         actorId: Long,
         targetEmail: String,
+        targetFullName: String,
         targetRole: UserRole,
         ip: String?,
         userAgent: String?
     ): UserResponse {
         if (targetRole == UserRole.RESIDENT) throw IllegalArgumentException("Use registration for residents")
         validateEmail(targetEmail)
+        val normalizedName = targetFullName.trim()
+        if (normalizedName.isEmpty()) throw InvalidFullNameException()
         val existing = users.findByEmail(targetEmail)
         if (existing != null) throw EmailAlreadyRegisteredException()
 
-        // Placeholder-хэш — будет перезаписан в acceptInvite. is_active=false до активации.
         val placeholder = PasswordHasher.hash(java.util.UUID.randomUUID().toString())
         val user = users.create(
             email = targetEmail,
             passwordHash = placeholder,
             role = targetRole,
-            fullName = null,
+            fullName = normalizedName,
             isActive = false,
             emailVerified = false,
             mustChangePassword = true
@@ -321,7 +324,7 @@ class AuthService(
         val token = tokens.createEmailToken(user.id, EmailTokenPurpose.ADMIN_INVITE, INVITE_TOKEN_TTL_SECONDS)
         val link = "$baseUrl/accept-invite?token=$token"
         val invitedBy = users.findById(actorId)?.email ?: "Администратор CleanCity"
-        val (subject, html) = EmailTemplates.adminInvite(link, invitedBy)
+        val (subject, html) = EmailTemplates.adminInvite(link, invitedBy, normalizedName)
         email.send(user.email, subject, html)
 
         audit.log(AuditAction.ADMIN_INVITE_SENT, actorId, "user", user.id.toString(), ip, userAgent, "role=${targetRole.name}")
@@ -485,7 +488,6 @@ class AuthService(
             email = email,
             fullName = fullName,
             role = role.name,
-            district = district,
             status = status,
             createdAt = createdAt.toString(),
             lastLoginAt = lastLoginAt?.toString(),

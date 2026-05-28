@@ -8,7 +8,6 @@ data class TeamMemberDto(
     val email: String,
     val fullName: String?,
     val role: String,            // "ADMIN" | "OPERATOR"
-    val district: String?,
     val status: TeamStatus,
     val createdAt: String,       // ISO-8601 с offset
     val lastLoginAt: String?,    // null для pending

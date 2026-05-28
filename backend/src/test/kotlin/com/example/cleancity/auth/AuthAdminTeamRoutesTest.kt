@@ -364,7 +364,7 @@ class AuthAdminTeamRoutesTest {
             val resp = client.post("/auth/admin/invite") {
                 header(HttpHeaders.Authorization, "Bearer ${bearerFor(adminId, UserRole.ADMIN)}")
                 contentType(ContentType.Application.Json)
-                setBody("""{"email":"new@t.local","role":"INSPECTOR"}""")
+                setBody("""{"email":"new@t.local","fullName":"X","role":"INSPECTOR"}""")
             }
             assertEquals(HttpStatusCode.BadRequest, resp.status)
         }
@@ -380,9 +380,45 @@ class AuthAdminTeamRoutesTest {
             val resp = client.post("/auth/admin/invite") {
                 header(HttpHeaders.Authorization, "Bearer ${bearerFor(opId, UserRole.OPERATOR)}")
                 contentType(ContentType.Application.Json)
-                setBody("""{"email":"new@t.local","role":"OPERATOR"}""")
+                setBody("""{"email":"new@t.local","fullName":"X","role":"OPERATOR"}""")
             }
             assertEquals(HttpStatusCode.Forbidden, resp.status)
+        }
+    }
+
+    @Test
+    fun `invite with blank fullName returns 400`() {
+        initDb()
+        val adminId = seedUser("admin@t.local", UserRole.ADMIN)
+
+        testApplication {
+            appWithAuth()
+            val resp = client.post("/auth/admin/invite") {
+                header(HttpHeaders.Authorization, "Bearer ${bearerFor(adminId, UserRole.ADMIN)}")
+                contentType(ContentType.Application.Json)
+                setBody("""{"email":"new@t.local","fullName":"   ","role":"OPERATOR"}""")
+            }
+            assertEquals(HttpStatusCode.BadRequest, resp.status)
+        }
+    }
+
+    @Test
+    fun `invite with fullName creates pending user with that name`() {
+        initDb()
+        val adminId = seedUser("admin2@t.local", UserRole.ADMIN)
+
+        testApplication {
+            appWithAuth()
+            val resp = client.post("/auth/admin/invite") {
+                header(HttpHeaders.Authorization, "Bearer ${bearerFor(adminId, UserRole.ADMIN)}")
+                contentType(ContentType.Application.Json)
+                setBody("""{"email":"named@t.local","fullName":"Пётр Петров","role":"OPERATOR"}""")
+            }
+            assertEquals(HttpStatusCode.Created, resp.status)
+            val invited = transaction {
+                Users.selectAll().where { Users.email eq "named@t.local" }.single()
+            }
+            assertEquals("Пётр Петров", invited[Users.fullName])
         }
     }
 }

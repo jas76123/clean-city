@@ -246,7 +246,14 @@ fun Route.authRoutes(
                     throw BadRequestException("Роль должна быть ADMIN или OPERATOR", ErrorCodes.VALIDATION_BAD_FIELD)
                 }
                 try {
-                    val invited = service.inviteAdmin(actorId, req.email, targetRole, call.clientIp(), call.userAgentSafe())
+                    val invited = service.inviteAdmin(
+                        actorId,
+                        req.email,
+                        req.fullName,
+                        targetRole,
+                        call.clientIp(),
+                        call.userAgentSafe()
+                    )
                     call.respond(HttpStatusCode.Created, invited)
                 } catch (e: InvalidEmailException) {
                     throw BadRequestException(e.message ?: "Invalid email", ErrorCodes.VALIDATION_INVALID_EMAIL)

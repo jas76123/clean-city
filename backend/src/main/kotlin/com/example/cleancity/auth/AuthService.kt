@@ -7,6 +7,9 @@ import com.example.cleancity.email.EmailTemplates
 import com.example.cleancity.shared.models.AuthResponse
 import com.example.cleancity.shared.models.UserResponse
 import com.example.cleancity.shared.models.UserRole
+import com.example.cleancity.shared.responses.admin.AuditEntryDto
+import com.example.cleancity.shared.responses.admin.TeamMemberDto
+import com.example.cleancity.shared.responses.admin.TeamStatus
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
@@ -56,7 +59,8 @@ class AuthService(
     private val baseUrl: String,
     private val termsVersion: String,
     private val totp: TotpService = TotpService(),
-    private val audit: AuditLogger = NoopAuditLogger
+    private val audit: AuditLogger = NoopAuditLogger,
+    private val auditLog: AuditLogRepository = AuditLogRepository()
 ) {
 
     /**
@@ -387,6 +391,46 @@ class AuthService(
         emailVerified = emailVerified,
         createdAt = createdAt.toString()
     )
+
+    suspend fun listTeamMembers(status: TeamStatus?): List<TeamMemberDto> {
+        val rows = users.listByTeamStatus(status)
+        return rows.map { it.toTeamMemberDto() }
+    }
+
+    suspend fun recentAuditEvents(limit: Int = 50): List<AuditEntryDto> {
+        val rows = auditLog.findRecent(limit.coerceIn(1, 50))
+        return rows.map {
+            AuditEntryDto(
+                id = it.id,
+                timestamp = it.createdAt.toString(),
+                actorEmail = it.actorEmail,
+                action = it.action,
+                targetType = it.targetType,
+                targetId = it.targetId,
+                ip = it.ip,
+                details = it.details
+            )
+        }
+    }
+
+    private fun UserRow.toTeamMemberDto(): TeamMemberDto {
+        val status = when {
+            isActive && emailVerified -> TeamStatus.ACTIVE
+            !isActive && emailVerified -> TeamStatus.FROZEN
+            else -> TeamStatus.PENDING
+        }
+        return TeamMemberDto(
+            id = id,
+            email = email,
+            fullName = fullName,
+            role = role.name,
+            district = district,
+            status = status,
+            createdAt = createdAt.toString(),
+            lastLoginAt = lastLoginAt?.toString(),
+            invitedAt = if (status == TeamStatus.PENDING) createdAt.toString() else null
+        )
+    }
 }
 
 /**

@@ -20,6 +20,7 @@ data class UserRow(
     val passwordHash: String,
     val role: UserRole,
     val fullName: String?,
+    val district: String?,
     val emailVerified: Boolean,
     val isActive: Boolean,
     val failedLoginAttempts: Int,
@@ -27,7 +28,8 @@ data class UserRow(
     val totpSecret: String?,
     val totpEnabled: Boolean,
     val mustChangePassword: Boolean,
-    val createdAt: OffsetDateTime
+    val createdAt: OffsetDateTime,
+    val lastLoginAt: OffsetDateTime?
 )
 
 class UserRepository {
@@ -84,6 +86,7 @@ class UserRepository {
             passwordHash = passwordHash,
             role = role,
             fullName = fullName,
+            district = null,
             emailVerified = emailVerified,
             isActive = isActive,
             failedLoginAttempts = 0,
@@ -91,7 +94,8 @@ class UserRepository {
             totpSecret = null,
             totpEnabled = false,
             mustChangePassword = mustChangePassword,
-            createdAt = now
+            createdAt = now,
+            lastLoginAt = null
         )
     }
 
@@ -198,6 +202,7 @@ class UserRepository {
         passwordHash = this[Users.passwordHash],
         role = UserRole.valueOf(this[Users.role]),
         fullName = this[Users.fullName],
+        district = this[Users.district],
         emailVerified = this[Users.emailVerified],
         isActive = this[Users.isActive],
         failedLoginAttempts = this[Users.failedLoginAttempts],
@@ -205,6 +210,7 @@ class UserRepository {
         totpSecret = this[Users.totpSecret],
         totpEnabled = this[Users.totpEnabled],
         mustChangePassword = this[Users.mustChangePassword],
-        createdAt = this[Users.createdAt]
+        createdAt = this[Users.createdAt],
+        lastLoginAt = this[Users.lastLoginAt]
     )
 }

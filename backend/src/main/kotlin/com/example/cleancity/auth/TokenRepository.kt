@@ -4,7 +4,9 @@ import com.example.cleancity.database.tables.EmailTokenPurpose
 import com.example.cleancity.database.tables.EmailTokens
 import com.example.cleancity.database.tables.RefreshTokens
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -65,16 +67,14 @@ class TokenRepository {
     }
 
     /**
-     * Помечает consumed = true для всех непогашенных ADMIN_INVITE-токенов
-     * указанного пользователя. Возвращает число затронутых строк.
+     * Удаляет все ADMIN_INVITE-токены указанного пользователя
+     * (используется при отзыве приглашения перед delete user — FK не даёт
+     * оставить токен болтаться). Возвращает число удалённых строк.
      */
     fun invalidateInviteForUser(userId: Long): Int = transaction {
-        EmailTokens.update({
+        EmailTokens.deleteWhere {
             (EmailTokens.userId eq userId) and
-                (EmailTokens.purpose eq EmailTokenPurpose.ADMIN_INVITE.name) and
-                (EmailTokens.consumed eq false)
-        }) {
-            it[EmailTokens.consumed] = true
+                (EmailTokens.purpose eq EmailTokenPurpose.ADMIN_INVITE.name)
         }
     }
 

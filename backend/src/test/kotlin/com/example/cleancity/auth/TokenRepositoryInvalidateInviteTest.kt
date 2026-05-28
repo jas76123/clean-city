@@ -43,7 +43,7 @@ class TokenRepositoryInvalidateInviteTest {
     }
 
     @Test
-    fun `invalidateInviteForUser consumes pending ADMIN_INVITE tokens`() {
+    fun `invalidateInviteForUser deletes pending ADMIN_INVITE tokens`() {
         initDb()
         val userId = seedUser()
         val repo = TokenRepository()
@@ -58,8 +58,7 @@ class TokenRepositoryInvalidateInviteTest {
                 (EmailTokens.userId eq userId) and
                     (EmailTokens.purpose eq EmailTokenPurpose.ADMIN_INVITE.name)
             }.toList()
-            assertEquals(2, rows.size)
-            rows.forEach { assertTrue(it[EmailTokens.consumed]) }
+            assertTrue(rows.isEmpty())
         }
     }
 

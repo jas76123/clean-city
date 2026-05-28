@@ -427,7 +427,10 @@ Web admin может быть проще (показываем основной 
 > Бэкенд: monthlyKpis в /analytics/overview + новый GET /analytics/trends.
 > Дизайн/план: docs/superpowers/specs/2026-05-24-day17a-dashboard-design.md,
 > docs/superpowers/plans/2026-05-24-day17a-dashboard.md.
-> Осталось по Дню 17: 17B (объявления), 17C (настройки/команда), 17D (PDF-отчёт).
+> **17D (PDF-отчёт) закрыт 2026-05-28.** GET /analytics/export/monthly-report.pdf + ExportSection.
+> Дизайн/план: docs/superpowers/specs/2026-05-28-day17d-monthly-report-pdf-design.md,
+> docs/superpowers/plans/2026-05-28-day17d-monthly-report-pdf.md.
+> **День 17 закрыт полностью.**
 
 - [x] `AnnouncementsPage` — форма создания (title, body, icon, districts, expires_at) + список + снятие с публикации. Без редактирования и без поля category — см. docs/superpowers/specs/2026-05-24-day17b-announcements-design.md.
 - [ ] При публикации → push на mobile
@@ -440,10 +443,10 @@ Web admin может быть проще (показываем основной 
   - [x] Топ-5 по голосам жителей (см. мокап)
   - [ ] Карта с pins всех активных жалоб — отложено (нужен ключ Yandex JS API)
 - [x] `AnalyticsPage` — trend-карты + SLA + влияние голосов + переключатель периода.
-- [ ] **PDF «Сводный отчёт за месяц»** (один реальный из 4 в мокапе):
-  - [ ] Бэкенд: `GET /analytics/export/monthly-report.pdf` — генерация через OpenPDF (`com.github.librepdf:openpdf:1.3.30`, Apache 2.0). Шаблон: KPI + графики (можно как картинки из data-URL) + топ районов + SLA-таблица.
-  - [ ] Фронт: 1-я карточка в Settings → Export — кликабельная, скачивает PDF.
-  - [ ] Остальные 3 карточки (Реестр / SLA / Голосование) — рендерятся с состоянием `disabled` + tooltip «Скоро» (см. SPEC § 12).
+- [x] **PDF «Сводный отчёт за месяц»** (один реальный из 4 в мокапе):
+  - [x] Бэкенд: `GET /analytics/export/monthly-report.pdf` — генерация через OpenPDF (`com.github.librepdf:openpdf:1.3.30`, Apache 2.0). Шаблон: KPI + топ районов + SLA-таблица. **Без графиков** (решение при brainstorming).
+  - [x] Фронт: 1-я карточка в Settings → Export — кликабельная, скачивает PDF.
+  - [x] Остальные 3 карточки (Реестр / SLA / Голосование) — рендерятся с состоянием `disabled` + tooltip «Скоро» (см. SPEC § 12).
 - [x] `SettingsPage` — приглашение админов, audit-лог (последние 50 событий). Профиль/смена пароля/2FA UI — в backlog (бэкенд готов).
 - [x] **Управление командой в Settings:**
   - [x] Список админов через `GET /auth/admin/users` (фильтр по статусу: ACTIVE / FROZEN / PENDING).

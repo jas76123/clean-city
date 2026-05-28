@@ -64,6 +64,20 @@ class TokenRepository {
         EmailTokens.update({ EmailTokens.id eq tokenId }) { it[EmailTokens.consumed] = true }
     }
 
+    /**
+     * Помечает consumed = true для всех непогашенных ADMIN_INVITE-токенов
+     * указанного пользователя. Возвращает число затронутых строк.
+     */
+    fun invalidateInviteForUser(userId: Long): Int = transaction {
+        EmailTokens.update({
+            (EmailTokens.userId eq userId) and
+                (EmailTokens.purpose eq EmailTokenPurpose.ADMIN_INVITE.name) and
+                (EmailTokens.consumed eq false)
+        }) {
+            it[EmailTokens.consumed] = true
+        }
+    }
+
     // ----- Refresh tokens -----
 
     fun createRefreshToken(

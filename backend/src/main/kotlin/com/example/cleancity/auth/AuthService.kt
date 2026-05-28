@@ -35,6 +35,11 @@ class TwoFactorNotConfiguredException : RuntimeException("2FA not configured")
 class InvalidTotpCodeException : RuntimeException("Invalid 2FA code")
 class TwoFactorRoleException : RuntimeException("2FA available only for admin/operator/inspector")
 
+class SelfFreezeException : RuntimeException("Нельзя заморозить собственный аккаунт")
+class LastActiveAdminException : RuntimeException("Это последний активный администратор")
+class InviteNotAcceptedException : RuntimeException("Сотрудник ещё не принял приглашение")
+class NotAPendingInviteException : RuntimeException("Это не pending-приглашение")
+
 /**
  * Результат шага 1 логина: либо успех (резидент или админ без 2FA),
  * либо требование 2FA с challenge-токеном.
@@ -411,6 +416,32 @@ class AuthService(
                 details = it.details
             )
         }
+    }
+
+    /**
+     * Замораживает сотрудника:
+     *  - I1: нельзя замораживать самого себя
+     *  - I2: если targetRole == ADMIN, должен остаться ≥1 активный ADMIN после операции
+     *  - I5: все refresh-токены target ревокаются
+     */
+    suspend fun freezeUser(actorId: Long, targetId: Long, ip: String?, ua: String?) {
+        if (actorId == targetId) throw SelfFreezeException()
+
+        val target = users.findById(targetId)
+            ?: throw IllegalArgumentException("User not found")
+        if (target.role == UserRole.RESIDENT) {
+            throw IllegalArgumentException("Cannot freeze a resident via team API")
+        }
+
+        if (target.role == UserRole.ADMIN) {
+            val activeAdminsAfter = users.listByTeamStatus(TeamStatus.ACTIVE)
+                .count { it.role == UserRole.ADMIN && it.id != targetId }
+            if (activeAdminsAfter < 1) throw LastActiveAdminException()
+        }
+
+        users.setActive(targetId, false)
+        tokens.revokeAllUserRefreshTokens(targetId)
+        audit.log(AuditAction.ADMIN_USER_FROZEN, actorId, "user", targetId.toString(), ip, ua)
     }
 
     private fun UserRow.toTeamMemberDto(): TeamMemberDto {

@@ -174,6 +174,10 @@ class UserRepository {
         }
     }
 
+    fun setActive(userId: Long, value: Boolean) = transaction {
+        Users.update({ Users.id eq userId }) { it[Users.isActive] = value }
+    }
+
     /**
      * Список сотрудников (ADMIN/OPERATOR) по статусу команды.
      * status = null → все три статуса (без RESIDENT).

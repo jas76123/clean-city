@@ -1,0 +1,25 @@
+# deploy/Caddyfile
+# Три поддомена. Caddy сам получает Let's Encrypt при первом запуске —
+# нужны A-записи в REG.RU, указывающие на public IP VM.
+
+clean--city.ru, www.clean--city.ru {
+	root * /srv/landing
+	file_server
+	encode gzip
+	@apk path /cleancity.apk
+	header @apk Content-Disposition "attachment; filename=cleancity.apk"
+}
+
+admin.clean--city.ru {
+	reverse_proxy web-admin:80
+	encode gzip
+}
+
+api.clean--city.ru {
+	reverse_proxy backend:8080
+	request_body {
+		max_size 10MB
+	}
+	# CORS не нужен — admin.clean--city.ru работает через прокси,
+	# SPA дёргает /api на своём origin (см. Task 4, web-admin nginx-config).
+}

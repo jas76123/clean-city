@@ -405,6 +405,24 @@ class AuthAdminTeamRoutesTest {
     }
 
     @Test
+    fun `invite with missing fullName field returns 400 with VALIDATION_BAD_FIELD`() {
+        initDb()
+        val adminId = seedUser("admin@t.local", UserRole.ADMIN)
+
+        testApplication {
+            appWithAuth()
+            val resp = client.post("/auth/admin/invite") {
+                header(HttpHeaders.Authorization, "Bearer ${bearerFor(adminId, UserRole.ADMIN)}")
+                contentType(ContentType.Application.Json)
+                setBody("""{"email":"new@t.local","role":"OPERATOR"}""")
+            }
+            assertEquals(HttpStatusCode.BadRequest, resp.status)
+            val body = resp.bodyAsText()
+            assertTrue(body.contains("VALIDATION_BAD_FIELD"), "expected code VALIDATION_BAD_FIELD, got: $body")
+        }
+    }
+
+    @Test
     fun `invite with fullName creates pending user with that name`() {
         initDb()
         val adminId = seedUser("admin2@t.local", UserRole.ADMIN)

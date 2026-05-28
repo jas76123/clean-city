@@ -66,7 +66,6 @@ export function TeamTable({ status, members, currentRole, onAction }: Props) {
           <TableHead>Email</TableHead>
           <TableHead>ФИО</TableHead>
           <TableHead>Роль</TableHead>
-          <TableHead>Район</TableHead>
           <TableHead>{status === 'pending' ? 'Приглашён' : 'Последний вход'}</TableHead>
           {showActions && <TableHead className="text-right">Действия</TableHead>}
         </TableRow>
@@ -81,7 +80,6 @@ export function TeamTable({ status, members, currentRole, onAction }: Props) {
                 {m.role === 'ADMIN' ? 'Админ' : 'Оператор'}
               </Badge>
             </TableCell>
-            <TableCell>{m.district ?? 'Все районы'}</TableCell>
             <TableCell>{formatDate(status === 'pending' ? m.invitedAt : m.lastLoginAt)}</TableCell>
             {showActions && action && (
               <TableCell className="text-right">

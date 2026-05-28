@@ -8,7 +8,6 @@ const member: TeamMemberDto = {
   email: 'a@b.c',
   fullName: 'Иван Иванов',
   role: 'OPERATOR',
-  district: null,
   status: 'ACTIVE',
   createdAt: '2026-05-28T12:00:00Z',
   lastLoginAt: '2026-05-28T11:00:00Z',
@@ -39,5 +38,29 @@ describe('TeamTable', () => {
       />,
     )
     expect(screen.getByText('—')).toBeInTheDocument()
+  })
+
+  it('shows fullName in row', () => {
+    render(
+      <TeamTable
+        status="active"
+        members={[member]}
+        currentRole="ADMIN"
+        onAction={() => {}}
+      />,
+    )
+    expect(screen.getByText('Иван Иванов')).toBeInTheDocument()
+  })
+
+  it('does not render district column', () => {
+    render(
+      <TeamTable
+        status="active"
+        members={[member]}
+        currentRole="ADMIN"
+        onAction={() => {}}
+      />,
+    )
+    expect(screen.queryByRole('columnheader', { name: /район/i })).toBeNull()
   })
 })

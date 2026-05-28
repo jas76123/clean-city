@@ -16,9 +16,10 @@ export async function listTeamMembers(
 
 export async function inviteTeamMember(
   email: string,
+  fullName: string,
   role: 'ADMIN' | 'OPERATOR',
 ): Promise<void> {
-  await api.post('/auth/admin/invite', { email, role })
+  await api.post('/auth/admin/invite', { email, fullName, role })
 }
 
 export async function freezeUser(userId: number): Promise<void> {

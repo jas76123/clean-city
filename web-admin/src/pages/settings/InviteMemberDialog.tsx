@@ -21,26 +21,30 @@ import {
 type Props = {
   open: boolean
   loading?: boolean
-  onSubmit: (email: string, role: 'ADMIN' | 'OPERATOR') => void
+  onSubmit: (email: string, fullName: string, role: 'ADMIN' | 'OPERATOR') => void
   onCancel: () => void
 }
 
 export function InviteMemberDialog({ open, loading = false, onSubmit, onCancel }: Props) {
   const [email, setEmail] = useState('')
+  const [fullName, setFullName] = useState('')
   const [role, setRole] = useState<'ADMIN' | 'OPERATOR'>('OPERATOR')
 
   const handleSubmit = () => {
-    if (!email.trim()) return
-    onSubmit(email.trim(), role)
+    if (!email.trim() || !fullName.trim()) return
+    onSubmit(email.trim(), fullName.trim(), role)
   }
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
       setEmail('')
+      setFullName('')
       setRole('OPERATOR')
       onCancel()
     }
   }
+
+  const canSubmit = email.trim().length > 0 && fullName.trim().length > 0
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -60,6 +64,17 @@ export function InviteMemberDialog({ open, loading = false, onSubmit, onCancel }
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="ivan@sochi.gov.ru"
+              disabled={loading}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="invite-fullname">ФИО</Label>
+            <Input
+              id="invite-fullname"
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Иван Иванов"
               disabled={loading}
             />
           </div>
@@ -84,7 +99,7 @@ export function InviteMemberDialog({ open, loading = false, onSubmit, onCancel }
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={loading}>
             Отмена
           </Button>
-          <Button onClick={handleSubmit} disabled={loading || !email.trim()}>
+          <Button onClick={handleSubmit} disabled={loading || !canSubmit}>
             {loading ? 'Отправляем…' : 'Пригласить'}
           </Button>
         </DialogFooter>

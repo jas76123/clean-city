@@ -277,7 +277,6 @@ export interface TeamMemberDto {
   email: string
   fullName: string | null
   role: 'ADMIN' | 'OPERATOR'
-  district: string | null
   status: TeamStatus
   createdAt: string
   lastLoginAt: string | null

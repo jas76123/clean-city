@@ -71,8 +71,8 @@ export function TeamSection({ currentRole }: Props) {
   }
 
   const inviteMut = useMutation({
-    mutationFn: (vars: { email: string; role: 'ADMIN' | 'OPERATOR' }) =>
-      inviteTeamMember(vars.email, vars.role),
+    mutationFn: (vars: { email: string; fullName: string; role: 'ADMIN' | 'OPERATOR' }) =>
+      inviteTeamMember(vars.email, vars.fullName, vars.role),
     onSuccess: () => {
       toast.success('Приглашение отправлено')
       setInviteOpen(false)
@@ -149,7 +149,7 @@ export function TeamSection({ currentRole }: Props) {
       <InviteMemberDialog
         open={inviteOpen}
         loading={inviteMut.isPending}
-        onSubmit={(email, role) => inviteMut.mutate({ email, role })}
+        onSubmit={(email, fullName, role) => inviteMut.mutate({ email, fullName, role })}
         onCancel={() => setInviteOpen(false)}
       />
 

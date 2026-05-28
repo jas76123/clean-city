@@ -1,6 +1,8 @@
 import { useAuth } from '@/auth/AuthContext'
 import { TeamSection } from './settings/TeamSection'
-import { AuditLogSection } from './settings/AuditLogSection'
+// Журнал событий временно скрыт — секция готова, но решено не показывать
+// до отдельной договорённости. Раскомментировать импорт + render ниже.
+// import { AuditLogSection } from './settings/AuditLogSection'
 
 export function SettingsPage() {
   const { user } = useAuth()
@@ -10,7 +12,7 @@ export function SettingsPage() {
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold">Настройки</h1>
       <TeamSection currentRole={role} />
-      <AuditLogSection />
+      {/* <AuditLogSection /> */}
     </div>
   )
 }

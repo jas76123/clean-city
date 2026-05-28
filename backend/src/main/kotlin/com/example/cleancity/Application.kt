@@ -13,6 +13,7 @@ import com.example.cleancity.auth.bootstrapInitialAdmin
 import com.example.cleancity.analytics.AnalyticsRepository
 import com.example.cleancity.analytics.AnalyticsService
 import com.example.cleancity.analytics.analyticsRoutes
+import com.example.cleancity.analytics.pdf.MonthlyReportPdfService
 import com.example.cleancity.announcements.AnnouncementRepository
 import com.example.cleancity.announcements.AnnouncementService
 import com.example.cleancity.announcements.announcementRoutes
@@ -154,6 +155,7 @@ fun Application.module() {
 
     val analyticsRepository = AnalyticsRepository()
     val analyticsService = AnalyticsService(analyticsRepository)
+    val monthlyReportPdfService = MonthlyReportPdfService(analyticsService)
 
     installNotificationCleanup(notificationRepository)
 
@@ -178,7 +180,7 @@ fun Application.module() {
         voteRoutes(voteService)
         notificationRoutes(notificationRepository)
         announcementRoutes(announcementService)
-        analyticsRoutes(analyticsService)
+        analyticsRoutes(analyticsService, monthlyReportPdfService)
         if (storage is LocalStorageService) {
             photoRoutes(storage)
         }

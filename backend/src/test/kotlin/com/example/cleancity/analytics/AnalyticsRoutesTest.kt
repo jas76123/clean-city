@@ -82,7 +82,10 @@ class AnalyticsRoutesTest {
                 }
             }
             installApiErrorHandling()
-            routing { analyticsRoutes(AnalyticsService(AnalyticsRepository())) }
+            routing {
+                val analyticsSvc = AnalyticsService(AnalyticsRepository())
+                analyticsRoutes(analyticsSvc, com.example.cleancity.analytics.pdf.MonthlyReportPdfService(analyticsSvc))
+            }
         }
     }
 
@@ -255,5 +258,46 @@ class AnalyticsRoutesTest {
             header("Authorization", "Bearer ${bearerFor(ctx.residentId, UserRole.RESIDENT)}")
         }
         assertEquals(HttpStatusCode.Forbidden, resp.status)
+    }
+
+    @Test
+    fun `guest gets 401 on monthly report pdf`() = testApplication {
+        initDb()
+        appWith()
+
+        val resp = client.get("/analytics/export/monthly-report.pdf")
+        assertEquals(HttpStatusCode.Unauthorized, resp.status)
+    }
+
+    @Test
+    fun `resident gets 403 on monthly report pdf`() = testApplication {
+        val ctx = initDb()
+        appWith()
+
+        val resp = client.get("/analytics/export/monthly-report.pdf") {
+            header("Authorization", "Bearer ${bearerFor(ctx.residentId, UserRole.RESIDENT)}")
+        }
+        assertEquals(HttpStatusCode.Forbidden, resp.status)
+    }
+
+    @Test
+    fun `admin gets 200 with pdf headers and magic bytes`() = testApplication {
+        val ctx = initDb()
+        appWith()
+
+        val resp = client.get("/analytics/export/monthly-report.pdf") {
+            header("Authorization", "Bearer ${bearerFor(ctx.adminId, UserRole.ADMIN)}")
+        }
+        assertEquals(HttpStatusCode.OK, resp.status)
+        assertEquals("application/pdf", resp.headers["Content-Type"])
+        val disposition = resp.headers["Content-Disposition"] ?: ""
+        assertEquals(
+            true,
+            disposition.startsWith("attachment; filename=\"cleancity-monthly-report-") &&
+                disposition.endsWith(".pdf\""),
+            "Content-Disposition: $disposition",
+        )
+        val bytes = resp.readBytes()
+        assertEquals("%PDF-".toByteArray().toList(), bytes.take(5))
     }
 }

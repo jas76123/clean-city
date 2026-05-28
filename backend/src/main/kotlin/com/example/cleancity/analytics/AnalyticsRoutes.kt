@@ -2,21 +2,26 @@ package com.example.cleancity.analytics
 
 import com.example.cleancity.ForbiddenException
 import com.example.cleancity.UnauthorizedException
+import com.example.cleancity.analytics.pdf.MonthlyReportPdfService
 import com.example.cleancity.shared.models.AnalyticsPeriod
 import com.example.cleancity.shared.models.UserRole
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondBytes
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 
 private val ADMIN_ROLES = setOf(UserRole.ADMIN, UserRole.OPERATOR)
 
-fun Route.analyticsRoutes(service: AnalyticsService) {
+fun Route.analyticsRoutes(service: AnalyticsService, pdfService: MonthlyReportPdfService) {
     authenticate("auth-jwt") {
         route("/analytics") {
             get("/overview") {
@@ -64,6 +69,15 @@ fun Route.analyticsRoutes(service: AnalyticsService) {
                     "Invalid groupBy '$groupByRaw' (allowed: day, week, month)"
                 }
                 call.respond(service.trendsRange(call.period(), groupBy = groupByRaw))
+            }
+            get("/export/monthly-report.pdf") {
+                call.requireAdmin()
+                val bytes = pdfService.generate()
+                call.response.header(
+                    HttpHeaders.ContentDisposition,
+                    "attachment; filename=\"${pdfService.filename()}\"",
+                )
+                call.respondBytes(bytes, ContentType.Application.Pdf)
             }
         }
     }

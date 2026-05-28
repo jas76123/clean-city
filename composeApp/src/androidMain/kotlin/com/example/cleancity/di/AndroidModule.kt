@@ -1,6 +1,7 @@
 package com.example.cleancity.di
 
 import com.example.cleancity.BuildConfig
+import com.example.cleancity.data.local.SeenNotificationStoreFactory
 import com.example.cleancity.data.storage.TokenStorageFactory
 import com.example.cleancity.domain.location.AndroidLocationProvider
 import com.example.cleancity.domain.location.LocationProvider
@@ -15,6 +16,7 @@ import org.koin.dsl.module
 fun androidModule(): Module = module {
     single { NetworkConfig(baseUrl = BuildConfig.API_BASE_URL, isDebug = BuildConfig.IS_DEBUG) }
     single { TokenStorageFactory(androidContext()) }
+    single { SeenNotificationStoreFactory(androidContext()) }
     single<HttpClientEngine> { OkHttp.create() }
     single<LocationProvider> { AndroidLocationProvider(androidContext()) }
     single<MapSearchProvider> { AndroidMapSearchProvider() }

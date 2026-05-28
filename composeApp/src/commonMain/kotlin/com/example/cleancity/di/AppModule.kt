@@ -1,5 +1,7 @@
 package com.example.cleancity.di
 
+import com.example.cleancity.data.local.SeenNotificationStore
+import com.example.cleancity.data.local.SeenNotificationStoreFactory
 import com.example.cleancity.data.network.AnnouncementsApi
 import com.example.cleancity.data.network.AnnouncementsApiContract
 import com.example.cleancity.data.network.AuthApi
@@ -15,6 +17,9 @@ import com.example.cleancity.data.network.createHttpClient
 import com.example.cleancity.data.repository.AuthRepository
 import com.example.cleancity.data.storage.TokenStorage
 import com.example.cleancity.data.storage.TokenStorageFactory
+import com.example.cleancity.domain.AnnouncementSeenFilter
+import com.example.cleancity.domain.AuthState
+import com.example.cleancity.domain.NotificationEventBus
 import com.example.cleancity.domain.UnreadCountStore
 import com.example.cleancity.domain.location.LocationProvider
 import com.example.cleancity.ui.feature.auth.ForgotPasswordScreenModel
@@ -40,6 +45,7 @@ data class NetworkConfig(val baseUrl: String, val isDebug: Boolean)
 
 fun appModule(): Module = module {
     single { get<TokenStorageFactory>().create() } bind TokenStorage::class
+    single { get<SeenNotificationStoreFactory>().create() } bind SeenNotificationStore::class
 
     single {
         val cfg = get<NetworkConfig>()
@@ -69,8 +75,18 @@ fun appModule(): Module = module {
 
     single { AuthRepository(get(), get(), get(), get()) }
 
+    single { NotificationEventBus() }
+    single { AnnouncementSeenFilter(get<SeenNotificationStore>()) }
+
     single {
-        UnreadCountStore(api = get<NotificationsApiContract>())
+        val authRepo = get<AuthRepository>()
+        UnreadCountStore(
+            api = get<NotificationsApiContract>(),
+            seenStore = get<SeenNotificationStore>(),
+            filter = get<AnnouncementSeenFilter>(),
+            bus = get<NotificationEventBus>(),
+            authProvider = { (authRepo.state.value as? AuthState.Authenticated)?.user?.id },
+        )
     }
 
     single { com.example.cleancity.ui.feature.map.picker.AddressPickerBus() }

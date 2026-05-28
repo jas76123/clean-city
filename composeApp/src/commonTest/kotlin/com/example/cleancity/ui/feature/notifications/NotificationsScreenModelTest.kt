@@ -1,11 +1,14 @@
 package com.example.cleancity.ui.feature.notifications
 
+import com.example.cleancity.data.local.InMemorySeenNotificationStore
 import com.example.cleancity.data.network.FakeAuthApi
 import com.example.cleancity.data.network.FakeNotificationsApi
 import com.example.cleancity.data.network.FakeUserApi
 import com.example.cleancity.data.repository.AuthRepository
 import com.example.cleancity.data.storage.FakeTokenStorage
 import com.example.cleancity.data.storage.Tokens
+import com.example.cleancity.domain.AnnouncementSeenFilter
+import com.example.cleancity.domain.NotificationEventBus
 import com.example.cleancity.domain.UnreadCountStore
 import com.example.cleancity.shared.models.NotificationKind
 import com.example.cleancity.shared.models.NotificationListResponse
@@ -40,15 +43,42 @@ class NotificationsScreenModelTest {
         createdAt = "2026-05-21T09:00:00Z",
     )
 
+    /** Конструктор UnreadCountStore с разумными дефолтами для тестов screen-model. */
+    private fun TestScope.makeStore(
+        api: FakeNotificationsApi = FakeNotificationsApi(),
+        userId: Long? = 1L,
+    ): UnreadCountStore {
+        val seen = InMemorySeenNotificationStore()
+        return UnreadCountStore(
+            api = api,
+            seenStore = seen,
+            filter = AnnouncementSeenFilter(seen),
+            bus = NotificationEventBus(),
+            authProvider = { userId },
+            scope = this,
+            dispatcher = UnconfinedTestDispatcher(testScheduler),
+        )
+    }
+
     // UnreadCountStore.stop() обнуляет счётчик, поэтому посеять значение можно
     // только через один прогон polling: start() + runCurrent(). Polling-job
     // оставляем активным до конца теста — в самом тесте вызвать store.stop().
     private fun TestScope.seededStore(initial: Int): UnreadCountStore {
-        val store = UnreadCountStore(
-            api = FakeNotificationsApi().apply { nextCount = initial.toLong() },
-            scope = this,
-            dispatcher = UnconfinedTestDispatcher(testScheduler),
-        )
+        val items = (1..initial).map {
+            NotificationResponse(
+                id = it.toLong(),
+                kind = NotificationKind.ANNOUNCEMENT,
+                title = "T",
+                body = "B",
+                createdAt = "2026-05-21T09:00:00Z",
+            )
+        }
+        val api = FakeNotificationsApi().apply {
+            nextListResult = Result.success(
+                NotificationListResponse(items, items.size.toLong(), false)
+            )
+        }
+        val store = makeStore(api = api)
         store.start()
         testScheduler.runCurrent()
         return store
@@ -76,7 +106,7 @@ class NotificationsScreenModelTest {
         val api = FakeNotificationsListApi().apply {
             nextListResult = Result.success(NotificationListResponse(emptyList(), 0, false))
         }
-        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()), authedRepo())
+        val model = NotificationsScreenModel(api, makeStore(), authedRepo())
 
         model.load()
 
@@ -89,7 +119,7 @@ class NotificationsScreenModelTest {
                 NotificationListResponse(listOf(notification(1), notification(2)), 2, false)
             )
         }
-        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()), authedRepo())
+        val model = NotificationsScreenModel(api, makeStore(), authedRepo())
 
         model.load()
 
@@ -101,7 +131,7 @@ class NotificationsScreenModelTest {
         val api = FakeNotificationsListApi().apply {
             nextListResult = Result.failure(RuntimeException("нет сети"))
         }
-        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()), authedRepo())
+        val model = NotificationsScreenModel(api, makeStore(), authedRepo())
 
         model.load()
 
@@ -211,7 +241,7 @@ class NotificationsScreenModelTest {
                 )
             )
         }
-        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()), authedRepo())
+        val model = NotificationsScreenModel(api, makeStore(), authedRepo())
         model.load()
 
         val state = model.state.value as NotificationsState.Loaded
@@ -220,7 +250,7 @@ class NotificationsScreenModelTest {
 
     @Test fun `load as guest yields GuestPrompt and never calls api`() = runTest {
         val api = FakeNotificationsListApi()
-        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()), guestRepo())
+        val model = NotificationsScreenModel(api, makeStore(), guestRepo())
 
         model.load()
 
@@ -232,7 +262,7 @@ class NotificationsScreenModelTest {
         val api = FakeNotificationsListApi().apply {
             nextListResult = Result.success(NotificationListResponse(emptyList(), 0, false))
         }
-        val model = NotificationsScreenModel(api, UnreadCountStore(FakeNotificationsApi()), authedRepo())
+        val model = NotificationsScreenModel(api, makeStore(), authedRepo())
 
         model.load()
 

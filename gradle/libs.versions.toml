@@ -26,6 +26,10 @@ metadata-extractor = "2.19.0"
 aws-sdk = "2.29.10"
 play-services-location = "21.3.0"
 coil = "3.0.4"
+androidx-work = "2.10.0"
+androidx-datastore = "1.1.1"
+androidx-lifecycle-process = "2.8.7"
+androidx-core-ktx = "1.13.1"
 
 [libraries]
 voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.ref = "voyager" }
@@ -77,6 +81,10 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "androidx-work" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidx-datastore" }
+androidx-lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "androidx-lifecycle-process" }
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core-ktx" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

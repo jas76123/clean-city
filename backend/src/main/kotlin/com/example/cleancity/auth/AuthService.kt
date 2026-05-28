@@ -460,6 +460,20 @@ class AuthService(
         audit.log(AuditAction.ADMIN_USER_UNFROZEN, actorId, "user", targetId.toString(), ip, ua)
     }
 
+    /**
+     * Отзыв pending-приглашения. I4: target должен быть pending
+     * (is_active=false, email_verified=false). После — invalidate токенов + delete row.
+     */
+    suspend fun revokeInvitation(actorId: Long, targetId: Long, ip: String?, ua: String?) {
+        val target = users.findById(targetId)
+            ?: throw IllegalArgumentException("User not found")
+        if (target.isActive || target.emailVerified) throw NotAPendingInviteException()
+
+        tokens.invalidateInviteForUser(targetId)
+        users.delete(targetId)
+        audit.log(AuditAction.ADMIN_INVITE_REVOKED, actorId, "user", targetId.toString(), ip, ua)
+    }
+
     private fun UserRow.toTeamMemberDto(): TeamMemberDto {
         val status = when {
             isActive && emailVerified -> TeamStatus.ACTIVE

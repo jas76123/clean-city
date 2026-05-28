@@ -5,6 +5,7 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import com.example.cleancity.data.network.NotificationsApiContract
 import com.example.cleancity.data.repository.AuthRepository
 import com.example.cleancity.domain.AuthState
+import com.example.cleancity.domain.NotificationEventBus
 import com.example.cleancity.domain.UnreadCountStore
 import com.example.cleancity.shared.models.NotificationResponse
 import com.example.cleancity.ui.util.listErrorMessage
@@ -35,10 +36,22 @@ class NotificationsScreenModel(
     private val api: NotificationsApiContract,
     private val unreadCountStore: UnreadCountStore,
     private val authRepo: AuthRepository,
+    private val bus: NotificationEventBus,
 ) : ScreenModel {
 
     private val _state = MutableStateFlow<NotificationsState>(NotificationsState.Initial)
     val state: StateFlow<NotificationsState> = _state.asStateFlow()
+
+    init {
+        // Push-канал замечает новое ANNOUNCEMENT — подтягиваем список без
+        // ожидания pull-to-refresh, иначе элемент появляется только после
+        // того как юзер сам обновит экран.
+        screenModelScope.launch {
+            bus.newAnnouncements.collect {
+                if (authRepo.state.value is AuthState.Authenticated) load()
+            }
+        }
+    }
 
     /** Грузит список. Вызывается при открытии экрана; повторно — через pull-to-refresh. */
     fun load() {

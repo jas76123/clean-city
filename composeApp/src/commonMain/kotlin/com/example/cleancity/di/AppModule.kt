@@ -116,6 +116,7 @@ fun appModule(): Module = module {
             complaintsApi = get<ComplaintsApiContract>(),
             announcementsApi = get<AnnouncementsApiContract>(),
             authRepo = get(),
+            notificationBus = get<NotificationEventBus>(),
         )
     }
     factory { (complaintId: Long) ->
@@ -137,6 +138,7 @@ fun appModule(): Module = module {
             api = get<NotificationsApiContract>(),
             unreadCountStore = get<UnreadCountStore>(),
             authRepo = get(),
+            bus = get<NotificationEventBus>(),
         )
     }
     factory {

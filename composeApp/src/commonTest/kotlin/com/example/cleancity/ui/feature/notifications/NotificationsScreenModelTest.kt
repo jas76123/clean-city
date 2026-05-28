@@ -106,7 +106,7 @@ class NotificationsScreenModelTest {
         val api = FakeNotificationsListApi().apply {
             nextListResult = Result.success(NotificationListResponse(emptyList(), 0, false))
         }
-        val model = NotificationsScreenModel(api, makeStore(), authedRepo())
+        val model = NotificationsScreenModel(api, makeStore(), authedRepo(), NotificationEventBus())
 
         model.load()
 
@@ -119,7 +119,7 @@ class NotificationsScreenModelTest {
                 NotificationListResponse(listOf(notification(1), notification(2)), 2, false)
             )
         }
-        val model = NotificationsScreenModel(api, makeStore(), authedRepo())
+        val model = NotificationsScreenModel(api, makeStore(), authedRepo(), NotificationEventBus())
 
         model.load()
 
@@ -131,7 +131,7 @@ class NotificationsScreenModelTest {
         val api = FakeNotificationsListApi().apply {
             nextListResult = Result.failure(RuntimeException("нет сети"))
         }
-        val model = NotificationsScreenModel(api, makeStore(), authedRepo())
+        val model = NotificationsScreenModel(api, makeStore(), authedRepo(), NotificationEventBus())
 
         model.load()
 
@@ -145,7 +145,7 @@ class NotificationsScreenModelTest {
             )
         }
         val store = seededStore(2)
-        val model = NotificationsScreenModel(api, store, authedRepo())
+        val model = NotificationsScreenModel(api, store, authedRepo(), NotificationEventBus())
         model.load()
 
         model.markRead(1L)
@@ -164,7 +164,7 @@ class NotificationsScreenModelTest {
             )
         }
         val store = seededStore(3)
-        val model = NotificationsScreenModel(api, store, authedRepo())
+        val model = NotificationsScreenModel(api, store, authedRepo(), NotificationEventBus())
         model.load()
 
         model.markRead(1L)
@@ -182,7 +182,7 @@ class NotificationsScreenModelTest {
             markReadShouldThrow = true
         }
         val store = seededStore(1)
-        val model = NotificationsScreenModel(api, store, authedRepo())
+        val model = NotificationsScreenModel(api, store, authedRepo(), NotificationEventBus())
         model.load()
 
         model.markRead(1L)
@@ -201,7 +201,7 @@ class NotificationsScreenModelTest {
             )
         }
         val store = seededStore(2)
-        val model = NotificationsScreenModel(api, store, authedRepo())
+        val model = NotificationsScreenModel(api, store, authedRepo(), NotificationEventBus())
         model.load()
 
         model.markAllRead()
@@ -221,7 +221,7 @@ class NotificationsScreenModelTest {
             nextMarkAllResult = Result.failure(RuntimeException("нет сети"))
         }
         val store = seededStore(2)
-        val model = NotificationsScreenModel(api, store, authedRepo())
+        val model = NotificationsScreenModel(api, store, authedRepo(), NotificationEventBus())
         model.load()
 
         model.markAllRead()
@@ -241,7 +241,7 @@ class NotificationsScreenModelTest {
                 )
             )
         }
-        val model = NotificationsScreenModel(api, makeStore(), authedRepo())
+        val model = NotificationsScreenModel(api, makeStore(), authedRepo(), NotificationEventBus())
         model.load()
 
         val state = model.state.value as NotificationsState.Loaded
@@ -250,7 +250,7 @@ class NotificationsScreenModelTest {
 
     @Test fun `load as guest yields GuestPrompt and never calls api`() = runTest {
         val api = FakeNotificationsListApi()
-        val model = NotificationsScreenModel(api, makeStore(), guestRepo())
+        val model = NotificationsScreenModel(api, makeStore(), guestRepo(), NotificationEventBus())
 
         model.load()
 
@@ -262,7 +262,7 @@ class NotificationsScreenModelTest {
         val api = FakeNotificationsListApi().apply {
             nextListResult = Result.success(NotificationListResponse(emptyList(), 0, false))
         }
-        val model = NotificationsScreenModel(api, makeStore(), authedRepo())
+        val model = NotificationsScreenModel(api, makeStore(), authedRepo(), NotificationEventBus())
 
         model.load()
 

@@ -6,6 +6,7 @@ import com.example.cleancity.data.network.AnnouncementsApiContract
 import com.example.cleancity.data.network.ComplaintsApiContract
 import com.example.cleancity.data.repository.AuthRepository
 import com.example.cleancity.domain.AuthState
+import com.example.cleancity.domain.NotificationEventBus
 import com.example.cleancity.domain.VoteEventBus
 import com.example.cleancity.shared.models.AnnouncementResponse
 import com.example.cleancity.shared.models.ComplaintResponse
@@ -42,6 +43,7 @@ class FeedScreenModel(
     private val complaintsApi: ComplaintsApiContract,
     private val announcementsApi: AnnouncementsApiContract,
     private val authRepo: AuthRepository,
+    private val notificationBus: NotificationEventBus,
 ) : ScreenModel {
 
     private val _state = MutableStateFlow<FeedState>(FeedState.Initial)
@@ -62,6 +64,12 @@ class FeedScreenModel(
                     loaded.copy(complaints = updated)
                 }
             }
+        }
+        // Polling-канал отметил новое ANNOUNCEMENT — обновляем карусель
+        // на ленте; иначе свежее объявление видно только после ручного
+        // refresh или перезапуска.
+        screenModelScope.launch {
+            notificationBus.newAnnouncements.collect { refresh() }
         }
     }
 

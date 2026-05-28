@@ -66,6 +66,8 @@ class MainShellScreen : Screen {
         TabNavigator(FeedTab) {
             val tabNavigator = LocalTabNavigator.current
 
+            NotificationPermissionGate(enabled = authState is AuthState.Authenticated)
+
             // 1. In-app banner подписка
             LaunchedEffect(Unit) {
                 bus.newAnnouncements.collect { n ->

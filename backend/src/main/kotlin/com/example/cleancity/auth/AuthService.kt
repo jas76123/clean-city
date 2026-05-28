@@ -27,7 +27,7 @@ class InvalidCredentialsException(msg: String = "Invalid email or password") : R
 class TokenInvalidException(msg: String = "Invalid or expired token") : RuntimeException(msg)
 class WeakPasswordException(msg: String) : IllegalArgumentException(msg)
 class InvalidEmailException(msg: String = "Invalid email format") : IllegalArgumentException(msg)
-class InvalidFullNameException(msg: String = "Full name is required") : IllegalArgumentException(msg)
+class InvalidFullNameException(msg: String = "ФИО обязательно") : IllegalArgumentException(msg)
 class EmailAlreadyRegisteredException(msg: String = "Email already registered") : RuntimeException(msg)
 class AccountLockedException(val lockedUntil: OffsetDateTime) :
     RuntimeException("Account locked until $lockedUntil")

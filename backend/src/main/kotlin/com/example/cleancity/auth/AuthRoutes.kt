@@ -257,6 +257,8 @@ fun Route.authRoutes(
                     call.respond(HttpStatusCode.Created, invited)
                 } catch (e: InvalidEmailException) {
                     throw BadRequestException(e.message ?: "Invalid email", ErrorCodes.VALIDATION_INVALID_EMAIL)
+                } catch (e: InvalidFullNameException) {
+                    throw BadRequestException(e.message ?: "ФИО обязательно", ErrorCodes.VALIDATION_BAD_FIELD)
                 } catch (_: EmailAlreadyRegisteredException) {
                     throw ConflictException("Email already registered", ErrorCodes.EMAIL_ALREADY_REGISTERED)
                 }

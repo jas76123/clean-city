@@ -387,7 +387,7 @@ class AuthAdminTeamRoutesTest {
     }
 
     @Test
-    fun `invite with blank fullName returns 400`() {
+    fun `invite with blank fullName returns 400 with VALIDATION_BAD_FIELD`() {
         initDb()
         val adminId = seedUser("admin@t.local", UserRole.ADMIN)
 
@@ -399,6 +399,8 @@ class AuthAdminTeamRoutesTest {
                 setBody("""{"email":"new@t.local","fullName":"   ","role":"OPERATOR"}""")
             }
             assertEquals(HttpStatusCode.BadRequest, resp.status)
+            val body = resp.bodyAsText()
+            assertTrue(body.contains("VALIDATION_BAD_FIELD"), "expected code VALIDATION_BAD_FIELD, got: $body")
         }
     }
 

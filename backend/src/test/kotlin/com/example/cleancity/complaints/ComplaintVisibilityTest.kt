@@ -156,16 +156,16 @@ class ComplaintVisibilityTest {
     }
 
     @Test
-    fun `operator and inspector also see all statuses`() {
+    fun `operator and admin also see all statuses`() {
         val author = seedUser("a@x.ru")
         val op = seedUser("op@x.ru", UserRole.OPERATOR)
-        val ins = seedUser("ins@x.ru", UserRole.INSPECTOR)
+        val adm = seedUser("adm@x.ru", UserRole.ADMIN)
         seedAllStatuses(author)
 
         val opResp = service.list(Viewer.Authenticated(op, UserRole.OPERATOR), PublicListFilter())
-        val insResp = service.list(Viewer.Authenticated(ins, UserRole.INSPECTOR), PublicListFilter())
+        val admResp = service.list(Viewer.Authenticated(adm, UserRole.ADMIN), PublicListFilter())
         assertEquals(5, opResp.items.size)
-        assertEquals(5, insResp.items.size)
+        assertEquals(5, admResp.items.size)
     }
 
     @Test

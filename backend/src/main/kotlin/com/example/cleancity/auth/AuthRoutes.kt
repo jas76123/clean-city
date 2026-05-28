@@ -13,6 +13,9 @@ import com.example.cleancity.shared.models.SessionDto
 import com.example.cleancity.shared.models.SessionsResponse
 import com.example.cleancity.shared.models.TwoFactorSetupResponse
 import com.example.cleancity.shared.models.UserRole
+import com.example.cleancity.shared.responses.admin.AuditLogResponse
+import com.example.cleancity.shared.responses.admin.TeamMembersResponse
+import com.example.cleancity.shared.responses.admin.TeamStatus
 import com.example.cleancity.shared.requests.auth.AcceptInviteRequest
 import com.example.cleancity.shared.requests.auth.AdminInviteRequest
 import com.example.cleancity.shared.requests.auth.ForgotPasswordRequest
@@ -234,21 +237,95 @@ fun Route.authRoutes(
             post("/admin/invite") {
                 val actorId = call.requireUserId()
                 val role = call.requireRole()
-                if (role !in setOf(UserRole.ADMIN, UserRole.OPERATOR, UserRole.INSPECTOR)) {
-                    throw ForbiddenException("Admins only")
+                if (role != UserRole.ADMIN) {
+                    throw ForbiddenException("Только администраторы могут приглашать сотрудников")
                 }
                 val req = call.receive<AdminInviteRequest>()
                 val targetRole = runCatching { UserRole.valueOf(req.role) }.getOrNull()
-                if (targetRole == null || targetRole == UserRole.RESIDENT) {
-                    throw BadRequestException("Invalid invite role", ErrorCodes.VALIDATION_BAD_FIELD)
+                if (targetRole == null || targetRole !in setOf(UserRole.ADMIN, UserRole.OPERATOR)) {
+                    throw BadRequestException("Роль должна быть ADMIN или OPERATOR", ErrorCodes.VALIDATION_BAD_FIELD)
                 }
                 try {
-                    val invited = service.inviteAdmin(actorId, req.email, targetRole, call.clientIp(), call.userAgentSafe())
+                    val invited = service.inviteAdmin(
+                        actorId,
+                        req.email,
+                        req.fullName,
+                        targetRole,
+                        call.clientIp(),
+                        call.userAgentSafe()
+                    )
                     call.respond(HttpStatusCode.Created, invited)
                 } catch (e: InvalidEmailException) {
                     throw BadRequestException(e.message ?: "Invalid email", ErrorCodes.VALIDATION_INVALID_EMAIL)
+                } catch (e: InvalidFullNameException) {
+                    throw BadRequestException(e.message ?: "ФИО обязательно", ErrorCodes.VALIDATION_BAD_FIELD)
                 } catch (_: EmailAlreadyRegisteredException) {
                     throw ConflictException("Email already registered", ErrorCodes.EMAIL_ALREADY_REGISTERED)
+                }
+            }
+
+            get("/admin/users") {
+                val role = call.requireRole()
+                if (role !in setOf(UserRole.ADMIN, UserRole.OPERATOR)) {
+                    throw ForbiddenException("Только сотрудники", ErrorCodes.FORBIDDEN)
+                }
+                val status = call.parameters["status"]?.let { raw ->
+                    runCatching { TeamStatus.valueOf(raw.uppercase()) }.getOrNull()
+                        ?: throw BadRequestException("Invalid status", ErrorCodes.VALIDATION_BAD_FIELD)
+                }
+                call.respond(HttpStatusCode.OK, TeamMembersResponse(service.listTeamMembers(status)))
+            }
+
+            get("/admin/audit-log") {
+                val role = call.requireRole()
+                if (role !in setOf(UserRole.ADMIN, UserRole.OPERATOR)) {
+                    throw ForbiddenException("Только сотрудники", ErrorCodes.FORBIDDEN)
+                }
+                val limit = call.parameters["limit"]?.toIntOrNull()?.coerceIn(1, 50) ?: 50
+                call.respond(HttpStatusCode.OK, AuditLogResponse(service.recentAuditEvents(limit)))
+            }
+
+            post("/admin/users/{id}/freeze") {
+                val actorId = call.requireUserId()
+                val role = call.requireRole()
+                if (role != UserRole.ADMIN) throw ForbiddenException("Admins only", ErrorCodes.FORBIDDEN)
+                val targetId = call.parameters["id"]?.toLongOrNull()
+                    ?: throw BadRequestException("Invalid user id", ErrorCodes.VALIDATION_BAD_FIELD)
+                try {
+                    service.freezeUser(actorId, targetId, call.clientIp(), call.userAgentSafe())
+                    call.respond(HttpStatusCode.NoContent)
+                } catch (_: SelfFreezeException) {
+                    throw ForbiddenException("Нельзя заморозить собственный аккаунт", ErrorCodes.ADMIN_CANNOT_FREEZE_SELF)
+                } catch (_: LastActiveAdminException) {
+                    throw ConflictException("Это последний активный администратор", ErrorCodes.LAST_ACTIVE_ADMIN)
+                }
+            }
+
+            post("/admin/users/{id}/unfreeze") {
+                val actorId = call.requireUserId()
+                val role = call.requireRole()
+                if (role != UserRole.ADMIN) throw ForbiddenException("Admins only", ErrorCodes.FORBIDDEN)
+                val targetId = call.parameters["id"]?.toLongOrNull()
+                    ?: throw BadRequestException("Invalid user id", ErrorCodes.VALIDATION_BAD_FIELD)
+                try {
+                    service.unfreezeUser(actorId, targetId, call.clientIp(), call.userAgentSafe())
+                    call.respond(HttpStatusCode.NoContent)
+                } catch (_: InviteNotAcceptedException) {
+                    throw BadRequestException("Сотрудник ещё не принял приглашение", ErrorCodes.INVITE_NOT_ACCEPTED)
+                }
+            }
+
+            delete("/admin/invitations/{id}") {
+                val actorId = call.requireUserId()
+                val role = call.requireRole()
+                if (role != UserRole.ADMIN) throw ForbiddenException("Admins only", ErrorCodes.FORBIDDEN)
+                val targetId = call.parameters["id"]?.toLongOrNull()
+                    ?: throw BadRequestException("Invalid user id", ErrorCodes.VALIDATION_BAD_FIELD)
+                try {
+                    service.revokeInvitation(actorId, targetId, call.clientIp(), call.userAgentSafe())
+                    call.respond(HttpStatusCode.NoContent)
+                } catch (_: NotAPendingInviteException) {
+                    throw BadRequestException("Это не pending-приглашение", ErrorCodes.NOT_A_PENDING_INVITE)
                 }
             }
         }

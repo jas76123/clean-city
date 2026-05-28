@@ -43,11 +43,12 @@ object EmailTemplates {
         return subject to html
     }
 
-    fun adminInvite(acceptLink: String, invitedBy: String): Pair<String, String> {
+    fun adminInvite(acceptLink: String, invitedBy: String, recipientName: String): Pair<String, String> {
         val subject = "Вас пригласили в админ-кабинет CleanCity"
         val html = """
             <html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
             <h2 style="color:#0d2b1a">Чистый Город · Сочи · Админ-кабинет</h2>
+            <p>Здравствуйте, $recipientName!</p>
             <p>$invitedBy пригласил(а) вас в админ-кабинет CleanCity. Установите пароль, чтобы активировать аккаунт:</p>
             <p><a href="$acceptLink" style="display:inline-block;background:#5DDE8A;color:#0d2b1a;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">Активировать аккаунт</a></p>
             <p style="color:#666;font-size:13px">Или скопируйте ссылку: $acceptLink</p>

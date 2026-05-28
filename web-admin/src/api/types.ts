@@ -1,4 +1,4 @@
-export type UserRole = 'RESIDENT' | 'OPERATOR' | 'INSPECTOR' | 'ADMIN'
+export type UserRole = 'RESIDENT' | 'OPERATOR' | 'ADMIN'
 
 export interface UserResponse {
   id: number
@@ -266,4 +266,38 @@ export interface CreateAnnouncementRequest {
   iconStyle: IconStyle
   districts: string[]
   expiresAt?: string
+}
+
+// --- Settings: команда + audit-лог (Day 17C) ---
+
+export type TeamStatus = 'ACTIVE' | 'FROZEN' | 'PENDING'
+
+export interface TeamMemberDto {
+  id: number
+  email: string
+  fullName: string | null
+  role: 'ADMIN' | 'OPERATOR'
+  status: TeamStatus
+  createdAt: string
+  lastLoginAt: string | null
+  invitedAt: string | null
+}
+
+export interface TeamMembersResponse {
+  items: TeamMemberDto[]
+}
+
+export interface AuditEntryDto {
+  id: number
+  timestamp: string
+  actorEmail: string | null
+  action: string
+  targetType: string | null
+  targetId: string | null
+  ip: string | null
+  details: string | null
+}
+
+export interface AuditLogResponse {
+  items: AuditEntryDto[]
 }

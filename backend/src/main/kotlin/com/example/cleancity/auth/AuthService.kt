@@ -7,6 +7,9 @@ import com.example.cleancity.email.EmailTemplates
 import com.example.cleancity.shared.models.AuthResponse
 import com.example.cleancity.shared.models.UserResponse
 import com.example.cleancity.shared.models.UserRole
+import com.example.cleancity.shared.responses.admin.AuditEntryDto
+import com.example.cleancity.shared.responses.admin.TeamMemberDto
+import com.example.cleancity.shared.responses.admin.TeamStatus
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
@@ -24,6 +27,7 @@ class InvalidCredentialsException(msg: String = "Invalid email or password") : R
 class TokenInvalidException(msg: String = "Invalid or expired token") : RuntimeException(msg)
 class WeakPasswordException(msg: String) : IllegalArgumentException(msg)
 class InvalidEmailException(msg: String = "Invalid email format") : IllegalArgumentException(msg)
+class InvalidFullNameException(msg: String = "ФИО обязательно") : IllegalArgumentException(msg)
 class EmailAlreadyRegisteredException(msg: String = "Email already registered") : RuntimeException(msg)
 class AccountLockedException(val lockedUntil: OffsetDateTime) :
     RuntimeException("Account locked until $lockedUntil")
@@ -31,6 +35,11 @@ class TwoFactorAlreadyEnabledException : RuntimeException("2FA already enabled")
 class TwoFactorNotConfiguredException : RuntimeException("2FA not configured")
 class InvalidTotpCodeException : RuntimeException("Invalid 2FA code")
 class TwoFactorRoleException : RuntimeException("2FA available only for admin/operator/inspector")
+
+class SelfFreezeException : RuntimeException("Нельзя заморозить собственный аккаунт")
+class LastActiveAdminException : RuntimeException("Это последний активный администратор")
+class InviteNotAcceptedException : RuntimeException("Сотрудник ещё не принял приглашение")
+class NotAPendingInviteException : RuntimeException("Это не pending-приглашение")
 
 /**
  * Результат шага 1 логина: либо успех (резидент или админ без 2FA),
@@ -56,7 +65,8 @@ class AuthService(
     private val baseUrl: String,
     private val termsVersion: String,
     private val totp: TotpService = TotpService(),
-    private val audit: AuditLogger = NoopAuditLogger
+    private val audit: AuditLogger = NoopAuditLogger,
+    private val auditLog: AuditLogRepository = AuditLogRepository()
 ) {
 
     /**
@@ -288,22 +298,24 @@ class AuthService(
     suspend fun inviteAdmin(
         actorId: Long,
         targetEmail: String,
+        targetFullName: String,
         targetRole: UserRole,
         ip: String?,
         userAgent: String?
     ): UserResponse {
         if (targetRole == UserRole.RESIDENT) throw IllegalArgumentException("Use registration for residents")
         validateEmail(targetEmail)
+        val normalizedName = targetFullName.trim()
+        if (normalizedName.isEmpty()) throw InvalidFullNameException()
         val existing = users.findByEmail(targetEmail)
         if (existing != null) throw EmailAlreadyRegisteredException()
 
-        // Placeholder-хэш — будет перезаписан в acceptInvite. is_active=false до активации.
         val placeholder = PasswordHasher.hash(java.util.UUID.randomUUID().toString())
         val user = users.create(
             email = targetEmail,
             passwordHash = placeholder,
             role = targetRole,
-            fullName = null,
+            fullName = normalizedName,
             isActive = false,
             emailVerified = false,
             mustChangePassword = true
@@ -312,7 +324,7 @@ class AuthService(
         val token = tokens.createEmailToken(user.id, EmailTokenPurpose.ADMIN_INVITE, INVITE_TOKEN_TTL_SECONDS)
         val link = "$baseUrl/accept-invite?token=$token"
         val invitedBy = users.findById(actorId)?.email ?: "Администратор CleanCity"
-        val (subject, html) = EmailTemplates.adminInvite(link, invitedBy)
+        val (subject, html) = EmailTemplates.adminInvite(link, invitedBy, normalizedName)
         email.send(user.email, subject, html)
 
         audit.log(AuditAction.ADMIN_INVITE_SENT, actorId, "user", user.id.toString(), ip, userAgent, "role=${targetRole.name}")
@@ -387,6 +399,101 @@ class AuthService(
         emailVerified = emailVerified,
         createdAt = createdAt.toString()
     )
+
+    suspend fun listTeamMembers(status: TeamStatus?): List<TeamMemberDto> {
+        val rows = users.listByTeamStatus(status)
+        return rows.map { it.toTeamMemberDto() }
+    }
+
+    suspend fun recentAuditEvents(limit: Int = 50): List<AuditEntryDto> {
+        val rows = auditLog.findRecent(limit.coerceIn(1, 50))
+        return rows.map {
+            AuditEntryDto(
+                id = it.id,
+                timestamp = it.createdAt.toString(),
+                actorEmail = it.actorEmail,
+                action = it.action,
+                targetType = it.targetType,
+                targetId = it.targetId,
+                ip = it.ip,
+                details = it.details
+            )
+        }
+    }
+
+    /**
+     * Замораживает сотрудника:
+     *  - I1: нельзя замораживать самого себя
+     *  - I2: если targetRole == ADMIN, должен остаться ≥1 активный ADMIN после операции
+     *  - I5: все refresh-токены target ревокаются
+     */
+    suspend fun freezeUser(actorId: Long, targetId: Long, ip: String?, ua: String?) {
+        if (actorId == targetId) throw SelfFreezeException()
+
+        val target = users.findById(targetId)
+            ?: throw IllegalArgumentException("User not found")
+        if (target.role == UserRole.RESIDENT) {
+            throw IllegalArgumentException("Cannot freeze a resident via team API")
+        }
+
+        if (target.role == UserRole.ADMIN) {
+            val activeAdminsAfter = users.listByTeamStatus(TeamStatus.ACTIVE)
+                .count { it.role == UserRole.ADMIN && it.id != targetId }
+            if (activeAdminsAfter < 1) throw LastActiveAdminException()
+        }
+
+        users.setActive(targetId, false)
+        tokens.revokeAllUserRefreshTokens(targetId)
+        audit.log(AuditAction.ADMIN_USER_FROZEN, actorId, "user", targetId.toString(), ip, ua)
+    }
+
+    /**
+     * Размораживает сотрудника. I3: target должен быть с email_verified=true
+     * (frozen, не pending).
+     */
+    suspend fun unfreezeUser(actorId: Long, targetId: Long, ip: String?, ua: String?) {
+        val target = users.findById(targetId)
+            ?: throw IllegalArgumentException("User not found")
+        if (target.role == UserRole.RESIDENT) {
+            throw IllegalArgumentException("Cannot unfreeze a resident via team API")
+        }
+        if (!target.emailVerified) throw InviteNotAcceptedException()
+
+        users.setActive(targetId, true)
+        audit.log(AuditAction.ADMIN_USER_UNFROZEN, actorId, "user", targetId.toString(), ip, ua)
+    }
+
+    /**
+     * Отзыв pending-приглашения. I4: target должен быть pending
+     * (is_active=false, email_verified=false). После — invalidate токенов + delete row.
+     */
+    suspend fun revokeInvitation(actorId: Long, targetId: Long, ip: String?, ua: String?) {
+        val target = users.findById(targetId)
+            ?: throw IllegalArgumentException("User not found")
+        if (target.isActive || target.emailVerified) throw NotAPendingInviteException()
+
+        tokens.invalidateInviteForUser(targetId)
+        users.delete(targetId)
+        audit.log(AuditAction.ADMIN_INVITE_REVOKED, actorId, "user", targetId.toString(), ip, ua)
+    }
+
+    private fun UserRow.toTeamMemberDto(): TeamMemberDto {
+        val status = when {
+            isActive && emailVerified -> TeamStatus.ACTIVE
+            !isActive && emailVerified -> TeamStatus.FROZEN
+            else -> TeamStatus.PENDING
+        }
+        return TeamMemberDto(
+            id = id,
+            email = email,
+            fullName = fullName,
+            role = role.name,
+            status = status,
+            createdAt = createdAt.toString(),
+            lastLoginAt = lastLoginAt?.toString(),
+            invitedAt = if (status == TeamStatus.PENDING) createdAt.toString() else null
+        )
+    }
 }
 
 /**

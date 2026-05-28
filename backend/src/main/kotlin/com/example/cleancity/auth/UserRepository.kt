@@ -2,7 +2,12 @@ package com.example.cleancity.auth
 
 import com.example.cleancity.database.tables.Users
 import com.example.cleancity.shared.models.UserRole
+import com.example.cleancity.shared.responses.admin.TeamStatus
 import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.selectAll
@@ -17,6 +22,7 @@ data class UserRow(
     val passwordHash: String,
     val role: UserRole,
     val fullName: String?,
+    val district: String?,
     val emailVerified: Boolean,
     val isActive: Boolean,
     val failedLoginAttempts: Int,
@@ -24,7 +30,8 @@ data class UserRow(
     val totpSecret: String?,
     val totpEnabled: Boolean,
     val mustChangePassword: Boolean,
-    val createdAt: OffsetDateTime
+    val createdAt: OffsetDateTime,
+    val lastLoginAt: OffsetDateTime?
 )
 
 class UserRepository {
@@ -39,13 +46,12 @@ class UserRepository {
 
     /**
      * true, если в системе есть хотя бы один пользователь с админ-ролью
-     * (ADMIN / OPERATOR / INSPECTOR), независимо от is_active.
+     * (ADMIN / OPERATOR), независимо от is_active.
      */
     fun hasAnyAdmin(): Boolean = transaction {
         !Users.selectAll().where {
             (Users.role eq UserRole.ADMIN.name) or
-                (Users.role eq UserRole.OPERATOR.name) or
-                (Users.role eq UserRole.INSPECTOR.name)
+                (Users.role eq UserRole.OPERATOR.name)
         }.empty()
     }
 
@@ -82,6 +88,7 @@ class UserRepository {
             passwordHash = passwordHash,
             role = role,
             fullName = fullName,
+            district = null,
             emailVerified = emailVerified,
             isActive = isActive,
             failedLoginAttempts = 0,
@@ -89,7 +96,8 @@ class UserRepository {
             totpSecret = null,
             totpEnabled = false,
             mustChangePassword = mustChangePassword,
-            createdAt = now
+            createdAt = now,
+            lastLoginAt = null
         )
     }
 
@@ -168,12 +176,43 @@ class UserRepository {
         }
     }
 
+    fun setActive(userId: Long, value: Boolean) = transaction {
+        Users.update({ Users.id eq userId }) { it[Users.isActive] = value }
+    }
+
+    fun delete(userId: Long): Int = transaction {
+        Users.deleteWhere { Users.id eq userId }
+    }
+
+    /**
+     * Список сотрудников (ADMIN/OPERATOR) по статусу команды.
+     * status = null → все три статуса (без RESIDENT).
+     */
+    fun listByTeamStatus(status: TeamStatus?): List<UserRow> = transaction {
+        Users.selectAll().where {
+            val staffRoles = (Users.role eq UserRole.ADMIN.name) or (Users.role eq UserRole.OPERATOR.name)
+            val statusFilter = when (status) {
+                TeamStatus.ACTIVE ->
+                    (Users.isActive eq true) and (Users.emailVerified eq true)
+                TeamStatus.FROZEN ->
+                    (Users.isActive eq false) and (Users.emailVerified eq true)
+                TeamStatus.PENDING ->
+                    (Users.isActive eq false) and (Users.emailVerified eq false)
+                null -> null
+            }
+            if (statusFilter == null) staffRoles else staffRoles and statusFilter
+        }
+            .orderBy(Users.createdAt to SortOrder.DESC)
+            .map { it.toUserRow() }
+    }
+
     private fun ResultRow.toUserRow() = UserRow(
         id = this[Users.id],
         email = this[Users.email],
         passwordHash = this[Users.passwordHash],
         role = UserRole.valueOf(this[Users.role]),
         fullName = this[Users.fullName],
+        district = this[Users.district],
         emailVerified = this[Users.emailVerified],
         isActive = this[Users.isActive],
         failedLoginAttempts = this[Users.failedLoginAttempts],
@@ -181,6 +220,7 @@ class UserRepository {
         totpSecret = this[Users.totpSecret],
         totpEnabled = this[Users.totpEnabled],
         mustChangePassword = this[Users.mustChangePassword],
-        createdAt = this[Users.createdAt]
+        createdAt = this[Users.createdAt],
+        lastLoginAt = this[Users.lastLoginAt]
     )
 }

@@ -259,6 +259,7 @@ class AuthSecurityTest {
         val invited = service.inviteAdmin(
             actorId = actorId,
             targetEmail = "newadmin@example.com",
+            targetFullName = "Test User",
             targetRole = UserRole.OPERATOR,
             ip = null,
             userAgent = null
@@ -288,7 +289,7 @@ class AuthSecurityTest {
     @Test
     fun `acceptInvite rejects weak password by admin rules`() = runBlocking<Unit> {
         val actorId = createAdmin("inviter2@example.com")
-        service.inviteAdmin(actorId, "newadmin2@example.com", UserRole.ADMIN, null, null)
+        service.inviteAdmin(actorId, "newadmin2@example.com", "Test User", UserRole.ADMIN, null, null)
         val token = email.lastTokenLink()
 
         assertFailsWith<WeakPasswordException> {
@@ -300,8 +301,39 @@ class AuthSecurityTest {
     fun `inviteAdmin refuses RESIDENT role`() = runBlocking<Unit> {
         val actorId = createAdmin("inviter3@example.com")
         assertFailsWith<IllegalArgumentException> {
-            service.inviteAdmin(actorId, "x@example.com", UserRole.RESIDENT, null, null)
+            service.inviteAdmin(actorId, "x@example.com", "Test User", UserRole.RESIDENT, null, null)
         }
+    }
+
+    @Test
+    fun `inviteAdmin saves fullName and uses it`() = runBlocking<Unit> {
+        val actorId = createAdmin("inviter4@example.com")
+
+        val invited = service.inviteAdmin(
+            actorId = actorId,
+            targetEmail = "named@example.com",
+            targetFullName = "Иван Иванов",
+            targetRole = UserRole.OPERATOR,
+            ip = null,
+            userAgent = null
+        )
+        val saved = users.findById(invited.id)!!
+        assertEquals("Иван Иванов", saved.fullName)
+    }
+
+    @Test
+    fun `inviteAdmin rejects blank fullName`() = runBlocking<Unit> {
+        val actorId = createAdmin("inviter5@example.com")
+        assertFailsWith<InvalidFullNameException> {
+            service.inviteAdmin(actorId, "x2@example.com", "   ", UserRole.OPERATOR, null, null)
+        }
+    }
+
+    @Test
+    fun `inviteAdmin trims fullName`() = runBlocking<Unit> {
+        val actorId = createAdmin("inviter6@example.com")
+        val invited = service.inviteAdmin(actorId, "y@example.com", "  Анна Сидорова  ", UserRole.OPERATOR, null, null)
+        assertEquals("Анна Сидорова", users.findById(invited.id)!!.fullName)
     }
 
     @Test

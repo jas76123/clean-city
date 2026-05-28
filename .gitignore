@@ -46,3 +46,6 @@ uploads/
 web-admin/node_modules/
 web-admin/dist/
 web-admin/.env
+
+# артефакт случайного npx-запуска в корне (web-admin держит свой node_modules)
+/node_modules/

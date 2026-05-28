@@ -59,7 +59,7 @@ fun AnnouncementInAppBanner(data: SnackbarData) {
         Spacer(Modifier.size(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                text = "Новое объявление",
+                text = "Новое уведомление",
                 style = MaterialTheme.typography.labelSmall,
                 color = Accent,
             )

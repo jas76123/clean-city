@@ -60,7 +60,7 @@ class AnnouncementSeenFilterTest {
     }
 
     @Test
-    fun `filter excludes COMPLAINT_STATUS even if newer`() = runTest {
+    fun `filter includes COMPLAINT_STATUS as well as ANNOUNCEMENT`() = runTest {
         val store = InMemorySeenNotificationStore()
         store.set(42L, 5L)
         val filter = AnnouncementSeenFilter(store)
@@ -71,8 +71,8 @@ class AnnouncementSeenFilterTest {
         )
         val newOnes = filter.newAnnouncements(42L, items)
 
-        assertEquals(listOf(6L), newOnes.map { it.id })
-        assertEquals(7L, store.get(42L), "lastSeen должен подняться даже на не-ANNOUNCEMENT")
+        assertEquals(listOf(7L, 6L), newOnes.map { it.id })
+        assertEquals(7L, store.get(42L))
     }
 
     @Test

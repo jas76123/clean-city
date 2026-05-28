@@ -10,6 +10,7 @@ import com.example.cleancity.domain.NotificationEventBus
 import com.example.cleancity.domain.VoteEventBus
 import com.example.cleancity.shared.models.AnnouncementResponse
 import com.example.cleancity.shared.models.ComplaintResponse
+import com.example.cleancity.shared.models.NotificationKind
 import com.example.cleancity.ui.util.listErrorMessage
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -65,11 +66,13 @@ class FeedScreenModel(
                 }
             }
         }
-        // Polling-канал отметил новое ANNOUNCEMENT — обновляем карусель
-        // на ленте; иначе свежее объявление видно только после ручного
-        // refresh или перезапуска.
+        // Polling-канал отметил новое уведомление: для ANNOUNCEMENT обновляем
+        // карусель на ленте (иначе свежее объявление видно только после ручного
+        // refresh). COMPLAINT_STATUS-уведомления карусели не касаются.
         screenModelScope.launch {
-            notificationBus.newAnnouncements.collect { refresh() }
+            notificationBus.newAnnouncements.collect { n ->
+                if (n.kind == NotificationKind.ANNOUNCEMENT) refresh()
+            }
         }
     }
 

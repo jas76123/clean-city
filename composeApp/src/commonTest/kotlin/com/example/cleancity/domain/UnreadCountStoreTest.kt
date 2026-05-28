@@ -124,7 +124,7 @@ class UnreadCountStoreTest {
     }
 
     @Test
-    fun `subsequent poll does not emit COMPLAINT_STATUS`() = runTest {
+    fun `subsequent poll emits COMPLAINT_STATUS to bus`() = runTest {
         val bus = NotificationEventBus()
         val seen = InMemorySeenNotificationStore()
         val api = FakeNotificationsApi().apply {
@@ -136,7 +136,7 @@ class UnreadCountStoreTest {
         testScheduler.runCurrent()
 
         val collected = mutableListOf<NotificationResponse>()
-        val job = launch { bus.newAnnouncements.toList(collected) }
+        val job = launch { bus.newAnnouncements.take(1).toList(collected) }
 
         api.nextListResult = Result.success(listResp(listOf(
             NotificationResponse(
@@ -150,10 +150,10 @@ class UnreadCountStoreTest {
         )))
         testScheduler.advanceTimeBy(30_001)
         testScheduler.runCurrent()
+        job.join()
 
-        assertTrue(collected.isEmpty())
+        assertEquals(listOf(6L), collected.map { it.id })
         store.stop()
-        job.cancel()
     }
 
     @Test

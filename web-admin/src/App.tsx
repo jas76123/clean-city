@@ -5,11 +5,11 @@ import { LoginPage } from '@/pages/LoginPage'
 import { AcceptInvitePage } from '@/pages/AcceptInvitePage'
 import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
-import { SectionPlaceholder } from '@/pages/placeholders/SectionPlaceholder'
 import { ComplaintsPage } from '@/pages/ComplaintsPage'
 import { OverviewPage } from '@/pages/OverviewPage'
 import { AnalyticsPage } from '@/pages/AnalyticsPage'
 import { AnnouncementsPage } from '@/pages/AnnouncementsPage'
+import { SettingsPage } from '@/pages/SettingsPage'
 
 export default function App() {
   return (
@@ -26,7 +26,7 @@ export default function App() {
             <Route path="/complaints" element={<ComplaintsPage />} />
             <Route path="/announcements" element={<AnnouncementsPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route path="/settings" element={<SectionPlaceholder title="Настройки" />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

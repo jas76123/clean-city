@@ -43,6 +43,7 @@ dependencies {
     implementation(libs.metadata.extractor)
     implementation(libs.aws.sdk.s3)
     implementation(libs.kotlinx.datetime)
+    implementation("com.github.librepdf:openpdf:1.3.30")
 
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.kotlin.test)

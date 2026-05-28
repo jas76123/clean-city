@@ -433,7 +433,7 @@ Web admin может быть проще (показываем основной 
 > **День 17 закрыт полностью.**
 
 - [x] `AnnouncementsPage` — форма создания (title, body, icon, districts, expires_at) + список + снятие с публикации. Без редактирования и без поля category — см. docs/superpowers/specs/2026-05-24-day17b-announcements-design.md.
-- [ ] При публикации → push на mobile
+- [x] При публикации → push на mobile — реализован как local notification (WorkManager + NotificationManager + in-app banner). FCM отложен. См. `docs/superpowers/specs/2026-05-28-day17b-announcement-push-design.md` + `docs/superpowers/plans/2026-05-28-day17b-announcement-push.md`.
 - [x] `OverviewPage` (главный экран после логина):
   - [x] Карточки KPI (total, NEW, IN_PROGRESS, RESOLVED, today, week, SLA breach)
   - [x] **SLA-алерт-баннер** наверху если `sla_breach_count > 0` — текст из `/analytics/overview` (см. мокап `admin-dashboard-v2.html`).

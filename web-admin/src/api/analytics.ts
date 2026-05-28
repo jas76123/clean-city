@@ -1,4 +1,5 @@
 import { api } from './client'
+import { parseContentDisposition } from './contentDisposition'
 import type {
   AnalyticsOverview,
   AnalyticsPeriod,
@@ -65,4 +66,14 @@ export async function getStrategic(period: AnalyticsPeriod): Promise<StrategicKp
 export async function getReopen(period: AnalyticsPeriod): Promise<ReopenStat> {
   const res = await api.get<ReopenStat>('/analytics/reopen', { params: { period } })
   return res.data
+}
+
+export async function downloadMonthlyReport(): Promise<{ blob: Blob; filename: string }> {
+  const res = await api.get<Blob>('/analytics/export/monthly-report.pdf', {
+    responseType: 'blob',
+  })
+  const filename =
+    parseContentDisposition(res.headers['content-disposition']) ??
+    'cleancity-monthly-report.pdf'
+  return { blob: res.data, filename }
 }

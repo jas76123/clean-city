@@ -86,6 +86,7 @@ class MainShellScreen : Screen {
             LaunchedEffect(pendingTap) {
                 val id = pendingTap ?: return@LaunchedEffect
                 tabNavigator.current = NotificationsTab
+                store.decrement(1)   // оптимистично уменьшаем бейдж
                 NotificationTapBus.consume(id)
             }
 

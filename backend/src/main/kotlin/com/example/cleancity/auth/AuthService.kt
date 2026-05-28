@@ -444,6 +444,22 @@ class AuthService(
         audit.log(AuditAction.ADMIN_USER_FROZEN, actorId, "user", targetId.toString(), ip, ua)
     }
 
+    /**
+     * Размораживает сотрудника. I3: target должен быть с email_verified=true
+     * (frozen, не pending).
+     */
+    suspend fun unfreezeUser(actorId: Long, targetId: Long, ip: String?, ua: String?) {
+        val target = users.findById(targetId)
+            ?: throw IllegalArgumentException("User not found")
+        if (target.role == UserRole.RESIDENT) {
+            throw IllegalArgumentException("Cannot unfreeze a resident via team API")
+        }
+        if (!target.emailVerified) throw InviteNotAcceptedException()
+
+        users.setActive(targetId, true)
+        audit.log(AuditAction.ADMIN_USER_UNFROZEN, actorId, "user", targetId.toString(), ip, ua)
+    }
+
     private fun UserRow.toTeamMemberDto(): TeamMemberDto {
         val status = when {
             isActive && emailVerified -> TeamStatus.ACTIVE

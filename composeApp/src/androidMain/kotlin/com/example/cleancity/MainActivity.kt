@@ -6,6 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.example.cleancity.domain.DeepLink
 import com.example.cleancity.domain.DeepLinkBus
+import com.example.cleancity.domain.NotificationTapBus
+import com.example.cleancity.notifications.SystemNotificationDispatcher
 import com.yandex.mapkit.MapKitFactory
 
 class MainActivity : ComponentActivity() {
@@ -33,7 +35,19 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        val uri = intent?.data ?: return
+        intent ?: return
+
+        // 1. Notification tap — extras от SystemNotificationDispatcher.
+        if (intent.hasExtra(SystemNotificationDispatcher.EXTRA_NOTIFICATION_ID)) {
+            val notifId = intent.getLongExtra(
+                SystemNotificationDispatcher.EXTRA_NOTIFICATION_ID, -1L,
+            )
+            if (notifId > 0) NotificationTapBus.emit(notifId)
+            return
+        }
+
+        // 2. Deep-link (email verify / reset password) — как было.
+        val uri = intent.data ?: return
         if (uri.scheme != "cleancity") return
         val token = uri.getQueryParameter("token") ?: return
         when (uri.host) {

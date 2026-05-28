@@ -1,6 +1,7 @@
 *.iml
 .gradle
 /local.properties
+/local.properties.*
 /.idea
 .DS_Store
 /build
@@ -50,3 +51,5 @@ web-admin/.env
 
 # артефакт случайного npx-запуска в корне (web-admin держит свой node_modules)
 /node_modules/
+deploy/landing/cleancity.apk
+deploy/landing/qr.png

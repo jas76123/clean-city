@@ -17,17 +17,13 @@ describe('ExportSection', () => {
     global.URL.revokeObjectURL = vi.fn()
   })
 
-  it('renders 4 export cards', () => {
+  it('renders only the active monthly report card', () => {
     render(<ExportSection />)
     expect(screen.getByText(/Сводный отчёт за месяц/i)).toBeInTheDocument()
-    expect(screen.getByText(/Реестр жалоб/i)).toBeInTheDocument()
-    expect(screen.getByText(/Отчёт по SLA/i)).toBeInTheDocument()
-    expect(screen.getByText(/Голосование жителей/i)).toBeInTheDocument()
-  })
-
-  it('marks 3 cards as disabled with "Скоро" badge', () => {
-    render(<ExportSection />)
-    expect(screen.getAllByText('Скоро')).toHaveLength(3)
+    expect(screen.queryByText(/Реестр жалоб/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Отчёт по SLA/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Голосование жителей/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('Скоро')).not.toBeInTheDocument()
   })
 
   it('calls downloadMonthlyReport on active button click', async () => {

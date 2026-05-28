@@ -14,12 +14,6 @@ function previousMonthLabel(now: Date = new Date()): string {
   return `${MONTHS_NOMINATIVE[prev.getMonth()]} ${prev.getFullYear()} г.`
 }
 
-const DISABLED_CARDS: Array<{ icon: string; title: string; subtitle: string }> = [
-  { icon: '📋', title: 'Реестр жалоб', subtitle: 'Все жалобы с фильтрами' },
-  { icon: '⏱', title: 'Отчёт по SLA', subtitle: 'Анализ соблюдения сроков' },
-  { icon: '🗳', title: 'Голосование жителей', subtitle: 'Активность по поддержке жалоб' },
-]
-
 export function ExportSection() {
   const [loading, setLoading] = useState(false)
 
@@ -65,20 +59,6 @@ export function ExportSection() {
             {loading ? 'Готовим…' : 'Скачать PDF'}
           </Button>
         </Card>
-        {DISABLED_CARDS.map((c) => (
-          <Card
-            key={c.title}
-            className="cursor-not-allowed p-4 opacity-50"
-            title="Появится в следующих обновлениях"
-            aria-disabled="true"
-          >
-            <div className="text-sm font-semibold">
-              {c.icon} {c.title}
-            </div>
-            <div className="mt-1 text-xs text-muted-foreground">{c.subtitle}</div>
-            <div className="mt-3 inline-block self-start rounded bg-muted px-2 py-0.5 text-xs">Скоро</div>
-          </Card>
-        ))}
       </div>
     </section>
   )

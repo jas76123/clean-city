@@ -68,13 +68,17 @@ done
 sleep 1
 
 # 4) pg_restore внутри контейнера.
+# pg_restore возвращает ненулевой код даже из-за безобидных ошибок (образ postgis уже
+# содержит схемы tiger/topology, а дамп их пересоздаёт → "already exists"). Поэтому НЕ
+# даём этому прервать скрипт — авторитетная проверка успеха ниже, по числу строк.
 docker cp "$DUMP" "$CONTAINER:/tmp/backup.dump"
 docker exec "$CONTAINER" pg_restore --no-owner --no-privileges \
-  -U postgres -d "$SCRATCH_DB" /tmp/backup.dump
+  -U postgres -d "$SCRATCH_DB" /tmp/backup.dump \
+  || echo "[restore-test] pg_restore завершился с игнорируемыми ошибками — проверяю по строкам"
 
-# 5) Проверка: ключевые таблицы есть и число строк — целое.
-ROWS_USERS=$(docker exec "$CONTAINER" psql -U postgres -d "$SCRATCH_DB" -tAc "SELECT count(*) FROM users")
-ROWS_COMPLAINTS=$(docker exec "$CONTAINER" psql -U postgres -d "$SCRATCH_DB" -tAc "SELECT count(*) FROM complaints")
+# 5) Проверка: ключевые таблицы есть и число строк — целое (это и есть критерий успеха).
+ROWS_USERS=$(docker exec "$CONTAINER" psql -U postgres -d "$SCRATCH_DB" -tAc "SELECT count(*) FROM users" 2>/dev/null || echo ERR)
+ROWS_COMPLAINTS=$(docker exec "$CONTAINER" psql -U postgres -d "$SCRATCH_DB" -tAc "SELECT count(*) FROM complaints" 2>/dev/null || echo ERR)
 ROWS_USERS="${ROWS_USERS//[[:space:]]/}"; ROWS_COMPLAINTS="${ROWS_COMPLAINTS//[[:space:]]/}"
 echo "[restore-test] users=$ROWS_USERS complaints=$ROWS_COMPLAINTS"
 

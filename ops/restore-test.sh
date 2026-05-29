@@ -53,10 +53,19 @@ echo "[restore-test] decrypted $DUMP_SIZE bytes"
 docker run -d --name "$CONTAINER" \
   -e POSTGRES_PASSWORD=restore -e POSTGRES_DB="$SCRATCH_DB" \
   postgis/postgis:16-3.4 >/dev/null
+# Entrypoint поднимает ВРЕМЕННЫЙ сервер для initdb, затем перезапускает настоящий.
+# pg_isready против временного даёт ложную готовность → pg_restore рвётся на середине
+# ("terminating connection due to administrator command"). Сначала ждём завершения
+# initdb, и только потом — готовности настоящего сервера.
+for _ in $(seq 1 60); do
+  docker logs "$CONTAINER" 2>&1 | grep -q "PostgreSQL init process complete" && break
+  sleep 1
+done
 for _ in $(seq 1 30); do
   docker exec "$CONTAINER" pg_isready -U postgres >/dev/null 2>&1 && break
   sleep 1
 done
+sleep 1
 
 # 4) pg_restore внутри контейнера.
 docker cp "$DUMP" "$CONTAINER:/tmp/backup.dump"

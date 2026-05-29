@@ -3,32 +3,33 @@ import type { AnalyticsPeriod } from '@/api/types'
 import {
   useStrategicQuery,
   useByCategoryQuery, useByDistrictQuery,
-  useReopenQuery, useTrendsRangeQuery, useVotesImpactQuery,
+  // HIDDEN_TEMPORARY: useReopenQuery, useTrendsRangeQuery, useVotesImpactQuery,
 } from '@/hooks/dashboardQueries'
 import { KpiCardWithTarget } from './analytics/KpiCardWithTarget'
 import { MedianP90Card } from './analytics/MedianP90Card'
-import { ReopenRateCard } from './analytics/ReopenRateCard'
+// HIDDEN_TEMPORARY: import { ReopenRateCard } from './analytics/ReopenRateCard'
 import { PeriodSwitcher } from './analytics/PeriodSwitcher'
 import { EquityTable } from './analytics/EquityTable'
-import { TrendCard } from './analytics/TrendCard'
-import { VotesImpactCard } from './analytics/VotesImpactCard'
+// HIDDEN_TEMPORARY: import { TrendCard } from './analytics/TrendCard'
+// HIDDEN_TEMPORARY: import { VotesImpactCard } from './analytics/VotesImpactCard'
 
-function groupByForPeriod(period: AnalyticsPeriod): 'day' | 'week' | 'month' {
-  if (period === 'WEEK' || period === 'MONTH') return 'day'
-  if (period === 'QUARTER') return 'week'
-  return 'month'  // YEAR, ALL
-}
+// HIDDEN_TEMPORARY: groupByForPeriod used only by hidden TrendCard section
+// function groupByForPeriod(period: AnalyticsPeriod): 'day' | 'week' | 'month' {
+//   if (period === 'WEEK' || period === 'MONTH') return 'day'
+//   if (period === 'QUARTER') return 'week'
+//   return 'month'  // YEAR, ALL
+// }
 
 export function AnalyticsPage() {
   const [period, setPeriod] = useState<AnalyticsPeriod>('MONTH')
-  const groupBy = groupByForPeriod(period)
+  // HIDDEN_TEMPORARY: const groupBy = groupByForPeriod(period)
 
   const strategic = useStrategicQuery(period)
-  const reopen = useReopenQuery(period)
-  const trends = useTrendsRangeQuery(period, groupBy)
+  // HIDDEN_TEMPORARY: const reopen = useReopenQuery(period)
+  // HIDDEN_TEMPORARY: const trends = useTrendsRangeQuery(period, groupBy)
   const byDistrict = useByDistrictQuery(period)
   const byCategory = useByCategoryQuery(period)
-  const votes = useVotesImpactQuery(period)
+  // HIDDEN_TEMPORARY: const votes = useVotesImpactQuery(period)
 
   if (strategic.isError) {
     return (
@@ -67,12 +68,14 @@ export function AnalyticsPage() {
           median={k.medianResolutionHours}
           p90={k.p90ResolutionHours}
         />
+        {/* HIDDEN_TEMPORARY: ReopenRateCard
         <ReopenRateCard
           reopenRate={k.reopenRate}
           reopenCount={reopen.data?.reopenCount ?? 0}
           resolvedCount={reopen.data?.resolvedCount ?? 0}
           target={k.reopenTargetPct}
         />
+        */}
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           <div className="text-xs text-slate-500">Закрыто за период</div>
           <div className="mt-1 text-2xl font-semibold text-slate-900">{k.throughput}</div>
@@ -80,12 +83,14 @@ export function AnalyticsPage() {
         </div>
       </section>
 
+      {/* HIDDEN_TEMPORARY: section "Динамика"
       <section>
         <h2 className="mb-2 text-sm font-medium text-slate-700">Динамика</h2>
         {trends.data
           ? <TrendCard trends={trends.data} />
           : <div className="text-sm text-slate-400">Загрузка…</div>}
       </section>
+      */}
 
       <section>
         <h2 className="mb-2 text-sm font-medium text-slate-700">Сравнение районов</h2>
@@ -101,7 +106,7 @@ export function AnalyticsPage() {
                 <th className="px-3 py-2">Категория</th>
                 <th className="px-3 py-2">Жалоб</th>
                 <th className="px-3 py-2">Медиана</th>
-                <th className="px-3 py-2">p90</th>
+                {/* HIDDEN_TEMPORARY: <th className="px-3 py-2">p90</th> */}
                 <th className="px-3 py-2">Соблюдение норматива, %</th>
               </tr>
             </thead>
@@ -120,9 +125,11 @@ export function AnalyticsPage() {
                     <td className="px-3 py-2 text-slate-700">
                       {c.medianResolutionHours == null ? '—' : `${c.medianResolutionHours.toFixed(1)}ч`}
                     </td>
+                    {/* HIDDEN_TEMPORARY: p90 column
                     <td className="px-3 py-2 text-slate-700">
                       {c.p90ResolutionHours == null ? '—' : `${c.p90ResolutionHours.toFixed(1)}ч`}
                     </td>
+                    */}
                     <td className={`px-3 py-2 font-medium ${slaText}`}>
                       {slaPct == null ? '—' : `${slaPct.toFixed(0)}%`}
                     </td>
@@ -134,9 +141,11 @@ export function AnalyticsPage() {
         </div>
       </section>
 
+      {/* HIDDEN_TEMPORARY: section "Влияние голосов на скорость решения"
       <section>
         <VotesImpactCard buckets={votes.data ?? []} />
       </section>
+      */}
     </div>
   )
 }

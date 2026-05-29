@@ -333,19 +333,16 @@ Also check `curl ... "/verify-email"` (no token) → `400`.
 
 ---
 
-### Task 4: (Your part) Yandex 360 + REG.RU DNS
+### Task 4: (Your part) Free Yandex mailbox + app-password
 
-Owner: Жасмин. No code. Domain `clean--city.ru` is registered at **REG.RU** → all DNS records are edited in the REG.RU DNS panel. Yandex 360 is only the mail provider.
+**Decision (2026-05-29):** Жасмин chose a **free personal `@yandex.ru` mailbox** over Yandex 360 для бизнеса — no subscription, no domain mail, no DNS records (MX/SPF/DKIM) and no domain verification. Trade-off: the sender address is `<account>@yandex.ru`, not `noreply@clean--city.ru`. Verification links are unaffected — they point to `api.clean--city.ru` (Task 3). Yandex SMTP rejects a `From` that differs from the authenticated account, so `EMAIL_FROM`'s address must equal `SMTP_USER`.
 
-- [ ] **Step 1:** In Yandex 360 (admin.yandex.ru) add/connect domain `clean--city.ru`.
-- [ ] **Step 2:** Add the records Yandex 360 shows, in the **REG.RU** DNS editor:
-  - verification **TXT** (value from Yandex 360),
-  - **MX** → `mx.yandex.net.` priority `10`,
-  - **SPF** TXT → `v=spf1 redirect=_spf.yandex.net`,
-  - **DKIM** TXT (key from Yandex 360 → "Почта" → DKIM).
-- [ ] **Step 3:** Wait for Yandex 360 to mark the domain verified (DNS propagation, up to a few hours).
-- [ ] **Step 4:** Create mailbox `noreply@clean--city.ru`.
-- [ ] **Step 5:** Create an **app-password** for SMTP for that mailbox (Yandex ID → Security → App passwords → "Mail"). Hand the app-password to Claude in-session — it goes only into `.env.prod`, never into git/commits.
+Owner: Жасмин. No code, no DNS.
+
+- [ ] **Step 1:** Create a free Yandex mailbox at https://mail.yandex.ru/ (e.g. `cleancity.sochi@yandex.ru`).
+- [ ] **Step 2:** Enable protocol access: Mail → Настройки → «Почтовые программы» (https://mail.yandex.ru/#setup/client) → allow access via mail clients (IMAP/SMTP). Save.
+- [ ] **Step 3:** Create an **app-password** at https://id.yandex.ru/security/app-passwords → type «Почта». Copy the 16-char password (shown once).
+- [ ] **Step 4:** Send Claude in-session: the `@yandex.ru` address + the app-password. It goes only into `.env.prod`, never into git/commits.
 
 ---
 
@@ -358,13 +355,13 @@ Owner: Жасмин. No code. Domain `clean--city.ru` is registered at **REG.RU*
 - [ ] **Step 1: Edit `/opt/cleancity/.env.prod`** (on prod, over SSH) — set:
 
 ```bash
-EMAIL_FROM=CleanCity Сочи <noreply@clean--city.ru>
+EMAIL_FROM=CleanCity Сочи <<account>@yandex.ru>
 SMTP_HOST=smtp.yandex.ru
 SMTP_PORT=465
-SMTP_USER=noreply@clean--city.ru
+SMTP_USER=<account>@yandex.ru
 SMTP_PASSWORD=<app-password-from-task-4>
 ```
-Keep file mode `0600`.
+Keep file mode `0600`. The `EMAIL_FROM` address must equal `SMTP_USER` (Yandex rejects a mismatched `From`); only the display name «CleanCity Сочи» is free-form.
 
 - [ ] **Step 2: Recreate the backend container so it picks up new env**
 

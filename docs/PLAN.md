@@ -466,29 +466,35 @@ Web admin может быть проще (показываем основной 
 
 ### День 18 (25.05) — Деплой на Yandex Cloud
 
-- [ ] Сменить `API_BASE_URL` в `secrets.properties` на боевой HTTPS-URL **до** release-сборки (хвост Day 14).
-- [ ] Ужесточить network security: убрать `usesCleartextTraffic="true"` из `AndroidManifest.xml` либо сузить до конкретного хоста через network-security-config (хвост Day 14).
-- [ ] Создать ВМ в Yandex Cloud (Ubuntu 24.04, 2 vCPU, 4GB RAM, 30GB SSD, public IP)
-- [ ] Настроить SSH по ключу, установить Docker + Docker Compose
-- [ ] Создать Object Storage bucket `cleancity-photos-prod` + сервисный ключ
-- [ ] DNS: `cleancity.ru` (или `.рф` если успеем) → A-запись на public IP
-- [ ] DNS поддоменов: `api.cleancity.ru` → backend, `admin.cleancity.ru` → web
-- [ ] Cloudflare как proxy (бесплатный tier — DDoS + SSL):
-  - [ ] Подключить домен → переключить NS на Cloudflare
-  - [ ] Включить proxy (оранжевая тучка)
-  - [ ] SSL/TLS Full (Strict)
-- [ ] Caddy на ВМ как reverse-proxy (auto-HTTPS через Let's Encrypt, проще nginx):
-  - [ ] `Caddyfile`: `api.cleancity.ru` → backend:8080, `admin.cleancity.ru` → web:80
-- [ ] `docker-compose.prod.yml`: db + backend + web + caddy
-- [ ] Прод-секреты в `.env.prod` на ВМ (никогда в git): `JWT_SECRET`, `DB_PASSWORD`, `S3_KEY`, `SMTP_PASSWORD`, `FCM_CREDENTIALS_PATH`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_ALERT_CHAT_ID`, `BACKUP_GPG_PASSPHRASE`
-- [ ] Применить миграции, создать первого админа из env
-- [ ] Залить **release-подписанный** mobile APK ссылкой `https://cleancity.ru/cleancity.apk` (статика через Caddy). На лендинге `cleancity.ru` — кнопка-RuStore + резервная ссылка с QR-кодом.
-- [ ] **Создать bucket `cleancity-backups`** в Yandex Object Storage + сервис-ключ только на запись. Установить cron `0 3 * * *` для `/opt/cleancity/backup.sh`. Запустить руками первый раз — проверить что файл появился в bucket.
-- [ ] Установить cron `*/5 * * * *` для healthcheck. Проверить: остановить контейнер `docker compose stop backend` — Telegram-чат получает алерт «API DOWN» в течение 5 мин.
-- [ ] Тест Telegram-алертов на ERROR-логи: бросить тестовое исключение в backend → проверить что прилетело.
-- [ ] Тест бэкапа: `gpg --decrypt <backup>.gpg | pg_restore -d cleancity_test` в отдельной staging-БД — проверить что данные восстанавливаются.
+> **Закрыт 2026-05-29.** Боевой стенд `clean--city.ru` на одной VM в Yandex Cloud:
+> лендинг с QR на APK (без магазинов), web-админка, backend; TLS напрямую через
+> Caddy/Let's Encrypt (без Cloudflare); домен `clean--city.ru` (не `cleancity.ru`);
+> GPG-бэкапы БД в S3 (lifecycle 30д) + healthcheck-алерты в Telegram.
+> E2E пройден на A33 (регистрация → жалоба с фото в S3 → push при смене статуса).
+> Дизайн+план: `docs/superpowers/specs/2026-05-28-day18-deploy-design.md`,
+> `docs/superpowers/plans/2026-05-28-day18-deploy.md`.
 
-**Checkpoint:** Открыть `https://admin.cleancity.ru` — логин работает, переключить mobile на prod-API — всё работает на реальных данных. Cron бэкапа запускается, healthcheck алерт работает, Telegram получает ERROR-логи.
+- [x] Сменить `API_BASE_URL` на боевой HTTPS-URL **до** release-сборки → `https://api.clean--city.ru`.
+- [ ] Ужесточить network security (`usesCleartextTraffic`) — проверить факт отдельно (вне рамок сессии деплоя).
+- [x] Создать ВМ в Yandex Cloud (Ubuntu 24.04, 2 vCPU, 4GB RAM, 30GB SSD, public IP `89.169.131.29`)
+- [x] Настроить SSH по ключу, установить Docker + Docker Compose (UFW 22/80/443, AWS CLI v2)
+- [x] Создать Object Storage bucket `cleancity-photos-prod` + сервис-аккаунт `cleancity-photos` (storage.editor)
+- [x] DNS: `clean--city.ru` → A-запись на public IP (REG.RU, не Cloudflare)
+- [x] DNS поддоменов: `api.clean--city.ru` → backend, `admin.clean--city.ru` → web, + `www`
+- [ ] ~~Cloudflare как proxy~~ — НЕ используется: TLS напрямую через Caddy/Let's Encrypt (tls-alpn-01).
+- [x] Caddy на ВМ как reverse-proxy (auto-HTTPS Let's Encrypt): `api.*` → backend:8080, `admin.*` → web:80, `@`/`www` → лендинг
+- [x] `docker-compose.prod.yml`: db + backend + web-admin + caddy
+- [x] Прод-секреты в `/opt/cleancity/.env.prod` (mode 600, не в git): `JWT_SECRET`, `POSTGRES_PASSWORD`, `STORAGE_S3_*`, `INITIAL_ADMIN_*`. FCM не используется (push через polling). SMTP временно отключён (`SMTP_HOST=""`) → `LoggingEmailService`; подключить Яндекс 360 до защиты.
+- [x] Применить миграции (Flyway), создать первого админа из env (`bootstrapInitialAdmin`)
+- [x] Залить release-подписанный APK ссылкой `https://clean--city.ru/cleancity.apk` (статика через Caddy) + лендинг с QR. RuStore не используется — раздача через хостинг.
+- [x] Bucket `cleancity-backups` + сервис-аккаунт `cleancity-backups` (storage.uploader, только запись). Cron `0 3 * * *` для `backup.sh`. Первый прогон руками — GPG-дамп 47KB залит в bucket.
+- [x] Cron `*/5 * * * *` healthcheck. Проверено: `stop backend` → Telegram «API DOWN», `start` → «API RECOVERED».
+- [ ] ~~Telegram-алерты на ERROR-логи~~ — не реализовано: мониторинг через healthcheck `/health` (out of scope).
+- [ ] Тест восстановления бэкапа (`gpg --decrypt | pg_restore`) — НЕ выполнен, рекомендуется прогнать до защиты.
+
+**Checkpoint:** ✅ `https://admin.clean--city.ru` — логин админа работает; mobile (A33) на prod-API — регистрация/жалоба/фото в S3/push работают на реальных данных; cron бэкапа и healthcheck-алерты в Telegram проверены e2e.
+
+**Известный баг (follow-up до включения SMTP):** ссылка в письме подтверждения указывает на `GET /verify-email`, а реальный роут — `POST /auth/verify-email` (`AuthService.kt:364` vs `AuthRoutes.kt:47,67`). Пока почта на логах — не мешает; перед включением Яндекс 360 надо починить шаблон/добавить GET-обработчик.
 
 ---
 

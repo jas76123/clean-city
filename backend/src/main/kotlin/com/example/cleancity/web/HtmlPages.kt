@@ -14,6 +14,14 @@ object HtmlPages {
     private const val GREEN = "#5DDE8A"
     private const val DARK = "#0d2b1a"
 
+    // Defense-in-depth: WebAuthRoutes — первичный гейт. Здесь — вторичный: если будущий
+    // вызыватель подставит непроверенный токен, бросаем, а не рендерим reflected XSS.
+    private val SAFE_TOKEN = Regex("^[A-Za-z0-9._-]{1,512}$")
+    private fun safeToken(token: String): String {
+        require(SAFE_TOKEN.matches(token)) { "Unsafe token passed to HtmlPages" }
+        return token
+    }
+
     private fun shell(title: String, inner: String): String = """
         <!doctype html><html lang="ru"><head>
         <meta charset="utf-8">
@@ -35,7 +43,9 @@ object HtmlPages {
         </body></html>
     """.trimIndent()
 
-    fun verifyEmail(token: String): String = shell("Подтверждение email", """
+    fun verifyEmail(token: String): String {
+        val t = safeToken(token)
+        return shell("Подтверждение email", """
         <p>Нажмите кнопку, чтобы подтвердить email и активировать аккаунт:</p>
         <button class="btn" id="go">Подтвердить email</button>
         <div class="msg" id="msg"></div>
@@ -44,7 +54,7 @@ object HtmlPages {
           document.getElementById('go').addEventListener('click', function(){
             var m = document.getElementById('msg'); this.disabled = true;
             fetch('/auth/verify-email', {method:'POST', headers:{'Content-Type':'application/json'},
-              body: JSON.stringify({token: "$token"})})
+              body: JSON.stringify({token: "$t"})})
               .then(function(r){
                 if (r.ok) { m.className='msg ok'; m.textContent='Email подтверждён! Откройте приложение CleanCity и войдите.'; }
                 else { m.className='msg err'; m.textContent='Ссылка недействительна или истекла. Запросите новое письмо в приложении.'; document.getElementById('go').disabled=false; }
@@ -52,9 +62,12 @@ object HtmlPages {
               .catch(function(){ m.className='msg err'; m.textContent='Ошибка сети. Попробуйте ещё раз.'; document.getElementById('go').disabled=false; });
           });
         </script>
-    """.trimIndent())
+        """.trimIndent())
+    }
 
-    fun resetPassword(token: String): String = shell("Новый пароль", """
+    fun resetPassword(token: String): String {
+        val t = safeToken(token)
+        return shell("Новый пароль", """
         <p>Введите новый пароль:</p>
         <input type="password" id="pw" placeholder="Новый пароль" autocomplete="new-password">
         <input type="password" id="pw2" placeholder="Повторите пароль" autocomplete="new-password">
@@ -68,15 +81,18 @@ object HtmlPages {
             if(pw!==pw2){m.className='msg err';m.textContent='Пароли не совпадают.';return;}
             this.disabled=true;
             fetch('/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({token:"$token",newPassword:pw})})
+              body:JSON.stringify({token:"$t",newPassword:pw})})
               .then(function(r){ if(r.ok){m.className='msg ok';m.textContent='Пароль обновлён! Войдите заново.';}
                 else{m.className='msg err';m.textContent='Ссылка недействительна или пароль слишком простой.';document.getElementById('go').disabled=false;} })
               .catch(function(){m.className='msg err';m.textContent='Ошибка сети.';document.getElementById('go').disabled=false;});
           });
         </script>
-    """.trimIndent())
+        """.trimIndent())
+    }
 
-    fun acceptInvite(token: String): String = shell("Активация аккаунта", """
+    fun acceptInvite(token: String): String {
+        val t = safeToken(token)
+        return shell("Активация аккаунта", """
         <p>Установите пароль, чтобы активировать аккаунт сотрудника:</p>
         <input type="password" id="pw" placeholder="Пароль" autocomplete="new-password">
         <input type="password" id="pw2" placeholder="Повторите пароль" autocomplete="new-password">
@@ -90,13 +106,14 @@ object HtmlPages {
             if(pw!==pw2){m.className='msg err';m.textContent='Пароли не совпадают.';return;}
             this.disabled=true;
             fetch('/auth/admin/accept-invite',{method:'POST',headers:{'Content-Type':'application/json'},
-              body:JSON.stringify({token:"$token",password:pw})})
+              body:JSON.stringify({token:"$t",password:pw})})
               .then(function(r){ if(r.ok){m.className='msg ok';m.textContent='Аккаунт активирован! Войдите в админ-кабинет.';}
                 else{m.className='msg err';m.textContent='Ссылка недействительна или истекла.';document.getElementById('go').disabled=false;} })
               .catch(function(){m.className='msg err';m.textContent='Ошибка сети.';document.getElementById('go').disabled=false;});
           });
         </script>
-    """.trimIndent())
+        """.trimIndent())
+    }
 
     fun error(): String = shell("Ошибка", """
         <p class="err">Ссылка повреждена или неполная. Запросите новое письмо в приложении.</p>

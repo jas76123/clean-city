@@ -25,6 +25,7 @@ import com.example.cleancity.email.EmailService
 import com.example.cleancity.email.LoggingEmailService
 import com.example.cleancity.email.SmtpEmailService
 import com.example.cleancity.legal.legalRoutes
+import com.example.cleancity.web.webAuthRoutes
 import com.example.cleancity.notifications.DbNotificationService
 import com.example.cleancity.notifications.NotificationRepository
 import com.example.cleancity.notifications.notificationRoutes
@@ -174,6 +175,7 @@ fun Application.module() {
             call.respond(items)
         }
         legalRoutes()
+        webAuthRoutes()
         authRoutes(authService, rateLimiter)
         userRoutes(authService)
         complaintRoutes(complaintService)

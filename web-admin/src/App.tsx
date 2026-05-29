@@ -7,7 +7,8 @@ import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 import { ComplaintsPage } from '@/pages/ComplaintsPage'
 import { OverviewPage } from '@/pages/OverviewPage'
-import { AnalyticsPage } from '@/pages/AnalyticsPage'
+// HIDDEN_TEMPORARY: раздел «Аналитика» временно скрыт. Вернуть — раскомментировать импорт и роут ниже.
+// import { AnalyticsPage } from '@/pages/AnalyticsPage'
 import { AnnouncementsPage } from '@/pages/AnnouncementsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 
@@ -25,7 +26,8 @@ export default function App() {
             <Route path="/overview" element={<OverviewPage />} />
             <Route path="/complaints" element={<ComplaintsPage />} />
             <Route path="/announcements" element={<AnnouncementsPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
+            {/* HIDDEN_TEMPORARY: раздел «Аналитика» временно скрыт. Вернуть — раскомментировать роут и импорт выше. */}
+            {/* <Route path="/analytics" element={<AnalyticsPage />} /> */}
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

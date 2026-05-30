@@ -53,7 +53,12 @@ class SmtpEmailService(
     override suspend fun send(to: String, subject: String, htmlBody: String, plainBody: String?) {
         withContext(Dispatchers.IO) {
             val msg = MimeMessage(session)
-            val fromAddress: Address = InternetAddress(from)
+            // Display-name из EMAIL_FROM может быть кириллическим («Чистый Город»).
+            // InternetAddress(from) НЕ кодирует personal → в заголовке From кракозябры.
+            // Перекодируем personal в UTF-8 (RFC 2047), адрес оставляем как есть.
+            val fromAddress: Address = InternetAddress(from).apply {
+                personal?.let { setPersonal(it, "UTF-8") }
+            }
             val toAddress: Address = InternetAddress(to)
             msg.setFrom(fromAddress)
             msg.addRecipient(Message.RecipientType.TO, toAddress)

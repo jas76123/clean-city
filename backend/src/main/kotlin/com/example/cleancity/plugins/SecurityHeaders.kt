@@ -12,10 +12,17 @@ import io.ktor.server.response.header
  * мы не отдаём. Если позже появятся HTML-эндпоинты (например, страница подтверждения
  * email), CSP для них надо ослаблять адресно.
  */
+// HTML-эндпоинты со своим (ослабленным) CSP. Жёсткий app-wide CSP их бы сломал:
+//  - /legal/*               — inline <style>
+//  - email-landing страницы — inline <script> + fetch (CSP задаётся в WebAuthRoutes)
+// Заголовок здесь НЕ ставим: два CSP-заголовка браузер применяет как пересечение
+// (самый строгий), и страничный relax был бы аннулирован строгим default-src 'none'.
+private val EMAIL_LANDING_PATHS = setOf("/verify-email", "/reset-password", "/accept-invite")
+
 val SecurityHeaders = createApplicationPlugin(name = "SecurityHeaders") {
     onCall { call ->
-        // /legal/* страницы содержат inline <style> — app-wide CSP там задаётся в маршруте.
-        if (call.request.path().startsWith("/legal/")) return@onCall
+        val path = call.request.path()
+        if (path.startsWith("/legal/") || path in EMAIL_LANDING_PATHS) return@onCall
 
         with(call.response) {
             header("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")

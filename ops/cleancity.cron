@@ -6,7 +6,9 @@
 
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-MAILTO=
+# ВАЖНО: НЕ добавлять пустой `MAILTO=` — Debian cron 3.0pl1 валит на нём парсинг
+# всего файла ("Error: bad minute") и молча игнорирует его (ни backup, ни healthcheck
+# не запускаются). Вывод задач и так уходит в лог-файлы через `2>&1`, MTA нет.
 
 # Healthcheck — каждые 5 минут. Алерт на первом fail и на recovery,
 # подряд алертить запрещено state-файлом /tmp/cleancity-healthcheck-failing.

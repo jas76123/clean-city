@@ -10,6 +10,7 @@ import com.example.cleancity.shared.models.UserRole
 import com.example.cleancity.shared.responses.admin.AuditEntryDto
 import com.example.cleancity.shared.responses.admin.TeamMemberDto
 import com.example.cleancity.shared.responses.admin.TeamStatus
+import org.slf4j.LoggerFactory
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 
@@ -68,6 +69,22 @@ class AuthService(
     private val audit: AuditLogger = NoopAuditLogger,
     private val auditLog: AuditLogRepository = AuditLogRepository()
 ) {
+
+    private val logger = LoggerFactory.getLogger(AuthService::class.java)
+
+    /**
+     * Отправка письма, не валящая запрос. Доставка писем (особенно через
+     * антиспам провайдера) может падать — но это НЕ должно срывать регистрацию
+     * или forgot-password (иначе остаётся «висячий» неподтверждённый юзер и 500).
+     * Письмо при сбое логируется; пользователь дожимает через resend-verification.
+     */
+    private suspend fun trySend(to: String, subject: String, html: String, context: String) {
+        try {
+            email.send(to, subject, html)
+        } catch (e: Exception) {
+            logger.error("Не удалось отправить письмо ($context) на {}: {}", to, e.message, e)
+        }
+    }
 
     /**
      * Регистрация. Возвращает [UserResponse] (не AuthResponse — сначала верификация email).
@@ -209,7 +226,7 @@ class AuthService(
         val token = tokens.createEmailToken(user.id, EmailTokenPurpose.RESET_PASSWORD, RESET_TOKEN_TTL_SECONDS)
         val link = "$baseUrl/reset-password?token=$token"
         val (subject, html) = EmailTemplates.resetPassword(link)
-        email.send(user.email, subject, html)
+        trySend(user.email, subject, html, "password-reset")
     }
 
     /**
@@ -325,7 +342,7 @@ class AuthService(
         val link = "$baseUrl/accept-invite?token=$token"
         val invitedBy = users.findById(actorId)?.email ?: "Администратор CleanCity"
         val (subject, html) = EmailTemplates.adminInvite(link, invitedBy, normalizedName)
-        email.send(user.email, subject, html)
+        trySend(user.email, subject, html, "admin-invite")
 
         audit.log(AuditAction.ADMIN_INVITE_SENT, actorId, "user", user.id.toString(), ip, userAgent, "role=${targetRole.name}")
         return user.toResponse()
@@ -363,7 +380,7 @@ class AuthService(
     private suspend fun sendVerifyEmail(to: String, token: String) {
         val link = "$baseUrl/verify-email?token=$token"
         val (subject, html) = EmailTemplates.verifyEmail(link)
-        email.send(to, subject, html)
+        trySend(to, subject, html, "verify-email")
     }
 
     private fun issueAuthResponse(user: UserRow, ip: String?, userAgent: String?): AuthResponse {

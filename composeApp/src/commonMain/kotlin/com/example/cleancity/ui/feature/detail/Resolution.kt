@@ -4,7 +4,7 @@ import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.StatusChangeResponse
 
 /**
- * Комментарий администрации для закрытой жалобы (REJECTED/DUPLICATE) —
+ * Комментарий муниципальных служб для закрытой жалобы (REJECTED/DUPLICATE) —
  * текст последней записи истории статусов. Для остальных статусов — null.
  */
 fun resolutionComment(

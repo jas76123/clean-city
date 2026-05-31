@@ -446,7 +446,7 @@ private fun ResolutionBlock(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
-            "Решение администрации",
+            "Решение муниципальных служб",
             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
             color = Red,
         )

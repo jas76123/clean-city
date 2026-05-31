@@ -110,7 +110,7 @@ class NotificationsScreen : Screen {
                         EmptyState(
                             emoji = "🔔",
                             title = "Пока нет уведомлений",
-                            subtitle = "Здесь появятся ответы администрации и объявления.",
+                            subtitle = "Здесь появятся ответы муниципальных служб и объявления.",
                             modifier = Modifier.fillMaxSize(),
                         )
                     is NotificationsState.Error ->

@@ -31,7 +31,7 @@ class SystemNotificationDispatcher(private val ctx: Context) {
             CHANNEL_NAME,
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
-            description = "Объявления от администрации города"
+            description = "Объявления от муниципальных служб"
             enableVibration(true)
         }
         NotificationManagerCompat.from(ctx).createNotificationChannel(channel)

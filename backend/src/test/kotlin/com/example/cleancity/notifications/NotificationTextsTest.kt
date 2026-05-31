@@ -34,7 +34,7 @@ class NotificationTextsTest {
     }
 
     @Test
-    fun `REJECTED includes admin comment in 'Комментарий администрации' block`() {
+    fun `REJECTED includes admin comment in 'Комментарий муниципальных служб' block`() {
         val t = NotificationTexts.statusChange(
             "Свалка",
             ComplaintStatus.REJECTED,
@@ -42,7 +42,7 @@ class NotificationTextsTest {
         )
         assertEquals("Жалоба отклонена", t.title)
         assertTrue(t.body.contains("закрыта со статусом «Отклонена»"))
-        assertTrue(t.body.contains("Комментарий администрации: Не подтверждено инспектором"))
+        assertTrue(t.body.contains("Комментарий муниципальных служб: Не подтверждено инспектором"))
         assertEquals("WARNING", t.iconStyle)
     }
 
@@ -55,7 +55,7 @@ class NotificationTextsTest {
         )
         assertEquals("Жалоба отмечена как дубликат", t.title)
         assertTrue(t.body.contains("закрыта со статусом «Дубликат»"))
-        assertTrue(t.body.contains("Комментарий администрации: Дублирует #42"))
+        assertTrue(t.body.contains("Комментарий муниципальных служб: Дублирует #42"))
         assertEquals("WARNING", t.iconStyle)
     }
 

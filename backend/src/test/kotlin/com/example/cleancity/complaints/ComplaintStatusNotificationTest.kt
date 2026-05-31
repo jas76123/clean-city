@@ -165,7 +165,7 @@ class ComplaintStatusNotificationTest {
         assertTrue(outsider !in userIds)
 
         rows.forEach { r ->
-            assertTrue(r[Notifications.body].contains("Комментарий администрации: Не подтверждено инспектором"))
+            assertTrue(r[Notifications.body].contains("Комментарий муниципальных служб: Не подтверждено инспектором"))
             assertEquals("WARNING", r[Notifications.iconStyle])
         }
     }

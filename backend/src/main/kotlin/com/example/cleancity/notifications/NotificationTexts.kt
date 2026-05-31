@@ -28,13 +28,13 @@ object NotificationTexts {
         ComplaintStatus.REJECTED -> StatusChangeText(
             title = "Жалоба отклонена",
             body = "«$complaintTitle» закрыта со статусом «Отклонена». " +
-                "Комментарий администрации: $adminComment",
+                "Комментарий муниципальных служб: $adminComment",
             iconStyle = "WARNING"
         )
         ComplaintStatus.DUPLICATE -> StatusChangeText(
             title = "Жалоба отмечена как дубликат",
             body = "«$complaintTitle» закрыта со статусом «Дубликат». " +
-                "Комментарий администрации: $adminComment",
+                "Комментарий муниципальных служб: $adminComment",
             iconStyle = "WARNING"
         )
         ComplaintStatus.NEW -> error("NEW не триггерит уведомление о смене статуса")

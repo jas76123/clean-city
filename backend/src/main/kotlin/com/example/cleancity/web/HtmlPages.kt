@@ -26,7 +26,7 @@ object HtmlPages {
         <!doctype html><html lang="ru"><head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>$title · CleanCity</title>
+        <title>$title · Чистый Город</title>
         <style>
           body{font-family:sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;color:$DARK}
           h2{color:$DARK}
@@ -56,7 +56,7 @@ object HtmlPages {
             fetch('/auth/verify-email', {method:'POST', headers:{'Content-Type':'application/json'},
               body: JSON.stringify({token: "$t"})})
               .then(function(r){
-                if (r.ok) { m.className='msg ok'; m.textContent='Email подтверждён! Откройте приложение CleanCity и войдите.'; }
+                if (r.ok) { m.className='msg ok'; m.textContent='Email подтверждён! Откройте приложение «Чистый Город» и войдите.'; }
                 else { m.className='msg err'; m.textContent='Ссылка недействительна или истекла. Запросите новое письмо в приложении.'; document.getElementById('go').disabled=false; }
               })
               .catch(function(){ m.className='msg err'; m.textContent='Ошибка сети. Попробуйте ещё раз.'; document.getElementById('go').disabled=false; });

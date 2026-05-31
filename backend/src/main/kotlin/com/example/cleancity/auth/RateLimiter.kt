@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Простой in-memory rate limiter (фиксированное окно).
  * Подходит для одной ноды. Под прод-сервер с >1 инстансом нужен Redis-вариант.
  *
- * Ключ — ${bucket}:${ip}. После пилота можно расширить ключом по userId.
+ * Ключ — ${bucket}:${ip}. В дальнейшем можно расширить ключом по userId.
  */
 class RateLimiter(private val now: () -> Long = System::currentTimeMillis) {
 
@@ -41,7 +41,7 @@ class RateLimiter(private val now: () -> Long = System::currentTimeMillis) {
 }
 
 /**
- * Конфигурация для разных бакетов. Числа взяты с запасом для пилота —
+ * Конфигурация для разных бакетов. Числа взяты с запасом для текущего объёма —
  * чтобы не блокировать UI-нагрузочное тестирование/демо. На проде можно ужесточить.
  */
 object RateLimits {

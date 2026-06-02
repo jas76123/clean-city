@@ -41,13 +41,22 @@ export function ModerationPanel({ authorId, complaintId }: Props) {
       </div>
 
       {!s.isBanned && (
-        <textarea
-          className="w-full rounded border p-2 text-sm"
-          rows={2}
-          placeholder="Причина (обязательно для предупреждения и бана)"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-        />
+        <>
+          <label
+            htmlFor="mod-reason"
+            className="sr-only"
+          >
+            Причина
+          </label>
+          <textarea
+            id="mod-reason"
+            className="w-full rounded border p-2 text-sm"
+            rows={2}
+            placeholder="Причина (обязательно для предупреждения и бана)"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+        </>
       )}
 
       <div className="flex flex-wrap gap-2">

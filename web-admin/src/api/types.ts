@@ -301,3 +301,12 @@ export interface AuditEntryDto {
 export interface AuditLogResponse {
   items: AuditEntryDto[]
 }
+
+// --- Модерация жителей (Day 18 / Task 8) ---
+
+export interface ModerationSummary {
+  rejectedCountSinceWarning: number
+  flagged: boolean
+  isWarned: boolean
+  isBanned: boolean
+}

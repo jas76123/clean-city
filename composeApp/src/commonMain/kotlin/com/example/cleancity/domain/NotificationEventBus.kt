@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.SharedFlow
 
 /**
  * Однонаправленная шина для свежих ANNOUNCEMENT-уведомлений, замеченных
- * polling-циклом. Подписчики: AnnouncementInAppBanner (foreground),
+ * polling-циклом. Подписчики: глобальный оверлей-баннер в App.kt (foreground),
  * AnnouncementBusBridge (background → системная шторка).
  */
 class NotificationEventBus {

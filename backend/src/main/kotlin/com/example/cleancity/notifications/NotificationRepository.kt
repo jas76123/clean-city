@@ -40,15 +40,17 @@ class NotificationRepository {
     ) {
         if (userIds.isEmpty()) return
         val now = OffsetDateTime.now(ZoneOffset.UTC)
-        Notifications.batchInsert(userIds) { uid ->
-            this[Notifications.userId] = uid
-            this[Notifications.kind] = kind.name
-            this[Notifications.title] = title
-            this[Notifications.body] = body
-            this[Notifications.iconStyle] = iconStyle
-            this[Notifications.complaintId] = complaintId
-            this[Notifications.announcementId] = announcementId
-            this[Notifications.createdAt] = now
+        transaction {
+            Notifications.batchInsert(userIds) { uid ->
+                this[Notifications.userId] = uid
+                this[Notifications.kind] = kind.name
+                this[Notifications.title] = title
+                this[Notifications.body] = body
+                this[Notifications.iconStyle] = iconStyle
+                this[Notifications.complaintId] = complaintId
+                this[Notifications.announcementId] = announcementId
+                this[Notifications.createdAt] = now
+            }
         }
     }
 

@@ -6,7 +6,9 @@ import com.example.cleancity.auth.TokenRepository
 import com.example.cleancity.auth.UserRepository
 import com.example.cleancity.auth.UserRow
 import com.example.cleancity.complaints.ComplaintRepository
+import com.example.cleancity.database.tables.AuditAction
 import com.example.cleancity.notifications.NotificationService
+import com.example.cleancity.shared.models.NotificationKind
 import com.example.cleancity.shared.models.UserRole
 
 class ResidentNotFoundException : RuntimeException()
@@ -43,7 +45,22 @@ class ModerationService(
         )
     }
 
-    @Suppress("unused")
+    fun warn(actorId: Long, residentId: Long, complaintId: Long, reason: String, ip: String?, ua: String?) {
+        val target = requireResident(residentId)
+        val cleanReason = reason.trim()
+        if (cleanReason.isEmpty()) throw ReasonRequiredException()
+        notifications.notify(
+            recipientUserIds = listOf(target.id),
+            kind = NotificationKind.MODERATION_WARNING,
+            title = "Предупреждение модерации",
+            body = cleanReason,
+            iconStyle = "WARNING",
+            complaintId = complaintId,
+        )
+        users.setWarnedAt(residentId)
+        audit.log(AuditAction.RESIDENT_WARNED, actorId, "user", residentId.toString(), ip, ua, cleanReason)
+    }
+
     private fun requireResident(residentId: Long): UserRow {
         val user = users.findById(residentId) ?: throw ResidentNotFoundException()
         if (user.role != UserRole.RESIDENT) throw NotAResidentException()

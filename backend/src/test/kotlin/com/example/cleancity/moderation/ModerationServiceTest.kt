@@ -1,8 +1,10 @@
 package com.example.cleancity.moderation
 
+import com.example.cleancity.auth.DbAuditLogger
 import com.example.cleancity.auth.TokenRepository
 import com.example.cleancity.auth.UserRepository
 import com.example.cleancity.complaints.ComplaintRepository
+import com.example.cleancity.database.tables.AuditLog
 import com.example.cleancity.database.tables.Complaints
 import com.example.cleancity.database.tables.EmailTokens
 import com.example.cleancity.database.tables.Notifications
@@ -11,15 +13,18 @@ import com.example.cleancity.database.tables.StatusChanges
 import com.example.cleancity.database.tables.Users
 import com.example.cleancity.notifications.NotificationRepository
 import com.example.cleancity.notifications.DbNotificationService
+import com.example.cleancity.shared.models.NotificationKind
 import com.example.cleancity.shared.models.UserRole
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -31,8 +36,8 @@ class ModerationServiceTest {
             driver = "org.h2.Driver"
         )
         transaction {
-            SchemaUtils.drop(Notifications, StatusChanges, Complaints, RefreshTokens, EmailTokens, Users)
-            SchemaUtils.create(Users, EmailTokens, RefreshTokens, Complaints, StatusChanges, Notifications)
+            SchemaUtils.drop(Notifications, StatusChanges, Complaints, RefreshTokens, EmailTokens, AuditLog, Users)
+            SchemaUtils.create(Users, EmailTokens, RefreshTokens, Complaints, StatusChanges, Notifications, AuditLog)
         }
     }
 
@@ -42,6 +47,7 @@ class ModerationServiceTest {
             complaints = ComplaintRepository(),
             tokens = TokenRepository(),
             notifications = DbNotificationService(NotificationRepository()),
+            audit = DbAuditLogger(),
         )
 
     private fun seedUser(role: UserRole, active: Boolean = true): Long = transaction {
@@ -105,5 +111,74 @@ class ModerationServiceTest {
         val summary = svc.getSummary(resident)
         assertEquals(2, summary.rejectedCountSinceWarning)
         assertFalse(summary.flagged)
+    }
+
+    @Test
+    fun `warn sends MODERATION_WARNING notification, sets warned_at, resets count, audits`() {
+        initDb()
+        val svc = service()
+        val admin = seedUser(UserRole.ADMIN)
+        val resident = seedUser(UserRole.RESIDENT)
+        val before = OffsetDateTime.now(ZoneOffset.UTC).minusDays(1)
+        seedRejectedComplaints(resident, 3, before)
+
+        // создать жалобу-нарушение для привязки уведомления
+        val complaintId = transaction {
+            Complaints.insert {
+                it[Complaints.authorId] = resident
+                it[Complaints.category] = "GARBAGE"
+                it[Complaints.title] = "bad"
+                it[Complaints.description] = "d"
+                it[Complaints.latitude] = 43.6
+                it[Complaints.longitude] = 39.7
+                it[Complaints.address] = "addr"
+                it[Complaints.status] = "NEW"
+                it[Complaints.createdAt] = OffsetDateTime.now(ZoneOffset.UTC)
+                it[Complaints.updatedAt] = OffsetDateTime.now(ZoneOffset.UTC)
+            }[Complaints.id]
+        }
+
+        svc.warn(admin, resident, complaintId, "Не оскорбляйте", "1.1.1.1", "UA")
+
+        // уведомление создано нужного вида и привязано к жалобе
+        val notif = transaction {
+            Notifications.selectAll().where { Notifications.userId eq resident }.single()
+        }
+        assertEquals(NotificationKind.MODERATION_WARNING.name, notif[Notifications.kind])
+        assertEquals(complaintId, notif[Notifications.complaintId])
+
+        // счётчик обнулён: старые отклонения (до warned_at) больше не считаются
+        val summary = svc.getSummary(resident)
+        assertTrue(summary.isWarned)
+        assertEquals(0, summary.rejectedCountSinceWarning)
+        assertFalse(summary.flagged)
+
+        // аудит записан
+        val audited = transaction {
+            AuditLog.selectAll().where { AuditLog.action eq "RESIDENT_WARNED" }.count()
+        }
+        assertEquals(1L, audited)
+    }
+
+    @Test
+    fun `warn on non-resident throws`() {
+        initDb()
+        val svc = service()
+        val admin = seedUser(UserRole.ADMIN)
+        val operator = seedUser(UserRole.OPERATOR)
+        assertFailsWith<NotAResidentException> {
+            svc.warn(admin, operator, 1L, "x", null, null)
+        }
+    }
+
+    @Test
+    fun `warn with blank reason throws`() {
+        initDb()
+        val svc = service()
+        val admin = seedUser(UserRole.ADMIN)
+        val resident = seedUser(UserRole.RESIDENT)
+        assertFailsWith<ReasonRequiredException> {
+            svc.warn(admin, resident, 1L, "   ", null, null)
+        }
     }
 }

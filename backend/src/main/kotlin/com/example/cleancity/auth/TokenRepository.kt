@@ -38,12 +38,15 @@ class TokenRepository {
 
     // ----- Email tokens -----
 
+    // Email-токены — секреты «на предъявителя» (verify/reset/invite).
+    // В БД храним только SHA-256 hash (как refresh_tokens): сырой токен уходит
+    // в ссылку письма и возвращается вызывающему, в базе его нет.
     fun createEmailToken(userId: Long, purpose: EmailTokenPurpose, ttlSeconds: Long): String = transaction {
         val rawToken = TokenGenerator.emailToken()
         val now = OffsetDateTime.now(ZoneOffset.UTC)
         EmailTokens.insert {
             it[EmailTokens.userId] = userId
-            it[EmailTokens.token] = rawToken
+            it[EmailTokens.token] = TokenGenerator.hashSha256(rawToken)
             it[EmailTokens.purpose] = purpose.name
             it[EmailTokens.expiresAt] = now.plusSeconds(ttlSeconds)
             it[EmailTokens.consumed] = false
@@ -53,9 +56,10 @@ class TokenRepository {
     }
 
     fun findValidEmailToken(token: String, purpose: EmailTokenPurpose): EmailTokenRow? = transaction {
+        val tokenHash = TokenGenerator.hashSha256(token)
         val now = OffsetDateTime.now(ZoneOffset.UTC)
         EmailTokens.selectAll().where {
-            (EmailTokens.token eq token) and
+            (EmailTokens.token eq tokenHash) and
                 (EmailTokens.purpose eq purpose.name) and
                 (EmailTokens.consumed eq false) and
                 (EmailTokens.expiresAt greater now)

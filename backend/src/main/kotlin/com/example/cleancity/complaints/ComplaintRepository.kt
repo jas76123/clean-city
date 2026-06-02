@@ -336,6 +336,24 @@ class ComplaintRepository {
         }
     }
 
+    /**
+     * Число РАЗНЫХ жалоб автора с переходом в REJECTED после [since]
+     * (null = за всё время). DUPLICATE не учитывается.
+     */
+    fun countRejectedSince(authorId: Long, since: OffsetDateTime?): Int = transaction {
+        StatusChanges
+            .join(Complaints, JoinType.INNER, onColumn = StatusChanges.complaintId, otherColumn = Complaints.id)
+            .selectAll()
+            .where {
+                val base = (Complaints.authorId eq authorId) and
+                    (StatusChanges.toStatus eq ComplaintStatus.REJECTED.name)
+                if (since != null) base and (StatusChanges.createdAt greater since) else base
+            }
+            .map { it[StatusChanges.complaintId] }
+            .distinct()
+            .size
+    }
+
     fun insertStatusChange(
         complaintId: Long,
         fromStatus: ComplaintStatus?,

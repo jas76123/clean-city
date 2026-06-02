@@ -12,17 +12,14 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -33,7 +30,6 @@ import cafe.adriel.voyager.navigator.tab.Tab
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import com.example.cleancity.data.repository.AuthRepository
 import com.example.cleancity.domain.AuthState
-import com.example.cleancity.domain.NotificationEventBus
 import com.example.cleancity.domain.NotificationTapBus
 import com.example.cleancity.domain.UnreadCountStore
 import com.example.cleancity.ui.feature.shell.tabs.FeedTab
@@ -50,37 +46,26 @@ class MainShellScreen : Screen {
     override fun Content() {
         val store: UnreadCountStore = koinInject()
         val authRepo: AuthRepository = koinInject()
-        val bus: NotificationEventBus = koinInject()
+        val bannerController: BannerController = koinInject()
         val authState by authRepo.state.collectAsState()
         val unreadCount by store.state.collectAsState()
         val pendingTap by NotificationTapBus.pending.collectAsState()
-        val snackbarHost = remember { SnackbarHostState() }
+        val density = LocalDensity.current
 
         LaunchedEffect(authState) {
             if (authState is AuthState.Authenticated) store.start() else store.stop()
         }
         DisposableEffect(Unit) {
-            onDispose { store.stop() }
+            onDispose {
+                store.stop()
+                bannerController.setBottomBarHeight(0.dp)
+            }
         }
 
         TabNavigator(FeedTab) {
             val tabNavigator = LocalTabNavigator.current
 
             NotificationPermissionGate(enabled = authState is AuthState.Authenticated)
-
-            // 1. In-app banner подписка
-            LaunchedEffect(Unit) {
-                bus.newAnnouncements.collect { n ->
-                    val result = snackbarHost.showSnackbar(
-                        message = n.title,
-                        actionLabel = "Посмотреть",
-                        duration = SnackbarDuration.Long,
-                    )
-                    if (result == SnackbarResult.ActionPerformed) {
-                        tabNavigator.current = NotificationsTab
-                    }
-                }
-            }
 
             // 2. Тап по системному push — переключить на NotificationsTab.
             LaunchedEffect(pendingTap) {
@@ -92,9 +77,6 @@ class MainShellScreen : Screen {
 
             Scaffold(
                 contentWindowInsets = WindowInsets(0),
-                snackbarHost = {
-                    SnackbarHost(snackbarHost) { data -> AnnouncementInAppBanner(data) }
-                },
                 content = { padding ->
                     Box(Modifier.fillMaxSize().padding(padding)) {
                         CurrentTab()
@@ -102,6 +84,11 @@ class MainShellScreen : Screen {
                 },
                 bottomBar = {
                     NavigationBar(
+                        modifier = Modifier.onSizeChanged { size ->
+                            bannerController.setBottomBarHeight(
+                                with(density) { size.height.toDp() },
+                            )
+                        },
                         containerColor = Color.Transparent,
                         tonalElevation = 0.dp,
                     ) {

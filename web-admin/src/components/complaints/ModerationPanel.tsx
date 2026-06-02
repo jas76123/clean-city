@@ -36,7 +36,7 @@ export function ModerationPanel({ authorId, complaintId }: Props) {
           <Badge className="bg-slate-100 text-slate-600">предупреждён</Badge>
         )}
         {s.isBanned && (
-          <Badge className="bg-red-100 text-red-700">забанен</Badge>
+          <Badge className="bg-red-100 text-red-700">заблокирован</Badge>
         )}
       </div>
 
@@ -52,7 +52,7 @@ export function ModerationPanel({ authorId, complaintId }: Props) {
             id="mod-reason"
             className="w-full rounded border p-2 text-sm"
             rows={2}
-            placeholder="Причина (обязательно для предупреждения и бана)"
+            placeholder="Причина (обязательно для предупреждения и блокировки)"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
@@ -76,7 +76,7 @@ export function ModerationPanel({ authorId, complaintId }: Props) {
               disabled={!reason.trim() || ban.isPending}
               onClick={() => ban.mutate({ reason }, { onSuccess: () => setReason('') })}
             >
-              Забанить
+              Заблокировать
             </Button>
           </>
         )}
@@ -86,7 +86,7 @@ export function ModerationPanel({ authorId, complaintId }: Props) {
             disabled={unban.isPending}
             onClick={() => unban.mutate()}
           >
-            Разбанить
+            Разблокировать
           </Button>
         )}
       </div>

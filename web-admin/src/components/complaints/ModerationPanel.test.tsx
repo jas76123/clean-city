@@ -35,10 +35,10 @@ describe('ModerationPanel', () => {
     render(<ModerationPanel authorId={7} complaintId={42} />)
     expect(screen.getByText(/3 отклонённ/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Предупредить/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Забанить/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Заблокировать/ })).toBeInTheDocument()
   })
 
-  it('забаненный: показывает Разбанить и скрывает Предупредить/Забанить', () => {
+  it('заблокированный: показывает Разблокировать и скрывает Предупредить/Заблокировать', () => {
     mockSummaryData = {
       rejectedCountSinceWarning: 0,
       flagged: false,
@@ -46,9 +46,9 @@ describe('ModerationPanel', () => {
       isBanned: true,
     }
     render(<ModerationPanel authorId={7} complaintId={42} />)
-    expect(screen.getByRole('button', { name: /Разбанить/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Разблокировать/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Предупредить/ })).toBeNull()
-    expect(screen.queryByRole('button', { name: /Забанить/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Заблокировать/ })).toBeNull()
   })
 
   it('кнопка Предупредить задизаблена при пустой причине', () => {

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { StatusBadge } from './StatusBadge'
 import { PhotoGallery } from './PhotoGallery'
 import { StatusHistory } from './StatusHistory'
+import { ModerationPanel } from './ModerationPanel'
 
 interface Props {
   complaint: Complaint | undefined
@@ -75,6 +76,8 @@ export function ComplaintDetailPanel({ complaint, isLoading, isError, onAction }
         <div className="mb-1 text-sm font-medium text-slate-700">История статусов</div>
         <StatusHistory history={complaint.statusHistory} />
       </div>
+
+      <ModerationPanel authorId={complaint.authorId} complaintId={complaint.id} />
 
       {actions.length > 0 && (
         <div className="flex flex-wrap gap-2 border-t pt-3">

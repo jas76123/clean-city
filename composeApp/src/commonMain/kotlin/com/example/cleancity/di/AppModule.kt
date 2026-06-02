@@ -76,6 +76,7 @@ fun appModule(): Module = module {
     single { AuthRepository(get(), get(), get(), get()) }
 
     single { NotificationEventBus() }
+    single { com.example.cleancity.ui.feature.shell.BannerController() }
     single { AnnouncementSeenFilter(get<SeenNotificationStore>()) }
 
     single {

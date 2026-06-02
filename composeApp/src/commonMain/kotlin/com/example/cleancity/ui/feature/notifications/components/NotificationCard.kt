@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -57,6 +58,7 @@ fun NotificationCard(
             val icon = when (notification.kind) {
                 NotificationKind.COMPLAINT_STATUS -> Icons.Default.NotificationsActive
                 NotificationKind.ANNOUNCEMENT -> Icons.Default.Campaign
+                NotificationKind.MODERATION_WARNING -> Icons.Default.Warning
             }
             Icon(icon, contentDescription = null, tint = Green600, modifier = Modifier.size(22.dp))
         }

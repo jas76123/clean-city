@@ -8,6 +8,7 @@ import com.example.cleancity.database.tables.Votes
 import com.example.cleancity.shared.models.CategorySla
 import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.ProblemCategory
+import org.jetbrains.exposed.sql.Count
 import org.jetbrains.exposed.sql.Expression
 import org.jetbrains.exposed.sql.JoinType
 import org.jetbrains.exposed.sql.Op
@@ -341,17 +342,17 @@ class ComplaintRepository {
      * (null = за всё время). DUPLICATE не учитывается.
      */
     fun countRejectedSince(authorId: Long, since: OffsetDateTime?): Int = transaction {
+        val countExpr = Count(StatusChanges.complaintId, distinct = true)
         StatusChanges
             .join(Complaints, JoinType.INNER, onColumn = StatusChanges.complaintId, otherColumn = Complaints.id)
-            .selectAll()
+            .select(countExpr)
             .where {
                 val base = (Complaints.authorId eq authorId) and
                     (StatusChanges.toStatus eq ComplaintStatus.REJECTED.name)
                 if (since != null) base and (StatusChanges.createdAt greater since) else base
             }
-            .map { it[StatusChanges.complaintId] }
-            .distinct()
-            .size
+            .first()[countExpr]
+            .toInt()
     }
 
     fun insertStatusChange(

@@ -95,4 +95,35 @@ class CountRejectedSinceTest {
         val repo = ComplaintRepository()
         assertEquals(1, repo.countRejectedSince(resident, now.minusDays(1)))
     }
+
+    @Test
+    fun `author isolation - does not count other resident rejections`() {
+        initDb()
+        val now = OffsetDateTime.now(ZoneOffset.UTC)
+
+        val resident1 = seedResident()
+        val resident2 = transaction {
+            Users.insert {
+                it[Users.email] = "r2@test.local"
+                it[Users.passwordHash] = "x"
+                it[Users.role] = UserRole.RESIDENT.name
+                it[Users.isActive] = true
+                it[Users.emailVerified] = true
+                it[Users.createdAt] = OffsetDateTime.now(ZoneOffset.UTC)
+                it[Users.passwordChangedAt] = OffsetDateTime.now(ZoneOffset.UTC)
+            }[Users.id]
+        }
+
+        val c1 = seedComplaint(resident1)
+        val c2 = seedComplaint(resident2)
+
+        seedStatusChange(c1, "REJECTED", now, resident1)
+        seedStatusChange(c2, "REJECTED", now, resident2)
+
+        val repo = ComplaintRepository()
+        assertEquals(1, repo.countRejectedSince(resident1, null),
+            "countRejectedSince should only count resident1's own rejections")
+        assertEquals(1, repo.countRejectedSince(resident2, null),
+            "countRejectedSince should only count resident2's own rejections")
+    }
 }

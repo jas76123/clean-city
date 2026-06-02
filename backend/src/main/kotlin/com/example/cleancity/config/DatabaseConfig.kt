@@ -32,9 +32,14 @@ fun Application.configureDatabase() {
         arrayOf("classpath:db/migration")
     }
 
+    // В DEV допускаем out-of-order: сид-миграция db/seed-dev (V99__seed_dev.sql)
+    // намеренно имеет высокий номер и всегда применяется последней, поэтому любая
+    // новая реальная миграция (V9, V10, …) идёт «до» неё. Без outOfOrder Flyway
+    // отвергает её как нарушение порядка. В проде сид-миграций нет, порядок строгий.
     Flyway.configure()
         .dataSource(dbUrl, dbUser, dbPassword)
         .locations(*locations)
+        .outOfOrder(stage == "DEV")
         .load()
         .migrate()
 

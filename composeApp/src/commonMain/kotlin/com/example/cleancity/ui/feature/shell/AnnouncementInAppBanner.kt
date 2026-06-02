@@ -50,7 +50,8 @@ fun AnnouncementInAppBanner(
 ) {
     val density = LocalDensity.current
     val dismissThresholdPx = with(density) { 80.dp.toPx() }
-    var offsetY by remember { mutableStateOf(0f) }
+    // key to title so a new banner doesn't inherit a previous swipe offset
+    var offsetY by remember(title) { mutableStateOf(0f) }
 
     Row(
         modifier = modifier

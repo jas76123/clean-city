@@ -154,7 +154,10 @@ private fun BoxScope.GlobalNotificationBanner(authState: AuthState) {
         if (!showAllowed) controller.dismiss()
     }
 
-    // Автоскрытие по таймеру (перезапускается на каждый новый баннер).
+    // Автоскрытие по таймеру. Ключ — сам объект banner: на каждый НОВЫЙ баннер
+    // (другой title/id) таймер перезапускается. Точные дубли BannerData не
+    // перезапустят таймер, но это безопасно — upstream AnnouncementSeenFilter
+    // дедупит объявления, так что дубли практически не приходят.
     LaunchedEffect(banner) {
         if (banner != null) {
             delay(BANNER_AUTO_DISMISS_MS)

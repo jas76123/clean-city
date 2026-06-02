@@ -72,6 +72,11 @@ export function ComplaintDetailPanel({ complaint, isLoading, isError, onAction }
         <span className="font-medium text-slate-700">Голоса:</span> {complaint.votesCount}
       </div>
 
+      <div className="text-sm text-slate-600">
+        <span className="font-medium text-slate-700">Автор:</span>{' '}
+        {complaint.authorName?.trim() || `Пользователь #${complaint.authorId}`}
+      </div>
+
       <div>
         <div className="mb-1 text-sm font-medium text-slate-700">История статусов</div>
         <StatusHistory history={complaint.statusHistory} />

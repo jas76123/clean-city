@@ -19,13 +19,20 @@ export function ModerationPanel({ authorId, complaintId }: Props) {
   const ban = useBanMutation(authorId)
   const unban = useUnbanMutation(authorId)
   const [reason, setReason] = useState('')
+  const [open, setOpen] = useState(false)
 
   if (summary.isLoading || !summary.data) return null
   const s = summary.data
 
   return (
     <div className="space-y-2 border-t pt-3">
-      <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 text-left text-sm font-medium text-slate-700"
+      >
+        <span className="text-slate-400">{open ? '▾' : '▸'}</span>
         Модерация автора
         {s.flagged && (
           <Badge className="bg-amber-100 text-amber-800">
@@ -38,9 +45,9 @@ export function ModerationPanel({ authorId, complaintId }: Props) {
         {s.isBanned && (
           <Badge className="bg-red-100 text-red-700">заблокирован</Badge>
         )}
-      </div>
+      </button>
 
-      {!s.isBanned && (
+      {open && !s.isBanned && (
         <>
           <label
             htmlFor="mod-reason"
@@ -59,37 +66,39 @@ export function ModerationPanel({ authorId, complaintId }: Props) {
         </>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        {!s.isBanned && (
-          <>
+      {open && (
+        <div className="flex flex-wrap gap-2">
+          {!s.isBanned && (
+            <>
+              <Button
+                variant="outline"
+                disabled={!reason.trim() || warn.isPending}
+                onClick={() =>
+                  warn.mutate({ reason, complaintId }, { onSuccess: () => setReason('') })
+                }
+              >
+                Предупредить
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={!reason.trim() || ban.isPending}
+                onClick={() => ban.mutate({ reason }, { onSuccess: () => setReason('') })}
+              >
+                Заблокировать
+              </Button>
+            </>
+          )}
+          {s.isBanned && (
             <Button
               variant="outline"
-              disabled={!reason.trim() || warn.isPending}
-              onClick={() =>
-                warn.mutate({ reason, complaintId }, { onSuccess: () => setReason('') })
-              }
+              disabled={unban.isPending}
+              onClick={() => unban.mutate()}
             >
-              Предупредить
+              Разблокировать
             </Button>
-            <Button
-              variant="destructive"
-              disabled={!reason.trim() || ban.isPending}
-              onClick={() => ban.mutate({ reason }, { onSuccess: () => setReason('') })}
-            >
-              Заблокировать
-            </Button>
-          </>
-        )}
-        {s.isBanned && (
-          <Button
-            variant="outline"
-            disabled={unban.isPending}
-            onClick={() => unban.mutate()}
-          >
-            Разблокировать
-          </Button>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

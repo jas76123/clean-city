@@ -180,6 +180,14 @@ class UserRepository {
         Users.update({ Users.id eq userId }) { it[Users.isActive] = value }
     }
 
+    fun setWarnedAt(userId: Long, at: OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)) = transaction {
+        Users.update({ Users.id eq userId }) { it[Users.warnedAt] = at }
+    }
+
+    fun getWarnedAt(userId: Long): OffsetDateTime? = transaction {
+        Users.selectAll().where { Users.id eq userId }.firstOrNull()?.get(Users.warnedAt)
+    }
+
     fun delete(userId: Long): Int = transaction {
         Users.deleteWhere { Users.id eq userId }
     }

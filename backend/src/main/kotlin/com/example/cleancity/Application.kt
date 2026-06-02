@@ -10,6 +10,7 @@ import com.example.cleancity.auth.TotpService
 import com.example.cleancity.auth.UserRepository
 import com.example.cleancity.auth.authRoutes
 import com.example.cleancity.auth.bootstrapInitialAdmin
+import com.example.cleancity.auth.validateAccessPrincipal
 import com.example.cleancity.analytics.AnalyticsRepository
 import com.example.cleancity.analytics.AnalyticsService
 import com.example.cleancity.analytics.analyticsRoutes
@@ -102,14 +103,15 @@ fun Application.module() {
     }
 
     val jwtConfig = JwtConfig.fromEnvironment(environment)
+    val userRepository = UserRepository()
     install(Authentication) {
         jwt("auth-jwt") {
             realm = "CleanCity API"
             verifier(jwtConfig.verifier)
+            // Помимо подписи/типа проверяем is_active, чтобы бан/деактивация
+            // действовали немедленно на уже выданном access-токене.
             validate { credential ->
-                if (credential.payload.subject != null && credential.payload.getClaim("type").asString() == "access") {
-                    JWTPrincipal(credential.payload)
-                } else null
+                validateAccessPrincipal(credential.payload, userRepository)
             }
             challenge { _, _ ->
                 call.respond(

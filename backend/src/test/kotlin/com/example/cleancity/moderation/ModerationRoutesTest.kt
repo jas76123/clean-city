@@ -12,6 +12,7 @@ import com.example.cleancity.database.tables.Notifications
 import com.example.cleancity.database.tables.RefreshTokens
 import com.example.cleancity.database.tables.StatusChanges
 import com.example.cleancity.database.tables.Users
+import com.example.cleancity.auth.validateAccessPrincipal
 import com.example.cleancity.notifications.DbNotificationService
 import com.example.cleancity.notifications.NotificationRepository
 import com.example.cleancity.shared.models.UserRole
@@ -27,7 +28,6 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication
-import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.routing.routing
@@ -96,11 +96,7 @@ class ModerationRoutesTest {
             install(Authentication) {
                 jwt("auth-jwt") {
                     verifier(jwtConfig.verifier)
-                    validate { c ->
-                        if (c.payload.subject != null &&
-                            c.payload.getClaim("type").asString() == "access"
-                        ) JWTPrincipal(c.payload) else null
-                    }
+                    validate { c -> validateAccessPrincipal(c.payload, UserRepository()) }
                 }
             }
             installApiErrorHandling()
@@ -163,6 +159,23 @@ class ModerationRoutesTest {
         testApplication {
             appWithAuth()
             val resp = client.get("/auth/admin/residents/$targetId/moderation")
+            assertEquals(HttpStatusCode.Unauthorized, resp.status)
+        }
+    }
+
+    @Test
+    fun `banned (inactive) staff access token is rejected (401)`() {
+        initDb()
+        // Сотрудник с валидным по подписи токеном, но деактивированный (бан):
+        // доступ должен пропадать немедленно, ещё до проверки роли в requireStaff.
+        val bannedAdmin = seedUser("banned-adm@t.local", UserRole.ADMIN, isActive = false)
+        val targetId = seedUser("res@t.local", UserRole.RESIDENT)
+
+        testApplication {
+            appWithAuth()
+            val resp = client.get("/auth/admin/residents/$targetId/moderation") {
+                header(HttpHeaders.Authorization, "Bearer ${bearerFor(bannedAdmin, UserRole.ADMIN)}")
+            }
             assertEquals(HttpStatusCode.Unauthorized, resp.status)
         }
     }

@@ -20,6 +20,8 @@ import com.example.cleancity.announcements.announcementRoutes
 import com.example.cleancity.complaints.ComplaintRepository
 import com.example.cleancity.complaints.ComplaintService
 import com.example.cleancity.complaints.complaintRoutes
+import com.example.cleancity.moderation.ModerationService
+import com.example.cleancity.moderation.moderationRoutes
 import com.example.cleancity.config.configureDatabase
 import com.example.cleancity.email.EmailService
 import com.example.cleancity.email.LoggingEmailService
@@ -150,6 +152,13 @@ fun Application.module() {
         audit = complaintAudit
     )
     val voteService = VoteService(voteRepository, complaintRepository)
+    val moderationService = ModerationService(
+        users = UserRepository(),
+        complaints = complaintRepository,
+        tokens = TokenRepository(),
+        notifications = notificationService,
+        audit = DbAuditLogger()
+    )
 
     val announcementRepository = AnnouncementRepository()
     val announcementService = AnnouncementService(announcementRepository, notificationService)
@@ -179,6 +188,7 @@ fun Application.module() {
         authRoutes(authService, rateLimiter)
         userRoutes(authService)
         complaintRoutes(complaintService)
+        moderationRoutes(moderationService)
         voteRoutes(voteService)
         notificationRoutes(notificationRepository)
         announcementRoutes(announcementService)

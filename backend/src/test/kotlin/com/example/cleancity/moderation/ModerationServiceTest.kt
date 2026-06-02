@@ -181,4 +181,54 @@ class ModerationServiceTest {
             svc.warn(admin, resident, 1L, "   ", null, null)
         }
     }
+
+    @Test
+    fun `ban deactivates resident, revokes refresh tokens, audits`() {
+        initDb()
+        val svc = service()
+        val admin = seedUser(UserRole.ADMIN)
+        val resident = seedUser(UserRole.RESIDENT)
+        // активный refresh-токен жителя
+        TokenRepository().createRefreshToken(resident, "raw-token", null, null, 3600)
+
+        svc.ban(admin, resident, "Спам 18+", "1.1.1.1", "UA")
+
+        val summary = svc.getSummary(resident)
+        assertTrue(summary.isBanned)
+
+        val activeTokens = TokenRepository().listActiveRefreshTokens(resident)
+        assertTrue(activeTokens.isEmpty())
+
+        val audited = transaction {
+            AuditLog.selectAll().where { AuditLog.action eq "RESIDENT_BANNED" }.count()
+        }
+        assertEquals(1L, audited)
+    }
+
+    @Test
+    fun `unban reactivates resident and audits`() {
+        initDb()
+        val svc = service()
+        val admin = seedUser(UserRole.ADMIN)
+        val resident = seedUser(UserRole.RESIDENT, active = false)
+
+        svc.unban(admin, resident, "1.1.1.1", "UA")
+
+        assertFalse(svc.getSummary(resident).isBanned)
+        val audited = transaction {
+            AuditLog.selectAll().where { AuditLog.action eq "RESIDENT_UNBANNED" }.count()
+        }
+        assertEquals(1L, audited)
+    }
+
+    @Test
+    fun `ban with blank reason throws`() {
+        initDb()
+        val svc = service()
+        val admin = seedUser(UserRole.ADMIN)
+        val resident = seedUser(UserRole.RESIDENT)
+        assertFailsWith<ReasonRequiredException> {
+            svc.ban(admin, resident, "", null, null)
+        }
+    }
 }

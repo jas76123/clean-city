@@ -61,6 +61,21 @@ class ModerationService(
         audit.log(AuditAction.RESIDENT_WARNED, actorId, "user", residentId.toString(), ip, ua, cleanReason)
     }
 
+    fun ban(actorId: Long, residentId: Long, reason: String, ip: String?, ua: String?) {
+        requireResident(residentId)
+        val cleanReason = reason.trim()
+        if (cleanReason.isEmpty()) throw ReasonRequiredException()
+        users.setActive(residentId, false)
+        tokens.revokeAllUserRefreshTokens(residentId)
+        audit.log(AuditAction.RESIDENT_BANNED, actorId, "user", residentId.toString(), ip, ua, cleanReason)
+    }
+
+    fun unban(actorId: Long, residentId: Long, ip: String?, ua: String?) {
+        requireResident(residentId)
+        users.setActive(residentId, true)
+        audit.log(AuditAction.RESIDENT_UNBANNED, actorId, "user", residentId.toString(), ip, ua)
+    }
+
     private fun requireResident(residentId: Long): UserRow {
         val user = users.findById(residentId) ?: throw ResidentNotFoundException()
         if (user.role != UserRole.RESIDENT) throw NotAResidentException()

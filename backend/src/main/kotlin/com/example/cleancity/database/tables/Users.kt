@@ -23,6 +23,7 @@ object Users : Table("users") {
     val lastLoginIp = varchar("last_login_ip", 45).nullable()
     val acceptedTermsAt = timestampWithTimeZone("accepted_terms_at").nullable()
     val acceptedTermsVersion = varchar("accepted_terms_version", 10).nullable()
+    val warnedAt = timestampWithTimeZone("warned_at").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

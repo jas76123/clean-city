@@ -82,6 +82,14 @@ log "Жду пока эмулятор полностью загрузится…
 "$ADB" shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 2; done'
 log "Эмулятор готов."
 
+# 2b. adb reverse ------------------------------------------------------------
+# Backend зашивает в URL фоток свой app.base_url (= http://localhost:8081 в
+# dev). На эмуляторе localhost — это сам эмулятор, поэтому без туннеля фото
+# жалоб не грузятся (API при этом ходит по 10.0.2.2 и работает). Пробрасываем
+# порт 8081 на хост, чтобы http://localhost:8081/photos/... долетал до Mac.
+log "Настраиваю adb reverse tcp:8081 → host:8081 (загрузка фото жалоб)…"
+"$ADB" reverse tcp:8081 tcp:8081
+
 # 3. APK ---------------------------------------------------------------------
 if [[ "$DO_BUILD" -eq 1 ]] || [[ ! -f "$APK" ]]; then
     log "Собираю APK (./gradlew :composeApp:assembleDebug)…"

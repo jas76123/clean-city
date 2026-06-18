@@ -6,7 +6,10 @@ import com.example.cleancity.data.network.FakeAuthApi
 import com.example.cleancity.data.network.FakeUserApi
 import com.example.cleancity.data.repository.AuthRepository
 import com.example.cleancity.data.storage.FakeTokenStorage
+import com.example.cleancity.data.storage.Tokens
 import com.example.cleancity.domain.AuthState
+import com.example.cleancity.shared.models.UserResponse
+import com.example.cleancity.shared.models.UserRole
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -26,6 +29,41 @@ class ProfileScreenModelTest {
     private fun buildModel(authApi: FakeAuthApi): Pair<ProfileScreenModel, AuthRepository> {
         val repo = AuthRepository(authApi.asAuthApi(), FakeUserApi().asUserApi(), FakeTokenStorage())
         return ProfileScreenModel(FakeProfileComplaintsApi(), repo) to repo
+    }
+
+    private suspend fun authedRepo(): AuthRepository {
+        val user = UserResponse(
+            id = 1, email = "u@x.com", role = UserRole.RESIDENT,
+            fullName = "U", emailVerified = true, createdAt = "2026-05-21T00:00:00Z",
+        )
+        return AuthRepository(
+            FakeAuthApi().asAuthApi(),
+            FakeUserApi(meResult = Result.success(user)).asUserApi(),
+            FakeTokenStorage().apply { preset(Tokens("acc", "ref")) },
+        ).apply { init() }
+    }
+
+    // Регресс: при сетевой ошибке профиля приложение крашилось — исключение из
+    // async уходило мимо try/catch в родительский scope (Dispatchers.Main) и
+    // валило процесс. load() обязан показать Error, а не падать.
+    @Test fun `load surfaces Error state when complaints api fails instead of crashing`() = runTest {
+        val repo = authedRepo()
+        testScheduler.advanceUntilIdle()
+        assertIs<AuthState.Authenticated>(repo.state.value)
+
+        val networkError = ApiException(ApiError("NETWORK", "Connection refused"), 0)
+        val model = ProfileScreenModel(
+            FakeProfileComplaintsApi(
+                mineResult = Result.failure(networkError),
+                votedResult = Result.failure(networkError),
+            ),
+            repo,
+        )
+
+        model.load()
+        testScheduler.advanceUntilIdle()
+
+        assertIs<ProfileState.Error>(model.state.value)
     }
 
     @Test fun `deleteAccount success switches auth state to Anonymous`() = runTest {

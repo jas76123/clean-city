@@ -14,6 +14,7 @@ import com.example.cleancity.shared.models.NotificationKind
 import com.example.cleancity.ui.util.listErrorMessage
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -167,7 +168,10 @@ class FeedScreenModel(
     private suspend fun fetchPage(
         mode: FeedMode,
         page: Int,
-    ): Pair<List<AnnouncementResponse>, List<ComplaintResponse>> = with(screenModelScope) {
+    ): Pair<List<AnnouncementResponse>, List<ComplaintResponse>> = coroutineScope {
+        // coroutineScope (а не with(screenModelScope)): падение cmpDeferred при
+        // сетевой ошибке остаётся внутри и пробрасывается вызывающему в try/catch,
+        // а не улетает в screenModelScope (Dispatchers.Main) и не валит процесс.
         val annDeferred = async { runCatching { announcementsApi.list(limit = 5) }.getOrNull() }
         val cmpDeferred = async { fetchComplaints(mode, page) }
         val results = awaitAll(annDeferred, cmpDeferred)

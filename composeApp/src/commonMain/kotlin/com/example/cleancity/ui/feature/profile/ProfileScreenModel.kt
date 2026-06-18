@@ -8,6 +8,7 @@ import com.example.cleancity.domain.AuthState
 import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.UserResponse
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,10 +59,15 @@ class ProfileScreenModel(
         _state.value = ProfileState.Loading
         screenModelScope.launch {
             try {
-                val mineDeferred = async { complaintsApi.mine(page = 0, size = STATS_PAGE_SIZE) }
-                val votedDeferred = async { complaintsApi.voted(page = 0, size = 1) }
-                val mine = mineDeferred.await()
-                val voted = votedDeferred.await()
+                // coroutineScope обязателен: без него падение любого из async
+                // распространяется в родительский screenModelScope (Dispatchers.Main)
+                // в обход try/catch и валит процесс. coroutineScope локализует сбой —
+                // отменяет соседний async и пробрасывает исключение сюда, в catch.
+                val (mine, voted) = coroutineScope {
+                    val mineDeferred = async { complaintsApi.mine(page = 0, size = STATS_PAGE_SIZE) }
+                    val votedDeferred = async { complaintsApi.voted(page = 0, size = 1) }
+                    mineDeferred.await() to votedDeferred.await()
+                }
                 val stats = ProfileStats(
                     inProgress = mine.items.count { it.status == ComplaintStatus.NEW },
                     inWork = mine.items.count { it.status == ComplaintStatus.IN_PROGRESS },

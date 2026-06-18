@@ -10,10 +10,21 @@ import com.example.cleancity.shared.models.ProblemCategory
 import com.example.cleancity.shared.models.VoteResponse
 import com.example.cleancity.shared.requests.CreateComplaintRequest
 
-/** Заглушка: ProfileScreenModelTest проверяет только deleteAccount, load() не вызывается. */
-class FakeProfileComplaintsApi : ComplaintsApiContract {
-    override suspend fun mine(page: Int, size: Int): ComplaintListResponse = error("not used")
-    override suspend fun voted(page: Int, size: Int): ComplaintListResponse = error("not used")
+/**
+ * Заглушка ComplaintsApi для тестов профиля.
+ *
+ * По умолчанию mine()/voted() кидают error("not used") — для тестов, где load()
+ * не вызывается (например, deleteAccount). Для тестов load() передай явные
+ * результаты [mineResult]/[votedResult] (успех или ошибку сети).
+ */
+class FakeProfileComplaintsApi(
+    private val mineResult: Result<ComplaintListResponse>? = null,
+    private val votedResult: Result<ComplaintListResponse>? = null,
+) : ComplaintsApiContract {
+    override suspend fun mine(page: Int, size: Int): ComplaintListResponse =
+        (mineResult ?: error("not used")).getOrThrow()
+    override suspend fun voted(page: Int, size: Int): ComplaintListResponse =
+        (votedResult ?: error("not used")).getOrThrow()
     override suspend fun getMapMarkers(
         swLat: Double, swLon: Double, neLat: Double, neLon: Double,
         category: ProblemCategory?,

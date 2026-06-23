@@ -1,7 +1,12 @@
 package com.example.cleancity.domain.map
 
+import kotlin.math.PI
+import kotlin.math.asin
+import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.round
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 data class BoundingBox(
     val swLat: Double,
@@ -46,5 +51,18 @@ data class BoundingBox(
             span > 0.002 -> 16f
             else -> 17f
         }
+    }
+
+    // Диагональ bbox (юго-западный ↔ северо-восточный угол) в метрах, гаверсинус.
+    // Для совпадающих углов = 0. Используется, чтобы отличить «жалобы в одной точке»
+    // (span ≈ 0, зум их не разведёт → список) от обычного кластера (большой span → зум).
+    fun spanMeters(): Double {
+        val earthRadiusM = 6_371_000.0
+        fun rad(deg: Double) = deg * PI / 180.0
+        val dLat = rad(neLat - swLat)
+        val dLon = rad(neLon - swLon)
+        val a = sin(dLat / 2).pow(2) +
+            cos(rad(swLat)) * cos(rad(neLat)) * sin(dLon / 2).pow(2)
+        return 2 * earthRadiusM * asin(minOf(1.0, sqrt(a)))
     }
 }

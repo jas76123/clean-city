@@ -323,10 +323,14 @@ class MapScreenModelTest {
     fun `onClusterTap with empty ids falls back to zoom`() = runTest(dispatcher) {
         val model = newModel()
         advanceUntilIdle()
+        val zoomBefore = model.state.value.cameraPosition.zoom
 
+        // zero-span bbox: центр совпадает с углами, но зум-ветка всё равно должна сработать
         model.onClusterTap(emptyList(), BoundingBox(43.4660, 39.9242, 43.4660, 39.9242))
 
         assertEquals(null, model.state.value.selectedClusterIds)
+        assertEquals(17f, model.state.value.cameraPosition.zoom, "зум-ветка отработала (suggestedZoom для span=0)")
+        assertTrue(model.state.value.cameraPosition.zoom != zoomBefore, "зум изменился, значит zoomTo вызван")
         model.close()
     }
 
@@ -335,6 +339,7 @@ class MapScreenModelTest {
         val model = newModel()
         advanceUntilIdle()
         model.onClusterTap(listOf(1L, 2L), BoundingBox(43.4660, 39.9242, 43.4660, 39.9242))
+        assertEquals(listOf(1L, 2L), model.state.value.selectedClusterIds, "поле было установлено")
 
         model.closeClusterSheet()
 

@@ -1,6 +1,5 @@
 package com.example.cleancity.domain.map
 
-import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertTrue
 

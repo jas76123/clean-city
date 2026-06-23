@@ -42,6 +42,7 @@ import com.example.cleancity.ui.feature.map.components.CategorySheet
 import com.example.cleancity.ui.feature.map.components.MapFabGroup
 import com.example.cleancity.ui.feature.map.components.MapLegend
 import com.example.cleancity.ui.feature.map.components.MapSearchBar
+import com.example.cleancity.ui.feature.map.components.MarkerListSheet
 import com.example.cleancity.ui.feature.map.components.MarkerPreviewSheet
 import org.jetbrains.compose.resources.painterResource
 
@@ -95,11 +96,7 @@ class MapScreen : Screen {
                     markers = state.markers,
                     onCameraMoved = model::onCameraMoved,
                     onMarkerClick = model::onMarkerClick,
-                    onClusterTap = { bbox ->
-                        val midLat = (bbox.swLat + bbox.neLat) / 2.0
-                        val midLon = (bbox.swLon + bbox.neLon) / 2.0
-                        model.zoomTo(midLat, midLon, bbox.suggestedZoom())
-                    },
+                    onClusterTap = model::onClusterTap,
                     modifier = Modifier.fillMaxSize(),
                 )
 
@@ -155,6 +152,17 @@ class MapScreen : Screen {
                             },
                         )
                     }
+                }
+
+                state.selectedClusterIds?.let { ids ->
+                    MarkerListSheet(
+                        markers = state.markers.filter { it.id in ids },
+                        onDismiss = { model.closeClusterSheet() },
+                        onOpenDetail = { id ->
+                            model.closeClusterSheet()
+                            navigator.push(ComplaintDetailScreen(id))
+                        },
+                    )
                 }
 
                 if (state.isCategorySheetOpen) {

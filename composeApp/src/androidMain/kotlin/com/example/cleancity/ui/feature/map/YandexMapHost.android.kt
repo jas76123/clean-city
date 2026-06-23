@@ -53,7 +53,7 @@ actual fun YandexMapHost(
     markers: List<MapMarker>,
     onCameraMoved: (BoundingBox) -> Unit,
     onMarkerClick: (markerId: Long) -> Unit,
-    onClusterTap: (BoundingBox) -> Unit,
+    onClusterTap: (ids: List<Long>, bbox: BoundingBox) -> Unit,
     modifier: Modifier,
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -156,6 +156,7 @@ actual fun YandexMapHost(
                 ClusterTapListener { c ->
                     val placemarks = c.placemarks
                     if (placemarks.isEmpty()) return@ClusterTapListener true
+                    val ids = placemarks.mapNotNull { it.userData as? Long }
                     var minLat = Double.MAX_VALUE
                     var maxLat = -Double.MAX_VALUE
                     var minLon = Double.MAX_VALUE
@@ -167,7 +168,7 @@ actual fun YandexMapHost(
                         if (pt.longitude < minLon) minLon = pt.longitude
                         if (pt.longitude > maxLon) maxLon = pt.longitude
                     }
-                    onClusterTap(BoundingBox(minLat, minLon, maxLat, maxLon))
+                    onClusterTap(ids, BoundingBox(minLat, minLon, maxLat, maxLon))
                     true
                 },
             )
@@ -181,6 +182,7 @@ actual fun YandexMapHost(
         markers.forEach { marker ->
             val placemark = collection.addPlacemark().apply {
                 geometry = Point(marker.latitude, marker.longitude)
+                userData = marker.id
                 setIcon(
                     ImageProvider.fromBitmap(createPinBitmap(statusColor(marker.status), density)),
                     pinIconStyle,

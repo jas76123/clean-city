@@ -103,7 +103,7 @@ data class MapPickerScreen(
                     markers = emptyList(),
                     onCameraMoved = model::onCameraMoved,
                     onMarkerClick = {},
-                    onClusterTap = {},
+                    onClusterTap = { _, _ -> },
                     modifier = Modifier.fillMaxSize(),
                 )
                 Box(

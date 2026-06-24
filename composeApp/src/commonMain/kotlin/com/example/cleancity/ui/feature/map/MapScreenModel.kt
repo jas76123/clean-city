@@ -28,6 +28,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
+// Если все точки кластера умещаются в круг меньше этого радиуса, зум их не разведёт —
+// показываем список вместо приближения. Главный случай — точно совпадающие координаты.
+private const val CLUSTER_SPLIT_THRESHOLD_M = 25.0
+
 class MapScreenModel(
     private val api: ComplaintsApiContract,
     private val locationProvider: LocationProvider,
@@ -85,6 +89,20 @@ class MapScreenModel(
 
     fun closeMarkerSheet() {
         _state.update { it.copy(selectedMarkerId = null) }
+    }
+
+    fun onClusterTap(ids: List<Long>, bbox: BoundingBox) {
+        if (ids.isNotEmpty() && bbox.spanMeters() < CLUSTER_SPLIT_THRESHOLD_M) {
+            _state.update { it.copy(selectedClusterIds = ids) }
+        } else {
+            val midLat = (bbox.swLat + bbox.neLat) / 2.0
+            val midLon = (bbox.swLon + bbox.neLon) / 2.0
+            zoomTo(midLat, midLon, bbox.suggestedZoom())
+        }
+    }
+
+    fun closeClusterSheet() {
+        _state.update { it.copy(selectedClusterIds = null) }
     }
 
     fun toggleCategory(category: ProblemCategory) {

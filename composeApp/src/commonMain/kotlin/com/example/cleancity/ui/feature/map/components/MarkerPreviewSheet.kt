@@ -12,9 +12,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.cleancity.shared.models.ComplaintStatus
 import com.example.cleancity.shared.models.MapMarker
-import kotlin.math.roundToLong
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,20 +39,4 @@ fun MarkerPreviewSheet(
             ) { Text("Открыть детально") }
         }
     }
-}
-
-private fun formatCoord(value: Double): String {
-    val rounded = (value * 10000).roundToLong()
-    val whole = rounded / 10000
-    val frac = (rounded % 10000).let { if (it < 0) -it else it }
-    val fracStr = frac.toString().padStart(4, '0')
-    return "$whole.$fracStr"
-}
-
-private fun ComplaintStatus.localizedLabel(): String = when (this) {
-    ComplaintStatus.NEW -> "Новая"
-    ComplaintStatus.IN_PROGRESS -> "В работе"
-    ComplaintStatus.RESOLVED -> "Решено"
-    ComplaintStatus.REJECTED -> "Отклонено"
-    ComplaintStatus.DUPLICATE -> "Дубликат"
 }

@@ -11,6 +11,7 @@ data class MapUiState(
     val markers: List<MapMarker> = emptyList(),
     val selectedCategory: ProblemCategory? = null,
     val selectedMarkerId: Long? = null,
+    val selectedClusterIds: List<Long>? = null,
     val isCategorySheetOpen: Boolean = false,
     val isLoading: Boolean = false,
     val hasInitialDataLoaded: Boolean = false,

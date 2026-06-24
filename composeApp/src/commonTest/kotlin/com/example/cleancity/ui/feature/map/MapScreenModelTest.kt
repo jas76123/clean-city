@@ -291,4 +291,59 @@ class MapScreenModelTest {
         assertEquals(emptyList(), model.state.value.searchSuggestions)
         model.close()
     }
+
+    @Test
+    fun `onClusterTap with identical coords opens list and does not zoom`() = runTest(dispatcher) {
+        val model = newModel()
+        advanceUntilIdle()
+        val cameraBefore = model.state.value.cameraPosition
+
+        // три жалобы в одной точке: span = 0
+        model.onClusterTap(listOf(1L, 2L, 3L), BoundingBox(43.4660, 39.9242, 43.4660, 39.9242))
+
+        assertEquals(listOf(1L, 2L, 3L), model.state.value.selectedClusterIds)
+        assertEquals(cameraBefore, model.state.value.cameraPosition, "камера не должна двигаться")
+        model.close()
+    }
+
+    @Test
+    fun `onClusterTap with wide bbox zooms and opens no list`() = runTest(dispatcher) {
+        val model = newModel()
+        advanceUntilIdle()
+
+        model.onClusterTap(listOf(1L, 2L), BoundingBox(43.40, 39.90, 43.60, 40.10))
+
+        assertEquals(null, model.state.value.selectedClusterIds)
+        assertEquals(43.5, model.state.value.cameraPosition.latitude, "зум к центру bbox")
+        assertEquals(40.0, model.state.value.cameraPosition.longitude)
+        model.close()
+    }
+
+    @Test
+    fun `onClusterTap with empty ids falls back to zoom`() = runTest(dispatcher) {
+        val model = newModel()
+        advanceUntilIdle()
+        val zoomBefore = model.state.value.cameraPosition.zoom
+
+        // zero-span bbox: центр совпадает с углами, но зум-ветка всё равно должна сработать
+        model.onClusterTap(emptyList(), BoundingBox(43.4660, 39.9242, 43.4660, 39.9242))
+
+        assertEquals(null, model.state.value.selectedClusterIds)
+        assertEquals(17f, model.state.value.cameraPosition.zoom, "зум-ветка отработала (suggestedZoom для span=0)")
+        assertTrue(model.state.value.cameraPosition.zoom != zoomBefore, "зум изменился, значит zoomTo вызван")
+        model.close()
+    }
+
+    @Test
+    fun `closeClusterSheet clears selectedClusterIds`() = runTest(dispatcher) {
+        val model = newModel()
+        advanceUntilIdle()
+        model.onClusterTap(listOf(1L, 2L), BoundingBox(43.4660, 39.9242, 43.4660, 39.9242))
+        assertEquals(listOf(1L, 2L), model.state.value.selectedClusterIds, "поле было установлено")
+
+        model.closeClusterSheet()
+
+        assertEquals(null, model.state.value.selectedClusterIds)
+        model.close()
+    }
 }

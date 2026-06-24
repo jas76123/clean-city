@@ -13,6 +13,7 @@ import com.yandex.mapkit.search.Session
 import com.yandex.mapkit.search.SuggestOptions
 import com.yandex.mapkit.search.SuggestResponse
 import com.yandex.mapkit.search.SuggestSession
+import com.yandex.mapkit.search.Precision
 import com.yandex.mapkit.search.ToponymObjectMetadata
 import com.yandex.runtime.Error
 import kotlinx.coroutines.Dispatchers
@@ -118,9 +119,16 @@ class AndroidMapSearchProvider : MapSearchProvider {
                     val address = if (parts.isNotEmpty()) parts.joinToString(", ")
                         else obj.name ?: toponym?.address?.formattedAddress.orEmpty()
 
-                    // Координата toponym'а — на ней реально стоит дом/улица из адреса.
-                    // Если её нет (редко), state останется на исходных координатах.
-                    val toponymPoint = obj.geometry.firstOrNull()?.point
+                    // Снап на координату toponym'а допустим ТОЛЬКО для точного адреса
+                    // (дом / точная точка). Для уровня района/локалитета Yandex отдаёт
+                    // геометрию = центр района — снап туда схлопывает разные жалобы в одну
+                    // точку. В таком случае возвращаем null-координаты, и вызывающий код
+                    // оставляет точку, которую пользователь поставил на карте.
+                    val precise = house != null || toponym?.precision in setOf(
+                        Precision.EXACT,
+                        Precision.NUMBER,
+                    )
+                    val toponymPoint = if (precise) obj.geometry.firstOrNull()?.point else null
 
                     if (cont.isActive) cont.resume(
                         Result.success(

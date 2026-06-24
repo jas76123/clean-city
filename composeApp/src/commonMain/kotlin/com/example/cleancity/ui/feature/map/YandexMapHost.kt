@@ -12,6 +12,6 @@ expect fun YandexMapHost(
     markers: List<MapMarker>,
     onCameraMoved: (BoundingBox) -> Unit,
     onMarkerClick: (markerId: Long) -> Unit,
-    onClusterTap: (BoundingBox) -> Unit,
+    onClusterTap: (ids: List<Long>, bbox: BoundingBox) -> Unit,
     modifier: Modifier = Modifier,
 )

@@ -65,11 +65,11 @@ describe('SettingsPage', () => {
     vi.mocked(adminApi.recentAuditEvents).mockResolvedValue([])
   })
 
-  it('renders team section (audit log temporarily hidden)', () => {
+  it('renders team section and audit log', () => {
     mockAuthRole('ADMIN')
     wrap(<SettingsPage />)
     expect(screen.getByText('Команда')).toBeInTheDocument()
-    expect(screen.queryByText('Журнал событий')).not.toBeInTheDocument()
+    expect(screen.getByText('Журнал событий')).toBeInTheDocument()
   })
 
   it('admin sees invite and action buttons', async () => {
